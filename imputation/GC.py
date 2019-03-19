@@ -759,14 +759,20 @@ def format(args):
 
         cols = list(df.columns[2:])
         cols.insert(0, 'id')
+        cols.insert(1, 'group')
         df['id'] = df.iloc[:,0].astype('str') + '_' +df.iloc[:,1].astype('str')
+        df['group'] = 1
         df = df[cols]
+        
+        df = df.set_index('id')
+        df1 = df.transpose()
+        df1 = df1.reset_index()
+        columns = list(df1.columns)
+        columns[0] = 'id'
+        df1.columns = columns
 
-        df.loc[-1] = 1
-        df.index = df.index + 1
-        df = df.sort_index()
-        df.iloc[0,0] = np.nan
-        df.to_csv(opf, index=False, na_rep='')
+        df1.iloc[0,0] = np.nan
+        df1.to_csv(opf, index=False, na_rep='')
         print('Done, check file {}!'.format(opf))
 
 def bin(args):
