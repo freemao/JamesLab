@@ -1,5 +1,6 @@
 from __future__ import print_function
 import sys
+import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -7,6 +8,9 @@ from pathlib import Path
 from scipy.stats import linregress
 from collections import defaultdict
 from sklearn.metrics import mean_squared_error
+
+def print_json(data):
+    print(json.dumps(data, indent=2))
 
 def bin_markers(df, diff=0, missing_value='-'):
     """
