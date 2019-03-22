@@ -9,7 +9,7 @@ import sys
 import json
 import logging
 import requests
-#import geojsonio
+import geojsonio
 import pandas as pd
 from pathlib import Path
 from schnablelab import __version__ as version
@@ -88,7 +88,7 @@ class Filter(object):
             'config': {'gte': st, 'lte': ed}
         }
     
-    def get_filter_coverage(self, st=0.4, ed=1):
+    def get_filter_coverage(self, st=0, ed=1):
         return {
             'type': 'RangeFilter',
             'field_name': 'usable_data',
@@ -118,6 +118,8 @@ class Filter(object):
 class Request(object):
     '''
     customzie request object
+    stat endpoint requires the interval
+    search endpoint doesn't require the interval
     '''
     def __init__(self, item_types = ['PSScene4Band', 'PSOrthoTile'], interval=''):
         self.item_types = item_types
@@ -266,11 +268,131 @@ def stat(args):
     df_stat.to_csv(opts.output, index=False, sep='\t')
     print('also saved to %s!'%opts.output)
 
+def quick_search(args):
+    '''
+    %prog quick_search
+    
+    Perform quick serach and get ids for items from search resutls
+    '''
+    p = OptionParser(quick_search.__doc__)
+    p.add_option('-o', '--output', default="searchs.csv",
+                help='specify output file')
+    p.add_option('--geom', default="lindsay_james.geojson",
+                help='speficy the geojson file containing the geometry info')
+    p.add_option('--cloud', default=True, action='store_false',
+                help = 'disable cloud filter if add --cloud option')
+    p.add_option('--coverage', default=True, action='store_false',
+                help = 'disable area coverage filter if add --coverage option')
+    p.add_option('--instrument', default=False, action='store_true',
+                help = 'add instrument filter if add --instrument option')
+    p.add_option('--date_range', default=True, action='store_false',
+                help = 'disable date filter if add --date_range option')
+    p.add_option('--map_footprint', default=False, action='store_true',
+                help = 'add mapping footprints if add --map_footprint option')
+    
+    q = OptionGroup(p, "options for date filter")
+    p.add_option_group(q)
+    q.add_option('--start', default="2018-01-01",
+                help='the start date. use yyyy-mm-dd format.')
+    q.add_option('--end',
+                help='the end date. use yyyy-mm-dd format')
+    
+    r = OptionGroup(p, "options for request")
+    p.add_option_group(r)
+    r.add_option('--item_types', default='PSScene4Band', 
+                help='specify the item types. use comma separated if more than one item')
+
+    opts, args = p.parse_args(args)
+    if len(args) != 0:
+        sys.exit(not p.print_help())
+
+    # all filters
+    Filters, Filters_names = [], []
+    with open(opts.geom) as f:
+        data = json.load(f)
+    geometry = data['features'][0]['geometry']
+    filter_geom = Filter().get_filter_geometry(geometry)
+    Filters.append(filter_geom)
+    Filters_names.append(filter_geom['field_name'])
+    if opts.cloud:
+        filter_cloud = Filter().get_filter_cloud()
+        Filters.append(filter_cloud)
+        Filters_names.append(filter_cloud['field_name'])
+    if opts.coverage:
+        filter_coverage = Filter().get_filter_coverage()
+        Filters.append(filter_coverage)
+        Filters_names.append(filter_coverage['field_name'])
+    if opts.instrument:
+        filter_instrument = Filter().get_filter_instrument()
+        Filters.append(filter_instrument)
+        Filters_names.append(filter_instrument['field_name'])
+    if opts.date_range:
+        st, ed = opts.start, opts.end
+        filter_date = Filter().get_filter_date(st=st, ed=ed)
+        Filters.append(filter_date)
+        Filters_names.append(filter_date['field_name'])
+    Final_Filters = {
+        'type': 'AndFilter',
+        'config': Filters
+    }
+    print('Applied Filters: %s'%(', '.join(Filters_names)))
+    
+    # request
+    Requests = Request(item_types = opts.item_types.split(','))
+    Final_Requests = Requests.get_request(Final_Filters)    
+    #rint(Final_Requests)
+
+    # post
+    client = Client()
+    res = client.ses.post(client.url_quick_search, json=Final_Requests, params={"_page_size" : 10})
+    geojson = res.json() # important keys: _links(current link and link of the next page), features(id)
+    link_first_page = geojson['_links']['_first']
+
+    ids = []
+    def parse_page(session, search_url, map_footprint):
+        '''
+        loop pages and extract ids from each page
+        '''
+        res = session.get(search_url)
+        if map_footprint:
+            url = geojsonio.display(res.text)
+        page = res.json()
+        for feature in page['features']:
+            id = feature['id']
+            ids.append(id)
+        next_url = page["_links"].get("_next")
+        if next_url:
+            parse_page(session, next_url, map_footprint)
+
+    parse_page(client.ses, link_first_page, opts.map_footprint)
+    with open(opts.output, 'w') as f:
+        for id in ids:
+            f.write(id+'\n')
+    print('check ids in %s !'%(opts.output))
+
+def activate_download(args):
+    '''
+    %prog activate_download
+
+    each id represt an item, each item has many different assets, such as analytic and analytic_xml...
+    select the assets, activate them and start downloading 
+    '''
+
+    '''
+    assets_url = feature["_links"]["assets"]
+    assets = client.ses.get(assets_url)
+
+    df_stat.to_csv(opts.output, index=False, sep='\t')
+    print('also saved to %s!'%opts.output)
+    '''
+
 def main():
     actions = (
         ('asset_types', 'print all available asset types'),
         ('item_types', 'print all available item types'),
-        ('stat', 'check available imagery counts')
+        ('stat', 'check available imagery counts'),
+        ('quick_search', 'perform quick search to get all the target ids'),
+        ('activate_download', 'activate and download assets for each item')
             )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
