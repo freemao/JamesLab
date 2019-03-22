@@ -200,8 +200,8 @@ def stat(args):
                 help='speficy the geojson file containing the geometry info')
     p.add_option('--cloud', default=True, action='store_false',
                 help = 'disable cloud filter if add --cloud option')
-    p.add_option('--coverage', default=True, action='store_false',
-                help = 'disable area coverage filter if add --coverage option')
+    p.add_option('--coverage', default=False, action='store_true',
+                help = 'add area coverage filter if add --coverage option')
     p.add_option('--instrument', default=False, action='store_true',
                 help = 'add instrument filter if add --instrument option')
     p.add_option('--date_range', default=True, action='store_false',
@@ -281,8 +281,8 @@ def quick_search(args):
                 help='speficy the geojson file containing the geometry info')
     p.add_option('--cloud', default=True, action='store_false',
                 help = 'disable cloud filter if add --cloud option')
-    p.add_option('--coverage', default=True, action='store_false',
-                help = 'disable area coverage filter if add --coverage option')
+    p.add_option('--coverage', default=False, action='store_true',
+                help = 'add area coverage filter if add --coverage option')
     p.add_option('--instrument', default=False, action='store_true',
                 help = 'add instrument filter if add --instrument option')
     p.add_option('--date_range', default=True, action='store_false',
