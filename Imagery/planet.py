@@ -7,18 +7,26 @@ search, stat, and download data from Planet through planet api endpoints
 import os
 import sys
 import json
+import time
 import logging
 import requests
 import geojsonio
+import os.path as op
 import pandas as pd
+import numpy as np
 from pathlib import Path
 from schnablelab import __version__ as version
 from schnablelab.apps.Tools import print_json
 from schnablelab.apps.base import OptionParser, OptionGroup, ActionDispatcher, SUPPRESS_HELP
+from multiprocessing.dummy import Pool as ThreadPool
+from retrying import retry
 
 # API key and URLs
 PLANET_API_KEY = os.getenv('PLANET_API_KEY')
 URL = "https://api.planet.com/data/v1"
+
+default_geojson = op.abspath(op.dirname(__file__)) + '/lindsay_james.geojson'
+
 session = requests.Session()
 session.auth = (PLANET_API_KEY, '')
 
@@ -227,7 +235,8 @@ def stat(args):
 
     # all filters
     Filters, Filters_names = [], []
-    with open(opts.geom) as f:
+    geojson_fn = default_geojson if opts.geom == 'lindsay_james.geojson' else opts.geom
+    with open(geojson_fn) as f:
         data = json.load(f)
     geometry = data['features'][0]['geometry']
     filter_geom = Filter().get_filter_geometry(geometry)
@@ -275,7 +284,7 @@ def quick_search(args):
     Perform quick serach and get ids for items from search resutls
     '''
     p = OptionParser(quick_search.__doc__)
-    p.add_option('-o', '--output', default="searchs.csv",
+    p.add_option('-o', '--output', default="searches.csv",
                 help='specify output file')
     p.add_option('--geom', default="lindsay_james.geojson",
                 help='speficy the geojson file containing the geometry info')
@@ -308,7 +317,8 @@ def quick_search(args):
 
     # all filters
     Filters, Filters_names = [], []
-    with open(opts.geom) as f:
+    geojson_fn = default_geojson if opts.geom == 'lindsay_james.geojson' else opts.geom
+    with open(geojson_fn) as f:
         data = json.load(f)
     geometry = data['features'][0]['geometry']
     filter_geom = Filter().get_filter_geometry(geometry)
@@ -330,7 +340,7 @@ def quick_search(args):
         st, ed = opts.start, opts.end
         filter_date = Filter().get_filter_date(st=st, ed=ed)
         Filters.append(filter_date)
-        Filters_names.append(filter_date['field_name'])
+        Filters_names.append('date_range')
     Final_Filters = {
         'type': 'AndFilter',
         'config': Filters
@@ -338,7 +348,9 @@ def quick_search(args):
     print('Applied Filters: %s'%(', '.join(Filters_names)))
     
     # request
-    Requests = Request(item_types = opts.item_types.split(','))
+    items = opts.item_types.split(',')
+    print('Item Types: ', items)
+    Requests = Request(item_types = items)
     Final_Requests = Requests.get_request(Final_Filters)    
     #rint(Final_Requests)
 
@@ -348,7 +360,7 @@ def quick_search(args):
     geojson = res.json() # important keys: _links(current link and link of the next page), features(id)
     link_first_page = geojson['_links']['_first']
 
-    ids = []
+    ids, cloud_cover, item_type, assets_url = [], [], [], []
     def parse_page(session, search_url, map_footprint):
         '''
         loop pages and extract ids from each page
@@ -359,32 +371,126 @@ def quick_search(args):
         page = res.json()
         for feature in page['features']:
             id = feature['id']
+            cc = feature['properties']['cloud_cover']
+            it = feature['properties']['item_type']
+            au = feature['_links']['assets']
             ids.append(id)
+            cloud_cover.append(cc)
+            item_type.append(it)
+            assets_url.append(au)
         next_url = page["_links"].get("_next")
         if next_url:
             parse_page(session, next_url, map_footprint)
-
     parse_page(client.ses, link_first_page, opts.map_footprint)
-    with open(opts.output, 'w') as f:
-        for id in ids:
-            f.write(id+'\n')
-    print('check ids in %s !'%(opts.output))
 
-def activate_download(args):
-    '''
-    %prog activate_download
+    df = pd.DataFrame(dict(zip(['id', 'cloud_cover', 'item_type', 'assets_url'], [ids, cloud_cover, item_type, assets_url])))
+    df.to_csv(opts.output, index=False, sep='\t')
+    print('%s items found, please check search resutls in %s!'%(df.shape[0], opts.output))
 
-    each id represt an item, each item has many different assets, such as analytic and analytic_xml...
-    select the assets, activate them and start downloading 
+def activate(args):
     '''
+    %prog activate searches.csv
 
+    each id represt an item, each item has many different assets listed in the assets endpoint, 
+    such as analytic and analytic_xml...
+    This function will perform activation for the selecetd asset so they can be downloaded later 
     '''
-    assets_url = feature["_links"]["assets"]
-    assets = client.ses.get(assets_url)
+    p = OptionParser(activate.__doc__)
+    p.add_option('--output', default="download_links_AssetKey.csv",
+                help='specify output file')
+    p.add_option('--asset_key', default="analytic_xml", choices=('analytic', 'analytic_xml', 'visual'),
+                help='speficy the asset you are goting to activate and download')
+    opts, args = p.parse_args(args)
+    if len(args) != 1:
+        sys.exit(not p.print_help())
+    searches, = args
 
-    df_stat.to_csv(opts.output, index=False, sep='\t')
-    print('also saved to %s!'%opts.output)
+    client = Client()
+    asset_urls_df = pd.read_csv(searches, delim_whitespace=True)
+    asset_urls_df['asset_type'] = opts.asset_key
+
+    
+    # perform activation (control request rate here)
+    codes = []
+    for idx, row in asset_urls_df.iterrows():
+        print(idx, row['id'], row['item_type'])
+        res = client.ses.get(row['assets_url']) # normal request
+        activate_url = res.json()[opts.asset_key]['_links']['activate']
+        res = client.ses.get(activate_url) # activate request
+        code = res.status_code
+        codes.append(code)
+        if code == 202:
+            print('activation started')
+        elif code == 204:
+            print('activated')
+        elif code == 401:
+            print('no permission')
+        else:
+            print(code)
+        time.sleep(.500)
+    asset_urls_df['activation_code'] = np.array(codes)
+    
+    # check activation status (control request rate here)
+    asset_activated = False
+    while asset_activated == False:
+        if 202 not in asset_urls_df['activation_code'].values:
+            asset_activated = True
+            print('all assets have been activated!!!')
+        else:
+            asset_urls_df_202 = asset_urls_df.copy()
+            for idx, row in asset_urls_df_202.iterrows():
+                if row['activation_code'] == 202:
+                    status = client.ses.get(row['assets_url']).json()[opts.asset_key]['status'] # normal request
+                    time.sleep(.200)
+                    if status == 'active':
+                        print(row['id'], 'activated!')
+                        asset_urls_df.loc[idx, 'activation_code'] = 204
+                    else: print(row['id'], 'activating...')
+        time.sleep(5) # sleep 5s to start another round check
+
+    # update link for downloading
+    def get_download_link(asset_link):
+        res = client.ses.get(asset_link).json()[opts.asset_key] # normal request
+        time.sleep(.200)
+        return res['location'] if res['status'] == 'active' else np.nan
+    asset_urls_df['download_link'] = asset_urls_df['assets_url'].apply(get_download_link)
+
+    output = opts.output.replace('AssetKey', opts.asset_key) \
+        if opts.output == "download_links_AssetKey.csv" \
+        else opts.output
+    asset_urls_df.to_csv(output, index=False, sep='\t', na_rep='NaN')
+    print('check the download links in %s!'%output)
+
+def download(args):
     '''
+    %prog activate download_links.csv
+
+    download activated asset links 
+    '''
+    p = OptionParser(download.__doc__)
+    p.add_option('--output', default="'infer'",
+                help='default to construct the output file name from the API response')
+    opts, args = p.parse_args(args)
+    if len(args) != 1:
+        sys.exit(not p.print_help())
+    links_csv, = args
+    links_df = pd.read_csv(links_csv, delim_whitespace=True)
+    client = Client()
+
+    # Send a GET request to the provided location url,
+    for __, row in links_df.iterrows():
+        res = client.ses.get(row['download_link'], stream=True)
+        suffix = 'tif' if row['asset_type']=='visual' else row['asset_type']
+        output = '%s_%s.%s'%(row['id'], row['item_type'], suffix) \
+            if opts.output == "'infer'" else opts.output
+        # Save the file
+        with open(output, "wb") as f:
+            print('download %s...'%output)
+            for chunk in res.iter_content(chunk_size=1024):
+                if chunk: # filter out keep-alive new chunks
+                    f.write(chunk)
+                    f.flush()
+
 
 def main():
     actions = (
@@ -392,7 +498,8 @@ def main():
         ('item_types', 'print all available item types'),
         ('stat', 'check available imagery counts'),
         ('quick_search', 'perform quick search to get all the target ids'),
-        ('activate_download', 'activate and download assets for each item')
+        ('activate', 'activate assets for downloading'),
+        ('download', 'download activated links')
             )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
