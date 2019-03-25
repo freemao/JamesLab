@@ -30,7 +30,7 @@ def main():
         ('FixPlinkPed', 'fix the chr names issue and Convert -9 to 0 in the plink map file'),
         ('ped2bed', 'convert plink ped format to binary bed format'),
         ('genKinship', 'using gemma to generate centered kinship matrix'),
-        ('genPCA10', 'using tassel to generate the first 10 PCs'),
+        ('genPCA', 'using tassel to generate the first N PCs'),
         ('subsampling', 'resort hmp file by extracting part of samples'),
         ('downsampling', 'using part of SNPs when dataset is too large'),
         ('LegalHmp', 'convert illegal genotypes in hmp file to legal genotypes'),
@@ -416,29 +416,29 @@ def SortHmp(args):
     print('slurm file %s.Sort.slurm has been created, you can sbatch your job file.' % prefix)
 
 
-def genPCA10(args):
+def genPCA(args):
     """
-    %prog genPCA10 hmp
+    %prog genPCA hmp N
 
-    Generate first 10 PCs using tassel
+    Generate first N PCs using tassel
     """
-    p = OptionParser(genPCA10.__doc__)
+    p = OptionParser(genPCA.__doc__)
     p.set_slurm_opts(jn=True)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    hmp, = args
+    hmp, N, = args
     out_prefix = hmp.replace('.hmp', '')
-    cmd = '%s -Xms28g -Xmx29g -fork1 -h %s -PrincipalComponentsPlugin -ncomponents 10 -covariance true -endPlugin -export %s_10PCA -runfork1\n' % (tassel, hmp, out_prefix)
+    cmd = '%s -Xms28g -Xmx29g -fork1 -h %s -PrincipalComponentsPlugin -ncomponents %s -covariance true -endPlugin -export %s_%sPCA -runfork1\n' % (tassel, hmp, N, out_prefix, N)
 
     h = Slurm_header
     h += 'module load java/1.8\n'
     header = h % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
     header += cmd
-    f = open('%s.PCA10.slurm' % out_prefix, 'w')
+    f = open('%s.PCA%s.slurm' %(out_prefix,N), 'w')
     f.write(header)
     f.close()
-    print('slurm file %s.PCA10.slurm has been created, you can sbatch your job file.' % out_prefix)
+    print('slurm file %s.PCA%s.slurm has been created, you can sbatch your job file.' % (out_prefix,N))
 
 
 def reorgnzTasselPCA(args):
