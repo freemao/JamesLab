@@ -1,0 +1,20 @@
+### EXECUTION2019-05-16T12:55:11.651214 ###
+### EXECUTION2019-05-16T12:55:43.626238 ###
+Could not connect to zooniverse project
+> Invalid email or password.
+### EXECUTION2019-05-16T12:55:57.202051 ###
+Could not connect to zooniverse project
+> Invalid email or password.
+### EXECUTION2019-05-16T12:56:09.496667 ###
+Creating new subject set
+Manifest file must have a 'filename' column
+### EXECUTION2019-05-16T12:57:14.799243 ###
+### EXECUTION2019-05-16T12:57:31.801390 ###
+### EXECUTION2019-05-16T12:57:37.668151 ###
+### EXECUTION2019-05-16T12:58:08.130302 ###
+### EXECUTION2019-05-16T13:01:27.104919 ###
+### EXECUTION2019-05-16T13:02:53.065651 ###
+### EXECUTION2019-05-16T13:03:42.484877 ###
+### EXECUTION2019-05-16T13:04:01.895396 ###
+Manifest being generated with fields: [ id, filename ]
+DONE: 42 subjects written to manifest

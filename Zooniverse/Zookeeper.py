@@ -98,10 +98,10 @@ def manifest(args):
     p = OptionParser(manifest.__doc__)
     opts, args = p.parse_args(args)
 
-    if len(sys.argv) != 1:
+    if len(args) != 1:
         exit(not p.print_help())
 
-    imgdir = args[1]
+    imgdir = args[0]
 
     mani(imgdir)
 
