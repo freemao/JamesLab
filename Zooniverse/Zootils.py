@@ -20,8 +20,8 @@ except ImportError:
 
 log = logging.getLogger(__file__)
 log.setLevel(logging.DEBUG)
-log.addHandler(logging.FileHandler(osp.abspath(__file__) + ".log"))
-log.info('### EXECUTION' + dt.now().isoformat() + ' ###')
+log.addHandler(logging.FileHandler(osp.join(osp.dirname(osp.abspath(__file__)), "log"))
+log.info('### EXECUTION TIME: ' + dt.now().isoformat() + ' ###')
 log.addHandler(logging.StreamHandler())
 
                
