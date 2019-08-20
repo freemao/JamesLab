@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from PIL import Image
 from schnablelab.apps.base import cutlist, ActionDispatcher, OptionParser, glob
-from schnablelab.apps.header import Slurm_header, Slurm_gpu_header
+from schnablelab.apps.headers import Slurm_header, Slurm_gpu_header
 from schnablelab.apps.natsort import natsorted
 from glob import glob
 from pathlib import Path
