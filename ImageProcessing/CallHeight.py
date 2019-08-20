@@ -18,7 +18,7 @@ from matplotlib import rcParams
 from PIL import Image
 from math import hypot
 from schnablelab.apps.natsort import natsorted
-from schnablelab.apps.header import Slurm_header
+from schnablelab.apps.headers import Slurm_header
 from sklearn.linear_model import LinearRegression
 from schnablelab.apps.base import ActionDispatcher, OptionParser, glob
 import datetime
@@ -39,7 +39,7 @@ def main():
 
 def CallHeightRGB(args):
     """
-    %prog image_in_dir image_out_dir
+    %prog image_in_dir
     using thresholding method to calculate the plant height
     """
     p = OptionParser(CallHeightRGB.__doc__)
@@ -52,7 +52,7 @@ def CallHeightRGB(args):
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    imgInDir, imgOutDir = args
+    imgInDir, = args
     
     inPath = Path(imgInDir)
     imgs = list(inPath.glob('*png'))
@@ -128,7 +128,7 @@ def CallHeightRGB(args):
             # draw height and save results
             cv2.line(img, (500, y_lowest), (2000, y_lowest), (255,0,0), 7)    
             new_fn = row['fn'].replace('.png', '.height.png')
-            new_fn_path = Path(imgOutDir)/new_fn
+            new_fn_path = inPath/new_fn
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR) # cv2 assume your color is bgr
             cv2.imwrite(str(new_fn_path), img)
             #print('%s saved.'%new_fn)
