@@ -6,12 +6,14 @@ Find more details at cnblog:
 www.cnblogs.com/freemao/p/7076127.html
 """
 
+from pathlib import Path
 import os.path as op
 import sys
 from schnablelab.apps.base import ActionDispatcher, OptionParser, glob, iglob
 from schnablelab.apps.natsort import natsorted
 import subprocess
-from schnablelab.apps.header import Slurm_header
+from subprocess import run
+from schnablelab.apps.headers import Slurm_header
 
 # the location of linkimpute, beagle executable
 lkipt = op.abspath(op.dirname(__file__)) + '/../apps/LinkImpute.jar'
@@ -23,6 +25,7 @@ def main():
     actions = (
         ('splitVCF', 'split a vcf to several smaller files with equal size'),
         ('combineVCF', 'combine split vcfs'),
+        ('combineFQ', 'combine split fqs'),
         ('impute', 'impute vcf using beagle or linkimpute'),
         ('vcf2hmp', 'convert vcf to hmp format'),
         ('FixIndelHmp', 'fix the indels problems in hmp file converted from tassel'),
@@ -66,6 +69,22 @@ def splitVCF(args):
         cmd_cat = 'cat %s.header %s.%s.tmp.vcf > %s.%s.vcf' % (prefix, prefix, i, prefix, i)
         subprocess.call(cmd_cat, shell=True)
 
+def combineFQ(args):
+    """
+    %prog combineFQ pattern(with quotation) fn_out
+    """
+
+    p = OptionParser(combineFQ.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    fq_pattern, fn_out, = args
+    fns = glob(fq_pattern)
+    cmd = 'cat %s > %s'%(' '.join(fns), fn_out)
+    print(cmd)
+    run(cmd, shell=True)
+    
+    
 
 def combineVCF(args):
     """
