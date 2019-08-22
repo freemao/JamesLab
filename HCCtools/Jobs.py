@@ -10,7 +10,7 @@ import os.path as op
 import sys
 from schnablelab.apps.base import ActionDispatcher, OptionParser, glob,iglob
 from schnablelab.apps.natsort import natsorted
-from schnablelab.apps.header import Slurm_header
+from schnablelab.apps.headers import Slurm_header
 from subprocess import call
 from subprocess import Popen
 import subprocess

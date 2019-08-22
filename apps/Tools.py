@@ -136,6 +136,7 @@ def GenDataFrameFromPath(path, pattern='*.png'):
     """
     fnpaths = list(path.glob(pattern))
     df = pd.DataFrame(dict(zip(['fnpath'], [fnpaths])))
+    df['dir'] = df['fnpath'].apply(lambda x: x.parent)
     df['fn'] = df['fnpath'].apply(lambda x: x.name)
     return df
 

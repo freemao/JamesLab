@@ -10,6 +10,7 @@ from pathlib import Path
 from schnablelab.apps.base import ActionDispatcher, OptionParser, glob, iglob
 from schnablelab.apps.natsort import natsorted
 import subprocess
+from subprocess import run
 from schnablelab.apps.headers import Slurm_header
 
 
@@ -18,6 +19,7 @@ def main():
         ('fastqc', 'check the reads quality'),
         ('trim_paired', 'quality control on paired reads'),
         ('trim_single', 'quality control on single reads'),
+        ('combineFQ', 'combine splitted fastq files')
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
@@ -79,9 +81,9 @@ def trim_paired(args):
         r2_path = Path(r2_fn)
         prf = '_'.join(r1_path.name.split('_')[0:-1])+'.PE'
         print(prf)
-        r1_fn_out1 = r1_path.name.replace('R1.fastq', 'trimed.R1.fastq')
+        r1_fn_out1 = r1_path.name.replace('R1.fastq', 'trim.R1.fastq')
         r1_fn_out2 = r1_path.name.replace('R1.fastq', 'unpaired.R1.fastq')
-        r2_fn_out1 = r2_path.name.replace('R2.fastq', 'trimed.R2.fastq')
+        r2_fn_out1 = r2_path.name.replace('R2.fastq', 'trim.R2.fastq')
         r2_fn_out2 = r2_path.name.replace('R2.fastq', 'unpaired.R2.fastq')
         cmd = 'java -jar $TM_HOME/trimmomatic.jar PE -phred33 %s %s %s %s %s %s TRAILING:20 SLIDINGWINDOW:4:20 MINLEN:40'%(r1_fn,r2_fn,str(out_path/r1_fn_out1),str(out_path/r1_fn_out2),str(out_path/r2_fn_out1),str(out_path/r2_fn_out2))
         header = Slurm_header%(10, 10000, prf, prf, prf)
@@ -112,13 +114,28 @@ def trim_single(args):
         fn_path = Path(fn)
         prf = '_'.join(fn_path.name.split('_')[0:-1])+'.SE'
         print(prf)
-        fn_out = fn_path.name.replace('Unpaired.fastq', 'trimed.Unpaired.fastq')
+        fn_out = fn_path.name.replace('Unpaired.fastq', 'trim.Unpaired.fastq')
         cmd = 'java -jar $TM_HOME/trimmomatic.jar SE -phred33 %s %s TRAILING:20 SLIDINGWINDOW:4:20 MINLEN:40'%(fn, str(out_path/fn_out))
         header = Slurm_header%(10, 10000, prf, prf, prf)
         header += 'ml trimmomatic\n'
         header += cmd
         with open('%s.trim.slurm'%(prf), 'w') as f:
             f.write(header)
+
+def combineFQ(args):
+    """
+    %prog combineFQ pattern(with quotation) fn_out
+    """
+
+    p = OptionParser(combineFQ.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    fq_pattern, fn_out, = args
+    fns = glob(fq_pattern)
+    cmd = 'cat %s > %s'%(' '.join(fns), fn_out)
+    print(cmd)
+    run(cmd, shell=True)
 
 if __name__ == "__main__":
     main()
