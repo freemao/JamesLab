@@ -14,7 +14,7 @@ from pathlib import Path
 fns = glob('*_trimed.Unpaired.fastq')
 for fn in fns:
     sm = '_'.join(fn.split('_')[0:-1])
-    fn_out = '%s.trim.Unpaired.fastq'%sm
+    fn_out = '%s_trim.Unpaired.fastq'%sm
     if Path(fn_out).exists():
         print('%s exists, skip...'%fn_out)
     else:

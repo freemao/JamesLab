@@ -19,10 +19,65 @@ def main():
         ('fastqc', 'check the reads quality'),
         ('trim_paired', 'quality control on paired reads'),
         ('trim_single', 'quality control on single reads'),
-        ('combineFQ', 'combine splitted fastq files')
+        ('combineFQ', 'combine splitted fastq files'),
+        ('index_ref', 'index the genome sequences'),
+        ('align', 'align reads to the reference'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def align(args):
+    """
+    %prog align indx_base fq_fn ...
+
+    do alignment using bwa.
+    """
+    p = OptionParser(align.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args)==0:
+        sys.exit(not p.print_help())
+    ref_base = args[0]
+    fq_fns = args[1:]
+    sm = Path(fq_fns[0]).name.split('_trim')[0]
+    R = r"'@RG\tID:%s\tSM:%s'"%(sm, sm)
+    print(sm)
+    if len(fq_fns)==1:
+        sam = sm+'.se.sam'
+        print('run single-end alignment')
+        cmd = 'bwa mem -R %s %s %s > %s \n'%(R, ref_base, fq_fns[0], sam)
+        prf = '%s.se.align'%sm
+    elif len(fq_fns)==2:
+        sam = sm+'.pe.sam'
+        print('run paired-end alignment')
+        cmd = 'bwa mem -R %s %s %s %s > %s \n'%(R, ref_base, fq_fns[0], fq_fns[1], sam)
+        prf = '%s.pe.align'%sm
+    else:
+        sys.exit('only one or two read files')
+    header = Slurm_header%(100, 10000, prf, prf, prf)
+    header += 'ml bwa\n'
+    header += cmd
+    with open('%s.slurm'%prf, 'w') as f:
+        f.write(header)
+
+def index_ref(args):
+    """
+    %prog index_ref ref.fa
+
+    index the reference genome sequences
+    """
+    p = OptionParser(index_ref.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    ref_fn, = args
+    prefix = '.'.join(ref_fn.split('.')[0:-1])
+    cmd = 'bwa index -p %s %s'%(prefix, ref_fn)
+    print(cmd)
+    header = Slurm_header%(100, 15000, prefix, prefix, prefix)
+    header += 'ml bwa\n'
+    header += cmd
+    with open('%s.bwa_index.slurm'%prefix, 'w') as f:
+        f.write(header)
 
 def fastqc(args):
     """
