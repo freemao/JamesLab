@@ -22,9 +22,94 @@ def main():
         ('combineFQ', 'combine splitted fastq files'),
         ('index_ref', 'index the genome sequences'),
         ('align', 'align reads to the reference'),
+        ('sam2bam', 'convert sam format to bam format'),
+        ('sortbam', 'sort bam files'),
+        ('index_bam', 'index bam files'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def index_bam(args):
+    """
+    %prog bam_dir 
+        bam_dir: sorted bam files folder
+
+    index bam files using samtools/0.1 sort function.
+    """
+    p = OptionParser(index_bam.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args)==0:
+        sys.exit(not p.print_help())
+    bam_dir, = args
+    dir_path = Path(bam_dir)
+    bams = dir_path.glob('*.sorted.bam')
+    for bam in bams:
+        prf = bam.name.split('.sorted.bam')[0]
+        cmd = 'samtools index %s'%bam
+        header = Slurm_header%(10, 10000, prf, prf, prf)
+        header += 'ml samtools/0.1\n'
+        header += cmd
+        with open('%s.indexbam.slurm'%prf, 'w') as f:
+            f.write(header)
+
+def sortbam(args):
+    """
+    %prog in_dir out_dir
+        in_dir: bam files folder
+        out_dir: sorted bam files folder
+
+    sort bam files using samtools/0.1 sort function.
+    """
+    p = OptionParser(sortbam.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args)==0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir, = args
+
+    out_path = Path(out_dir)
+    if not out_path.exists():
+        sys.exit('%s does not exist...')
+    dir_path = Path(in_dir)
+    bams = dir_path.glob('*.bam')
+    for bam in bams:
+        prf = bam.name.split('.bam')[0]
+        sortbam = prf+'.sorted'
+        sortbam_path = out_path/sortbam
+        cmd = 'samtools sort %s %s'%(bam, sortbam)
+        header = Slurm_header%(100, 15000, prf, prf, prf)
+        header += 'ml samtools/0.1\n'
+        header += cmd
+        with open('%s.sortbam.slurm'%prf, 'w') as f:
+
+def sam2bam(args):
+    """
+    %prog in_dir out_dir
+        in_dir: sam files folder
+        out_dir: bam files folder
+
+    convert sam to bam using samtools/0.1.
+    """
+    p = OptionParser(sam2bam.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args)==0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir, = args
+
+    out_path = Path(out_dir)
+    if not out_path.exists():
+        sys.exit('%s does not exist...')
+    dir_path = Path(in_dir)
+    sams = dir_path.glob('*.sam')
+    for sam in sams:
+        prf = sam.name.split('.sam')[0]
+        bam = prf+'.bam'
+        bam_path = out_path/bam
+        cmd = 'samtools view -bS %s > %s'%(sam, bam_path)
+        header = Slurm_header%(100, 15000, prf, prf, prf)
+        header += 'ml samtools/0.1\n'
+        header += cmd
+        with open('%s.sam2bam.slurm'%prf, 'w') as f:
+            f.write(header)
 
 def align(args):
     """
@@ -97,7 +182,7 @@ def fastqc(args):
 
     out_path = Path(out_dir)
     if not out_path.exists():
-        print('%s does not exist...')
+        sys.exit('%s does not exist...')
     dir_path = Path(in_dir)
     fqs = dir_path.glob(opts.pattern)
     for fq in fqs:
@@ -127,8 +212,7 @@ def trim_paired(args):
     in_dir,out_dir, = args
     out_path = Path(out_dir)
     if not out_path.exists():
-        print('output dir %s does not exist...'%out_dir)
-        sys.exit(1)
+        sys.exit('output dir %s does not exist...'%out_dir)
     r1_fns = glob('%s/%s'%(in_dir, opts.pattern_r1))
     r2_fns = glob('%s/%s'%(in_dir, opts.pattern_r2))
     for r1_fn, r2_fn in zip(r1_fns, r2_fns):
@@ -162,8 +246,7 @@ def trim_single(args):
     in_dir,out_dir, = args
     out_path = Path(out_dir)
     if not out_path.exists():
-        print('output dir %s does not exist...'%out_dir)
-        sys.exit(1)
+        sys.exit('output dir %s does not exist...'%out_dir)
     fns = glob('%s/%s'%(in_dir, opts.pattern))
     for fn in fns:
         fn_path = Path(fn)
