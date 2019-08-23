@@ -5,13 +5,13 @@ Prepare fastq files ready for SNP calling
 """
 
 import sys
+import subprocess
 import os.path as op
 from pathlib import Path
-from schnablelab.apps.base import ActionDispatcher, OptionParser, glob, iglob
-from schnablelab.apps.natsort import natsorted
-import subprocess
 from subprocess import run
+from schnablelab.apps.natsort import natsorted
 from schnablelab.apps.headers import Slurm_header
+from schnablelab.apps.base import ActionDispatcher, OptionParser, glob, iglob
 
 
 def main():
@@ -25,9 +25,41 @@ def main():
         ('sam2bam', 'convert sam format to bam format'),
         ('sortbam', 'sort bam files'),
         ('index_bam', 'index bam files'),
+        ('split_fa_region', 'genearte a list of freebayes/bamtools region specifiers'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def split_fa_region(args):
+    """
+    %prog fa.fai region_size out_fn
+        fa.fai: index file for the fa file
+        region_size: the size for each splitted region
+        out_fn: the output file
+
+    genearte a list of freebayes/bamtools region specifiers
+    """
+    p = OptionParser(split_fa_region.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args)==0:
+        sys.exit(not p.print_help())
+    fasta_index_file, region_size, fn_out, = args
+    fasta_index_file = open(fasta_index_file)
+    region_size = int(region_size)
+    fn_out = open(fn_out, 'w')
+    for line in fasta_index_file:
+        fields = line.strip().split("\t")
+        chrom_name = fields[0]
+        chrom_length = int(fields[1])
+        region_start = 0
+        while region_start < chrom_length:
+            start = region_start
+            end = region_start + region_size
+            if end > chrom_length:
+                end = chrom_length
+            line = chrom_name + ":" + str(region_start) + "-" + str(end)+'\n'
+            fn_out.write(line)
+            region_start = end
 
 def index_bam(args):
     """
@@ -73,13 +105,14 @@ def sortbam(args):
     bams = dir_path.glob('*.bam')
     for bam in bams:
         prf = bam.name.split('.bam')[0]
-        sortbam = prf+'.sorted'
-        sortbam_path = out_path/sortbam
-        cmd = 'samtools sort %s %s'%(bam, sortbam)
+        sort_bam = prf+'.sorted'
+        sort_bam_path = out_path/sort_bam
+        cmd = 'samtools sort %s %s'%(bam, sort_bam_path)
         header = Slurm_header%(100, 15000, prf, prf, prf)
         header += 'ml samtools/0.1\n'
         header += cmd
         with open('%s.sortbam.slurm'%prf, 'w') as f:
+            f.write(header)
 
 def sam2bam(args):
     """
@@ -151,18 +184,29 @@ def index_ref(args):
     index the reference genome sequences
     """
     p = OptionParser(index_ref.__doc__)
+    p.add_option('--tool', default='bwa', choices=('bwa', 'samtools'),
+            help = 'tool for indexing reference genome')
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
     ref_fn, = args
     prefix = '.'.join(ref_fn.split('.')[0:-1])
-    cmd = 'bwa index -p %s %s'%(prefix, ref_fn)
-    print(cmd)
-    header = Slurm_header%(100, 15000, prefix, prefix, prefix)
-    header += 'ml bwa\n'
-    header += cmd
-    with open('%s.bwa_index.slurm'%prefix, 'w') as f:
-        f.write(header)
+    if opts.tool == 'bwa':
+        cmd = 'bwa index -p %s %s'%(prefix, ref_fn)
+        print(cmd)
+        header = Slurm_header%(100, 15000, prefix, prefix, prefix)
+        header += 'ml bwa\n'
+        header += cmd
+        with open('%s.bwa_index.slurm'%prefix, 'w') as f:
+            f.write(header)
+    else:
+        cmd = 'samtools faidx %s'%ref_fn
+        print(cmd)
+        header = Slurm_header%(10, 10000, prefix, prefix, prefix)
+        header += 'ml samtools\n'
+        header += cmd
+        with open('%s.samtools_index.slurm'%prefix, 'w') as f:
+            f.write(header)
 
 def fastqc(args):
     """

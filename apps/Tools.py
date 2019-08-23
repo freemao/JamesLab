@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os
 import sys
 import json
 import numpy as np
@@ -51,9 +52,6 @@ def bin_markers(df, diff=0, missing_value='-'):
         else:
             results.append(index[0])
     return represent_idx, block_idx, results
-
-
-
 
 def sort_merge_sort(arrays):
     """
@@ -129,7 +127,7 @@ def random_alternative(lens, values=[0,2]):
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
-def GenDataFrameFromPath(path, pattern='*.png'):
+def GenDataFrameFromPath(path, pattern='*.png', fs=False):
     """
     generate a dataframe for all file in a dir with the specific pattern of file name.
     use: GenDataFrameFromPath(path, pattern='*.png')
@@ -138,6 +136,8 @@ def GenDataFrameFromPath(path, pattern='*.png'):
     df = pd.DataFrame(dict(zip(['fnpath'], [fnpaths])))
     df['dir'] = df['fnpath'].apply(lambda x: x.parent)
     df['fn'] = df['fnpath'].apply(lambda x: x.name)
+    if fs:
+        df['size'] = df['fnpath'].apply(lambda x: os.path.getsize(x))
     return df
 
 def ConciseVcf(fn):
@@ -215,36 +215,4 @@ class SimpleStats(object):
     
     def agreement(self, cutoff):
         return (self.absdiff<=float(cutoff)).sum()/self.length
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
