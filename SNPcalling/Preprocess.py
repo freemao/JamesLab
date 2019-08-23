@@ -26,9 +26,29 @@ def main():
         ('sortbam', 'sort bam files'),
         ('index_bam', 'index bam files'),
         ('split_fa_region', 'genearte a list of freebayes/bamtools region specifiers'),
+        ('bam_list', 'genearte a list of bam files for freebayes -L use'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+
+def bam_list(args):
+    """
+    %prog bam_list bam_dir out_fn
+
+    genearte a list of bam files for freebayes -L use
+    """
+    p = OptionParser(bam_list.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args)==0:
+        sys.exit(not p.print_help())
+    bam_dir, fn_out, = args
+    dir_path = Path(bam_dir)
+    bams = sorted(dir_path.glob('*.bam'))
+    f = open(fn_out, 'w')
+    for bam in bams:
+        f.write('%s\n'%bam)
+    f.close()
 
 def split_fa_region(args):
     """
@@ -60,6 +80,7 @@ def split_fa_region(args):
             line = chrom_name + ":" + str(region_start) + "-" + str(end)+'\n'
             fn_out.write(line)
             region_start = end
+    fn_out.close()
 
 def index_bam(args):
     """
