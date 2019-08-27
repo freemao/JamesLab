@@ -29,6 +29,8 @@ def freebayes(args):
     create freebayes slurm jobs for each splitted region defined in region.txt file
     """
     p = OptionParser(freebayes.__doc__)
+    p.add_option('--max_depth', default=500,
+            help = 'cites where the mapping depth higher than this value will be ignored')
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
@@ -39,9 +41,9 @@ def freebayes(args):
             reg = reg.strip()
             reg_fn = reg.replace(':','_')
             reg_fn_vcf = '%s.vcf'%reg_fn
-            cmd = 'freebayes -r %s -f %s -C 1 -F 0.05 -L %s -u -n 2 > %s\n'%(reg, ref, bams, reg_fn_vcf)
+            cmd = 'freebayes -r %s -f %s -C 1 -F 0.05 -L %s -u -n 2 -g 500 > %s\n'%(reg, ref, bams, reg_fn_vcf)
             header = Slurm_header%(165, 20000, reg_fn, reg_fn, reg_fn)
-            header += 'ml freebayes\n'
+            header += 'ml freebayes/1.3\n'
             header += cmd
             with open('%s.fb.slurm'%reg_fn, 'w') as f1:
                 f1.write(header)
