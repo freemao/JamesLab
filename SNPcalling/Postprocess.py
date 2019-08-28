@@ -29,10 +29,65 @@ def main():
         ('impute', 'impute vcf using beagle or linkimpute'),
         ('vcf2hmp', 'convert vcf to hmp format'),
         ('FixIndelHmp', 'fix the indels problems in hmp file converted from tassel'),
+        ('FilterVCF', 'remove bad snps using bcftools'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
+def FilterVCF(args):
+    """
+    %prog FilterVCF dir_in dir_out
+
+    filter SNPs using bcftools
+    """
+
+    p = OptionParser(combineVCF.__doc__)
+    p.add_option('--pattern', default='*.vcf',
+                 help='file pattern for vcf files in dir_in')
+    p.add_option('--qual', default='10',
+                 help='minimum snp quality, 10: 10% is wrong, 20: 1% is wrong')
+    p.add_option('--n_alt', default='1',
+                 help='number of alt')
+    p.add_option('--maf',
+                 help='cutoff of minor allele frequency')
+    p.add_option('--missing',
+                 help='cutoff of missing rate')
+    p.add_option('--stype', default='snps,indels',
+                 help='snp types, comma separated if multiple types specified')
+    p.add_option('--normalization', default=False, action='store_true',
+                 help='perform normalization')
+    p.add_option('--ref', default='/work/schnablelab/cmiao/TimeSeriesGWAS/Genotype_GBS/Reference_Genome_4th/Sbicolor_454_v3.0.1.fa',
+                 help='required if --normalization specified')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir, = args
+    
+    out_path = Path(out_dir)
+    if not out_path.exists():
+        sys.exit('%s does not exist...')
+    dir_path = Path(in_dir)
+    vcfs = dir_path.glob(opts.pattern)
+
+    cond1 = 'N_ALT==%s && QUAL>=%s'%(opts.n_alt, opts.qual)
+    if opts.maf:
+        cond1 += ' && MAF>=%s'%opts.maf
+    if opts.missing:
+        cond1 += ' && NS/N_SAMPLES > %s'%opts.missing
+    cmd = "bcftools view -i '{cond1}' -v '{stype}' %s".format(cond1=cond1, stype=opts.stype)
+    if opts.normalization:
+        cmd += ' | bcftools norm -f %s -m -both'%(opts.ref)
+    cmd += ' > %s'
+    
+    for vcf in vcfs:
+        sm = '.'.join(vcf.name.split('.')[0:-1])
+        out_fn = sm+'.bcflt.vcf'
+        out_fn_path = out_path/out_fn
+        header = Slurm_header%(10, 20000, sm, sm, sm)
+        header += 'ml bcftools\n'
+        header += cmd%(vcf, out_fn_path)
+        with open('%s.bcflt.slurm'%sm, 'w') as f:
+            f.write(header)
 
 def splitVCF(args):
     """
