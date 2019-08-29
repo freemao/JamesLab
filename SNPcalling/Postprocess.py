@@ -274,33 +274,35 @@ def combineVCF(args):
 
 def impute(args):
     """
-    %prog impute vcf
+    %prog impute dir_in dir_out
     impute missing data in vcf using beagle or linkimpute
     """
     p = OptionParser(impute.__doc__)
-    p.set_slurm_opts(jn=False)
     p.add_option('--software', default='linkimpute', choices=('linkimpute', 'beagle'),
                  help='specify the imputation software')
+    p.add_option('--pattern', default='*.vcf',
+                 help='file pattern for vcf files in dir_in')
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    vcffile, = args
-    prefix = '.'.join(vcffile.split('.')[0:-1])
-    new_f = prefix + '.impt.vcf'
-
-    cmd = 'java -Xss48G -Xmx50G -jar %s -v %s %s \n' % (lkipt, vcffile, new_f) \
-        if opts.software == 'linkimpute' \
-        else 'java -Xss48G -Xmx50G -jar %s gt=%s out=%s.beagle \n' % (begle, vcffile, prefix)
-    header = Slurm_header % (opts.time, 51000, prefix, prefix, prefix)
-    header += 'module load java/1.7 \n' \
-        if opts.software == 'linkimpute' \
-        else 'module load java/1.8 \n'
-    header += cmd
-    f = open('%s.%s.slurm' % (prefix, opts.software), 'w')
-    f.write(header)
-    f.close()
-    print('slurm file %s.%s.slurm has been created! ' % (prefix, opts.software))
-
+    in_dir, out_dir, = args
+    out_path = Path(out_dir)
+    if not out_path.exists():
+        sys.exit('%s does not exist...')
+    dir_path = Path(in_dir)
+    vcfs = dir_path.glob(opts.pattern)
+    for vcf in vcfs:
+        sm = '.'.join(vcf.name.split('.')[0:-1])
+        out_fn = sm+'.LK.vcf' if opts.software=='linkimpute' else sm+'.BG'
+        out_fn_path = out_path/out_fn
+        cmd = 'java -Xss48G -Xmx50G -jar %s -v %s %s' % (lkipt, vcf, out_fn_path) \
+            if opts.software == 'linkimpute' \
+            else 'java -Xss48G -Xmx50G -jar %s gt=%s out=%s' % (begle, vcf, out_fn_path)
+        header = Slurm_header % (165, 51000, sm, sm, sm)
+        header += 'ml java/1.7\n' if opts.software == 'linkimpute' else 'ml java/1.8\n'
+        header += cmd
+        with open('%s.%s.slurm' % (sm, opts.software), 'w') as f:
+            f.write(header)
 
 def vcf2hmp(args):
     """
