@@ -41,7 +41,7 @@ def freebayes(args):
             reg = reg.strip()
             reg_fn = reg.replace(':','_')
             reg_fn_vcf = '%s.vcf'%reg_fn
-            cmd = 'freebayes -r %s -f %s -C 1 -F 0.05 -L %s -u -n 2 -g 500 > %s\n'%(reg, ref, bams, reg_fn_vcf)
+            cmd = 'freebayes -r %s -f %s -C 1 -F 0.05 -L %s -u -n 1 -g 10000 > %s\n'%(reg, ref, bams, reg_fn_vcf)
             header = Slurm_header%(165, 20000, reg_fn, reg_fn, reg_fn)
             header += 'ml freebayes/1.3\n'
             header += cmd

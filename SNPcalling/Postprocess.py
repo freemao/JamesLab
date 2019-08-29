@@ -17,7 +17,7 @@ from schnablelab.apps.headers import Slurm_header
 
 # the location of linkimpute, beagle executable
 lkipt = op.abspath(op.dirname(__file__)) + '/../apps/LinkImpute.jar'
-begle = op.abspath(op.dirname(__file__)) + '/../apps/beagle.21Jan17.6cc.jar'
+begle = op.abspath(op.dirname(__file__)) + '/../apps/beagle.24Aug19.3e8.jar'
 tassel = op.abspath(op.dirname(__file__)) + '/../apps/tassel-5-standalone/run_pipeline.pl'
 
 
@@ -30,9 +30,101 @@ def main():
         ('vcf2hmp', 'convert vcf to hmp format'),
         ('FixIndelHmp', 'fix the indels problems in hmp file converted from tassel'),
         ('FilterVCF', 'remove bad snps using bcftools'),
+        ('rmHetero', 'remove high heterozygous loci'),
+        ('subsampling', 'subsampling and reorder vcf files'),
+        ('fixGTsep', 'fix the allele separator for beagle imputation'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def fixGTsep(args):
+    """
+    %prog fixGTsep in_dir out_dir
+
+    replace the allele separator . in freebayes vcf file to / which is required for beagle
+    """
+    p = OptionParser(fixGTsep.__doc__)
+    p.add_option('--pattern', default='*.vcf',
+                 help='file pattern for vcf files in dir_in')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir, = args
+    out_path = Path(out_dir)
+    if not out_path.exists():
+        sys.exit('%s does not exist...')
+    dir_path = Path(in_dir)
+    vcfs = dir_path.glob(opts.pattern)
+    for vcf in vcfs:
+        sm = '.'.join(vcf.name.split('.')[0:-1])
+        out_fn = sm+'.fixGT.vcf'
+        out_fn_path = out_path/out_fn
+        cmd = "perl -pe 's/\s\.:/\t.\/.:/g' %s > %s"%(vcf, out_fn_path)
+        header = Slurm_header%(10, 10000, sm, sm, sm)
+        header += cmd
+        with open('%s.fixGT.slurm'%sm, 'w') as f:
+            f.write(header)
+
+def subsampling(args):
+    """
+    %prog subsampling in_dir out_dir samples.csv
+
+    subsampling and reorder samples in vcf file using bcftools
+    """
+    p = OptionParser(subsampling.__doc__)
+    p.add_option('--pattern', default='*.vcf',
+                 help='file pattern for vcf files in dir_in')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir,sm_fn, = args
+    out_path = Path(out_dir)
+    if not out_path.exists():
+        sys.exit('%s does not exist...')
+    dir_path = Path(in_dir)
+    vcfs = dir_path.glob(opts.pattern)
+    for vcf in vcfs:
+        sm = '.'.join(vcf.name.split('.')[0:-1])
+        out_fn = sm+'.subsm.vcf'
+        out_fn_path = out_path/out_fn
+        cmd = 'bcftools view -S %s %s > %s'%(sm_fn, vcf, out_fn_path)
+        header = Slurm_header%(10, 20000, sm, sm, sm)
+        header += 'ml bcftools\n'
+        header += cmd
+        with open('%s.subsm.slurm'%sm, 'w') as f:
+            f.write(header)
+
+def rmHetero(args):
+    """
+    %prog rmHetero in_dir out_dir
+
+    filter SNPs with high heterozygous rate
+    """
+
+    p = OptionParser(rmHetero.__doc__)
+    p.add_option('--pattern', default='*.vcf',
+                 help='file pattern for vcf files in dir_in')
+    p.add_option('--rate', default='0.05',
+                 help='heterozygous rate cutoff')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir, = args
+    out_path = Path(out_dir)
+    if not out_path.exists():
+        sys.exit('%s does not exist...')
+    dir_path = Path(in_dir)
+    vcfs = dir_path.glob(opts.pattern)
+    for vcf in vcfs:
+        sm = '.'.join(vcf.name.split('.')[0:-1])
+        out_fn = sm+'.rmHete.vcf'
+        out_fn_path = out_path/out_fn
+        cmd = 'python -m schnablelab.SNPcalling.FilterSNPs Heterozygous %s %s --h2_rate %s'%(vcf, out_fn_path, opts.rate)
+        header = Slurm_header%(10, 20000, sm, sm, sm)
+        #header += 'conda activate MCY\n'
+        header += cmd
+        with open('%s.rmHete.slurm'%sm, 'w') as f:
+            f.write(header)
 
 def FilterVCF(args):
     """
@@ -41,7 +133,7 @@ def FilterVCF(args):
     filter SNPs using bcftools
     """
 
-    p = OptionParser(combineVCF.__doc__)
+    p = OptionParser(FilterVCF.__doc__)
     p.add_option('--pattern', default='*.vcf',
                  help='file pattern for vcf files in dir_in')
     p.add_option('--qual', default='10',
@@ -186,7 +278,7 @@ def impute(args):
     impute missing data in vcf using beagle or linkimpute
     """
     p = OptionParser(impute.__doc__)
-    p.set_slurm_opts(jn=True)
+    p.set_slurm_opts(jn=False)
     p.add_option('--software', default='linkimpute', choices=('linkimpute', 'beagle'),
                  help='specify the imputation software')
     opts, args = p.parse_args(args)
@@ -196,10 +288,10 @@ def impute(args):
     prefix = '.'.join(vcffile.split('.')[0:-1])
     new_f = prefix + '.impt.vcf'
 
-    cmd = 'java -Xss100m -Xmx18G -jar %s -v %s %s \n' % (lkipt, vcffile, new_f) \
+    cmd = 'java -Xss48G -Xmx50G -jar %s -v %s %s \n' % (lkipt, vcffile, new_f) \
         if opts.software == 'linkimpute' \
-        else 'java -Xss16G -Xmx18G -jar %s gt=%s out=%s.beagle \n' % (begle, vcffile, prefix)
-    header = Slurm_header % (opts.time, 20000, opts.prefix, opts.prefix, opts.prefix)
+        else 'java -Xss48G -Xmx50G -jar %s gt=%s out=%s.beagle \n' % (begle, vcffile, prefix)
+    header = Slurm_header % (opts.time, 51000, prefix, prefix, prefix)
     header += 'module load java/1.7 \n' \
         if opts.software == 'linkimpute' \
         else 'module load java/1.8 \n'

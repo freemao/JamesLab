@@ -177,9 +177,11 @@ def align(args):
         sys.exit(not p.print_help())
     ref_base = args[0]
     fq_fns = args[1:]
+    print(fq_fns)
     sm = Path(fq_fns[0]).name.split('_trim')[0]
-    R = r"'@RG\tID:%s\tSM:%s'"%(sm, sm)
-    print(sm)
+    gid = sm.split('R')[0]
+    print(gid)
+    R = r"'@RG\tID:%s\tSM:%s'"%(gid, gid)
     if len(fq_fns)==1:
         sam = sm+'.se.sam'
         print('run single-end alignment')

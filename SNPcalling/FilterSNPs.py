@@ -13,7 +13,7 @@ from subprocess import call
 from schnablelab.apps.base import ActionDispatcher, OptionParser, glob,iglob
 from schnablelab.apps.natsort import natsorted
 import subprocess
-from schnablelab.apps.header import Slurm_header
+from schnablelab.apps.headers import Slurm_header
 
 def main():
     actions = (
@@ -156,7 +156,7 @@ def genotypes_count(snp):
 
 def Heterozygous(args):
     """
-    %prog vcf
+    %prog vcf_in vcf_out
     Remove bad and high heterizygous loci
     """
     p = OptionParser(Heterozygous.__doc__)
@@ -165,11 +165,10 @@ def Heterozygous(args):
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    vcffile, = args
+    vcffile, vcf_out, = args
     prefix = vcffile.split('.vcf')[0]
-    new_f = prefix + '.het.vcf'
     f0 = open(vcffile)
-    f1 = open(new_f, 'w')
+    f1 = open(vcf_out, 'w')
     for i in f0:
         if i.startswith('#'):
             f1.write(i)
