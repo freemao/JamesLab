@@ -99,7 +99,7 @@ def index_bam(args):
     for bam in bams:
         prf = bam.name.split('.sorted.bam')[0]
         cmd = 'samtools index %s'%bam
-        header = Slurm_header%(10, 10000, prf, prf, prf)
+        header = Slurm_header%(10, 8000, prf, prf, prf)
         header += 'ml samtools/0.1\n'
         header += cmd
         with open('%s.indexbam.slurm'%prf, 'w') as f:

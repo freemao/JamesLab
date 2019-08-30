@@ -295,10 +295,10 @@ def impute(args):
         sm = '.'.join(vcf.name.split('.')[0:-1])
         out_fn = sm+'.LK.vcf' if opts.software=='linkimpute' else sm+'.BG'
         out_fn_path = out_path/out_fn
-        cmd = 'java -Xss48G -Xmx50G -jar %s -v %s %s' % (lkipt, vcf, out_fn_path) \
+        cmd = 'java -Xmx60G -jar %s -v %s %s' % (lkipt, vcf, out_fn_path) \
             if opts.software == 'linkimpute' \
-            else 'java -Xss48G -Xmx50G -jar %s gt=%s out=%s' % (begle, vcf, out_fn_path)
-        header = Slurm_header % (165, 51000, sm, sm, sm)
+            else 'java -Xmx60G -jar %s gt=%s out=%s' % (begle, vcf, out_fn_path)
+        header = Slurm_header % (165, 61000, sm, sm, sm)
         header += 'ml java/1.7\n' if opts.software == 'linkimpute' else 'ml java/1.8\n'
         header += cmd
         with open('%s.%s.slurm' % (sm, opts.software), 'w') as f:
