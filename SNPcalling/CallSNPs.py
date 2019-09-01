@@ -73,10 +73,12 @@ def gatk(args):
     with open(regions) as f:
         for reg in f:
             reg = reg.strip()
+            if ':0-' in reg:
+                reg = reg.replace(':0-', ':1-')
             reg_fn = reg.replace(':','_')
             reg_fn_vcf = '%s.gatk.vcf'%reg_fn
             reg_fn_vcf_path = out_path/reg_fn_vcf
-            cmd = "gatk --java-options '-Xmx13G' HaplotypeCaller \\\n-R %s \\\n%s-O %s"%(ref, inputs, reg_fn_vcf_path)
+            cmd = "gatk --java-options '-Xmx13G' HaplotypeCaller \\\n-R %s -L %s \\\n%s-O %s"%(ref, reg, inputs, reg_fn_vcf_path)
             header = Slurm_header%(165, 15000, reg_fn, reg_fn, reg_fn)
             header += 'ml gatk4/4.1\n'
             header += cmd
