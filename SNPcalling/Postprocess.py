@@ -9,11 +9,12 @@ www.cnblogs.com/freemao/p/7076127.html
 from pathlib import Path
 import os.path as op
 import sys
+import pandas as pd
 from schnablelab.apps.base import ActionDispatcher, OptionParser, glob, iglob
 from schnablelab.apps.natsort import natsorted
 import subprocess
 from subprocess import run
-from schnablelab.apps.headers import Slurm_header
+from schnablelab.apps.headers import Slurm_header, multiCPU_header
 
 # the location of linkimpute, beagle executable
 lkipt = op.abspath(op.dirname(__file__)) + '/../apps/LinkImpute.jar'
@@ -26,7 +27,7 @@ def main():
         ('splitVCF', 'split a vcf to several smaller files with equal size'),
         ('combineVCF', 'combine split vcfs'),
         ('combineFQ', 'combine split fqs'),
-        ('impute', 'impute vcf using beagle or linkimpute'),
+        ('impute_beagle', 'impute vcf using beagle or linkimpute'),
         ('vcf2hmp', 'convert vcf to hmp format'),
         ('FixIndelHmp', 'fix the indels problems in hmp file converted from tassel'),
         ('FilterVCF', 'remove bad snps using bcftools'),
@@ -136,10 +137,10 @@ def FilterVCF(args):
     p = OptionParser(FilterVCF.__doc__)
     p.add_option('--pattern', default='*.vcf',
                  help='file pattern for vcf files in dir_in')
-    p.add_option('--qual', default='10',
-                 help='minimum snp quality, 10: 10% is wrong, 20: 1% is wrong')
     p.add_option('--n_alt', default='1',
                  help='number of alt')
+    p.add_option('--qual',
+                 help='minimum snp quality, 10: 10% is wrong, 20: 1% is wrong')
     p.add_option('--maf',
                  help='cutoff of minor allele frequency')
     p.add_option('--missing',
@@ -161,11 +162,14 @@ def FilterVCF(args):
     dir_path = Path(in_dir)
     vcfs = dir_path.glob(opts.pattern)
 
-    cond1 = 'N_ALT==%s && QUAL>=%s'%(opts.n_alt, opts.qual)
+    cond1 = 'N_ALT==%s'%opts.n_alt
+    if opts.qual:
+        cond1 += ' && QUAL>=%s'%opts.qual
     if opts.maf:
         cond1 += ' && MAF>=%s'%opts.maf
     if opts.missing:
-        cond1 += ' && NS/N_SAMPLES > %s'%opts.missing
+        missing_rate = 1 - float(opts.missing)
+        cond1 += ' && NS/N_SAMPLES > %.2f'%missing_rate
     cmd = "bcftools view -i '{cond1}' -v '{stype}' %s".format(cond1=cond1, stype=opts.stype)
     if opts.normalization:
         cmd += ' | bcftools norm -f %s -m -both'%(opts.ref)
@@ -175,7 +179,7 @@ def FilterVCF(args):
         sm = '.'.join(vcf.name.split('.')[0:-1])
         out_fn = sm+'.bcflt.vcf'
         out_fn_path = out_path/out_fn
-        header = Slurm_header%(10, 20000, sm, sm, sm)
+        header = Slurm_header%(10, 8000, sm, sm, sm)
         header += 'ml bcftools\n'
         header += cmd%(vcf, out_fn_path)
         with open('%s.bcflt.slurm'%sm, 'w') as f:
@@ -272,16 +276,16 @@ def combineVCF(args):
     f.close()
 
 
-def impute(args):
+def impute_beagle(args):
     """
-    %prog impute dir_in dir_out
-    impute missing data in vcf using beagle or linkimpute
+    %prog impute_beagle dir_in dir_out
+    impute missing data in vcf using beagle 
     """
-    p = OptionParser(impute.__doc__)
-    p.add_option('--software', default='linkimpute', choices=('linkimpute', 'beagle'),
-                 help='specify the imputation software')
+    p = OptionParser(impute_beagle.__doc__)
     p.add_option('--pattern', default='*.vcf',
-                 help='file pattern for vcf files in dir_in')
+                 help = 'file pattern for vcf files in dir_in')
+    p.add_option('--parameter_file',
+                 help = 'file including window, overlap parameters')
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
@@ -289,19 +293,30 @@ def impute(args):
     out_path = Path(out_dir)
     if not out_path.exists():
         sys.exit('%s does not exist...')
+
+    if opts.parameter_file:
+        df = pd.read_csv(opts.parameter_file)
+        df = df.set_index('fn')
+    
     dir_path = Path(in_dir)
     vcfs = dir_path.glob(opts.pattern)
     for vcf in vcfs:
         sm = '.'.join(vcf.name.split('.')[0:-1])
-        out_fn = sm+'.LK.vcf' if opts.software=='linkimpute' else sm+'.BG'
+        out_fn = sm+'.BG'
         out_fn_path = out_path/out_fn
-        cmd = 'java -Xmx60G -jar %s -v %s %s' % (lkipt, vcf, out_fn_path) \
-            if opts.software == 'linkimpute' \
-            else 'java -Xmx60G -jar %s gt=%s out=%s' % (begle, vcf, out_fn_path)
-        header = Slurm_header % (165, 61000, sm, sm, sm)
-        header += 'ml java/1.7\n' if opts.software == 'linkimpute' else 'ml java/1.8\n'
+        if opts.parameter_file:
+            if vcf.name in df.index:
+                window = df.loc[vcf.name, 'marker_5cm']
+                overlap = df.loc[vcf.name, 'marker_0.5cm']
+                cmd = 'beagle -Xmx60G gt=%s out=%s window=%s overlap=%s nthreads=10' % (vcf, out_fn_path, window, overlap)
+            else:
+                sys.exit('vcf file not in the parameter file')
+        else:
+            cmd = 'beagle -Xmx60G gt=%s out=%s nthreads=10' % (begle, vcf, out_fn_path)
+        header = multiCPU_header % (10, 167, 65000, sm, sm, sm)
+        header += 'ml beagle/4.1\n'
         header += cmd
-        with open('%s.%s.slurm' % (sm, opts.software), 'w') as f:
+        with open('%s.beagle.slurm' % sm, 'w') as f:
             f.write(header)
 
 def vcf2hmp(args):
