@@ -112,18 +112,26 @@ def Predict(args):
         print(npy)
         test_npy = np.load(npy)
         npy_shape = test_npy.shape
-        test_npy_2d = test_npy.reshape(npy_shape[0]*npy_shape[1], npy_shape[2])
+        np_dim = len(npy_shape)
+        test_npy_2d = test_npy.reshape(npy_shape[0]*npy_shape[1], npy_shape[2]) if np_dim==3 else test_npy
         print('testing data shape:', test_npy_2d.shape)
         pre_prob = my_model.predict(test_npy_2d)
         predictions = pre_prob.argmax(axis=1) # this is a numpy array
-        predictions = predictions.reshape(npy_shape[0], npy_shape[1])
-        df = pd.DataFrame(predictions)
-        df1 = df.replace(0, 255).replace(1, 127).replace(2, 253).replace(3, 190)#0: background; 1: leaf; 2: stem; 3: panicle
-        df2 = df.replace(0, 255).replace(1, 201).replace(2, 192).replace(3, 174)
-        df3 = df.replace(0, 255).replace(1, 127).replace(2, 134).replace(3, 212) 
-        arr = np.stack([df1.values, df2.values, df3.values], axis=2)
-        opt = npy.split('/')[-1].split('.npy')[0]+'.prd'
-        sm.imsave('%s.%s.png'%(opf,opt), arr)
+
+        if np_dim == 3:
+            predictions = predictions.reshape(npy_shape[0], npy_shape[1])
+            df = pd.DataFrame(predictions)
+            df1 = df.replace(0, 255).replace(1, 127).replace(2, 253).replace(3, 190)#0: background; 1: leaf; 2: stem; 3: panicle
+            df2 = df.replace(0, 255).replace(1, 201).replace(2, 192).replace(3, 174)
+            df3 = df.replace(0, 255).replace(1, 127).replace(2, 134).replace(3, 212) 
+            arr = np.stack([df1.values, df2.values, df3.values], axis=2)
+            opt = npy.split('/')[-1].split('.npy')[0]+'.prd'
+            sm.imsave('%s.%s.png'%(opf,opt), arr)
+        elif np_dim == 2:
+            opt = npy.split('/')[-1].split('.npy')[0]+'.prd'
+            np.savetxt('%s.%s.csv'%(opf, opt), predictions)
+        else:
+            sys.exit('either 2 or 3 dim numpy array!')
         print('Done!')
 
 def PredictSlurmCPU(args):
