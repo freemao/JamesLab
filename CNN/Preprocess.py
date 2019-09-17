@@ -38,9 +38,10 @@ def hyp2arr_slurms(args):
     num_arrs = len(folders)
     print('%s hyper folders found'%num_arrs)
     for hyp_dir in folders:
+        in_dir = str(hyp_dir/'Hyp_SV_90')
         out_fn = hyp_dir.name.replace(' ', '_')
         out_fn_path = out_path/out_fn
-        cmd = 'python -m schnablelab.CNN.Preprocess hyp2arr %s %s'%(hyp_dir/'Hyp_SV_90', out_fn_path)
+        cmd = 'python -m schnablelab.CNN.Preprocess hyp2arr %s %s'%(in_dir, out_fn_path)
         print(cmd)
         header = Slurm_header%(10, 5000, out_fn, out_fn, out_fn)
         header += 'conda activate MCY\n'
