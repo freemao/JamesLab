@@ -12,7 +12,7 @@ from numpy.random import uniform
 from schnablelab.apps.Tools import eprint
 from schnablelab.apps.natsort import natsorted
 from schnablelab.apps.base import ActionDispatcher, OptionParser
-from schnablelab.apps.header import Slurm_header, Slurm_gpu_header
+from schnablelab.apps.headers import Slurm_header, Slurm_gpu_header
 
 def main():
     actions = (

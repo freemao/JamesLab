@@ -31,6 +31,7 @@ def main():
         ('vcf2hmp', 'convert vcf to hmp format'),
         ('FixIndelHmp', 'fix the indels problems in hmp file converted from tassel'),
         ('FilterVCF', 'remove bad snps using bcftools'),
+        ('onlyMissing', 'perform filtering only on missing data'),
         ('rmHetero', 'remove high heterozygous loci'),
         ('subsampling', 'subsampling and reorder vcf files'),
         ('fixGTsep', 'fix the allele separator for beagle imputation'),
@@ -183,6 +184,56 @@ def FilterVCF(args):
         header += 'ml bcftools\n'
         header += cmd%(vcf, out_fn_path)
         with open('%s.bcflt.slurm'%sm, 'w') as f:
+            f.write(header)
+
+def getSMsNum(vcffile):
+    call('module load bcftools', shell=True)
+    child = subprocess.Popen('bcftools query -l %s|wc -l'%vcffile, shell=True, stdout=subprocess.PIPE)
+    SMs_num = float(child.communicate()[0])
+    return SMs_num
+
+
+def onlyMissing(args):
+    """
+    %prog dir_in dir_out
+    Remove SNPs with high missing rate (>0.4 by default)
+    """
+    p = OptionParser(onlyMissing.__doc__)
+    p.add_option('--pattern', default = '*.vcf',
+        help = 'remove loci with high missing data rate')
+    p.add_option('--missing_rate', default = 0.7,
+        help = 'specify the missing rate cutoff. SNPs with missing rate higher than this cutoff will be removed.')
+    p.add_option('--software', default = 'GATK',
+        help = 'specify the software generating the vcf file.')
+    p.add_option('--total_sm', default = 'infer',
+        help = 'specify total samples in the vcf file.')
+
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir, = args
+
+    out_path = Path(out_dir)
+    if not out_path.exists():
+        sys.exit('%s does not exist...')
+    dir_path = Path(in_dir)
+    vcfs = dir_path.glob(opts.pattern)
+    nonMR = 1-float(opts.missing_rate)
+
+    for vcf in vcfs:
+        prefix = '.'.join(vcf.name.split('.')[0:-1])
+        total_sm = getSMsNum(str(vcf)) if opts.total_sm == 'infer' else opts.total_sm
+        print('Total %s Samples.'%total_sm)
+        out_fn = prefix+'.mis.vcf'
+        out_fn_path = out_path/out_fn
+        if opts.software == 'GATK':
+            cmd = "bcftools view -i 'AN/%s >= %.2f' %s > %s\n"%(int(total_sm)*2, nonMR, vcf, out_fn_path)
+        else:
+            cmd = "bcftools view -i 'NS/%s >= %.2f' %s > %s\n"%(int(total_sm)*2, nonMR, vcf, out_fn_path)
+        header = Slurm_header%(10, 8000, prefix, prefix, prefix)
+        header += 'ml bcftools\n'
+        header += cmd
+        with open('%s.mis.slurm'%prefix, 'w') as f:
             f.write(header)
 
 def splitVCF(args):

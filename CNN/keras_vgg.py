@@ -17,14 +17,14 @@ from keras.optimizers import SGD
 ts = (256, 256)
 def preprocess(img_dir):
     imgs = []
-    all_imgs = glob(img_dir + '/*/*png')
+    all_imgs = glob(img_dir + '/*/*.jpeg')
     for i in all_imgs:
         img = load_img(i, target_size = ts)
         img_array = img_to_array(img)
         imgs.append(img_array)
     imgs = np.array(imgs)
-    #print(imgs.shape)
-    #print('the demension of image array: %s'%(','.join([str(i) for i in imgs.shape]))) 
+    print(imgs.shape)
+    print('the demension of image array: %s'%(','.join([str(i) for i in imgs.shape]))) 
     return imgs
 
 def train(train_dir, val_dir, Categories, lr, epc, model_name):
@@ -84,10 +84,10 @@ def train(train_dir, val_dir, Categories, lr, epc, model_name):
       Conv2D(512, (3, 3), activation='relu', padding='same'),
       MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
       #Dropout(0.25),
-      #Conv2D(512, (3, 3), activation='relu', padding='same',),
-      #Conv2D(512, (3, 3), activation='relu', padding='same',),
-      #Conv2D(512, (3, 3), activation='relu', padding='same',),
-      #MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
+      Conv2D(512, (3, 3), activation='relu', padding='same',),
+      Conv2D(512, (3, 3), activation='relu', padding='same',),
+      Conv2D(512, (3, 3), activation='relu', padding='same',),
+      MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
       #Dropout(0.25),
       Flatten(),
       Dense(500, activation='relu'),
@@ -104,10 +104,12 @@ def train(train_dir, val_dir, Categories, lr, epc, model_name):
       metrics=['accuracy']
       )
     print('compile done')
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=200)
     model_history = model.fit_generator(
       train_generator, 
       epochs=int(epc), 
-      validation_data=val_generator
+      validation_data=val_generator,
+      callbacks=[es]
       )
 
     model.save('%s.h5'%model_name)
