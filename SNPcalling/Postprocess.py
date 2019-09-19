@@ -25,7 +25,7 @@ tassel = op.abspath(op.dirname(__file__)) + '/../apps/tassel-5-standalone/run_pi
 def main():
     actions = (
         ('splitVCF', 'split a vcf to several smaller files with equal size'),
-        ('combineVCF', 'combine split vcfs'),
+        ('merge_files', 'combine split vcf or hmp files'),
         ('combineFQ', 'combine split fqs'),
         ('impute_beagle', 'impute vcf using beagle or linkimpute'),
         ('vcf2hmp', 'convert vcf to hmp format'),
@@ -120,8 +120,7 @@ def rmHetero(args):
     for vcf in vcfs:
         sm = '.'.join(vcf.name.split('.')[0:-1])
         out_fn = sm+'.rmHete.vcf'
-        out_fn_path = out_path/out_fn
-        cmd = 'python -m schnablelab.SNPcalling.FilterSNPs Heterozygous %s %s --h2_rate %s'%(vcf, out_fn_path, opts.rate)
+        cmd = 'python -m schnablelab.SNPcalling.FilterSNPs Heterozygous %s %s --h2_rate %s'%(vcf, out_path/out_fn, opts.rate)
         header = Slurm_header%(10, 20000, sm, sm, sm)
         #header += 'conda activate MCY\n'
         header += cmd
@@ -288,44 +287,35 @@ def combineFQ(args):
     
     
 
-def combineVCF(args):
+def merge_files(args):
     """
-    %prog combineVCF N pattern
-    combine split vcf (1-based) files to a single one. Pattern example: hmp321_agpv4_chr9.%s.beagle.vcf
+    %prog merge_files pattern out_fn
+    combine split vcf files to a single one. Pattern example: 'hmp321_agpv4_chr9.%s.beagle.vcf'
+    revise the lambda fucntion to fit your file patterns
     """
 
-    p = OptionParser(combineVCF.__doc__)
-    p.add_option('--header', default='yes', choices=('yes', 'no'),
-                 help='choose whether add header or not')
+    p = OptionParser(merge_files.__doc__)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    N, vcf_pattern, = args
-    N = int(N)
-    new_f = vcf_pattern.replace('%s', '').replace('..', '.')
-    print('output file: %s' % new_f)
+    pattern,out_fn, = args
 
-    f = open(new_f, 'w')
+    fns = [str(i) for i in list(Path('.').glob(pattern))]
+    fns_sorted = sorted(fns, key=lambda x: int(x.split('_')[1].split('-')[0]))
+    print(fns_sorted)
+    print('%s files found!'%len(fns_sorted))
 
-    fn1 = open(vcf_pattern % 1)
-    print(1)
-    if opts.header == 'yes':
-        for i in fn1:
+    f = open(out_fn, 'w')
+    print(fns_sorted[0])
+    with open(fns_sorted[0]) as f1:
+        for i in f1:
             f.write(i)
-    else:
-        for i in fn1:
-            if not i.startswith('#'):
-                f.write(i)
-    fn1.close()
-    for i in range(2, N + 1):
+    for i in fns_sorted[1:]:
         print(i)
-        fn = open(vcf_pattern % i)
-        for j in fn:
-            if not j.startswith('#'):
-                f.write(j)
-        fn.close()
-    f.close()
-
+        with open(i) as f2:
+            for j in f2:
+                if not j.startswith('#'):
+                    f.write(j)
 
 def impute_beagle(args):
     """

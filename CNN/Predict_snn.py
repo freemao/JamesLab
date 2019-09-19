@@ -157,7 +157,7 @@ def PredictSlurmCPU(args):
         st, ed = gn.split('-')
         ed = int(ed)+1
         gn = '%s-%s'%(st, ed)
-        cmd = "python -m schnablelab.CNN.Predict Predict %s '%s' %s\n"%(mn, npy_pattern, gn)
+        cmd = "python -m schnablelab.CNN.Predict_snn Predict %s '%s'\n"%(mn, npy_pattern)
         opt = '%s.%s'%(opts.prefix, gn)
         header = Slurm_header%(opts.time, opt, opt, opt, opt)
         header += "ml anaconda\nsource activate Py3KerasTensorCPU\n"
@@ -188,7 +188,7 @@ def PredictSlurmGPU(args):
         st, ed = gn.split('-')
         ed = int(ed)+1
         gn = '%s-%s'%(st, ed)
-        cmd = "python -m schnablelab.CNN.Predict Predict %s '%s' %s\n"%(mn, npy_pattern, gn)
+        cmd = "python -m schnablelab.CNN.Predict_snn Predict %s '%s'\n"%(mn, npy_pattern)
         opt = '%s.%s'%(opts.prefix, gn)
         header = Slurm_gpu_header%(opts.time, opts.memory, opt, opt, opt)
         header += "ml anaconda\nsource activate MCY\n"

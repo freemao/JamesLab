@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from PIL import Image
 from schnablelab.apps.base import ActionDispatcher, OptionParser, glob
-from schnablelab.apps.header import Slurm_header, Slurm_gpu_constraint_header, Slurm_gpu_header
+from schnablelab.apps.headers import Slurm_header, Slurm_gpu_constraint_header, Slurm_gpu_header
 from schnablelab.apps.natsort import natsorted
 from glob import glob
 from PIL import Image
@@ -36,7 +36,7 @@ def dpp(args):
     using your trained dpp model to make predictions.
     """
     p = OptionParser(dpp.__doc__)
-    p.set_slurm_opts(jn=True, gpu=True, env=True)
+    p.set_slurm_opts(jn=True, gpu=True)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())

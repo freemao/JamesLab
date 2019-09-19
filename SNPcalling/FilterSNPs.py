@@ -9,6 +9,7 @@ https://samtools.github.io/bcftools/bcftools.html
 import pandas as pd
 import os.path as op
 import sys
+from pathlib import Path
 from subprocess import call
 from schnablelab.apps.base import ActionDispatcher, OptionParser, glob,iglob
 from schnablelab.apps.natsort import natsorted
@@ -17,47 +18,16 @@ from schnablelab.apps.headers import Slurm_header
 
 def main():
     actions = (
-        ('Preprocess', 'preprocess raw SNPs by controlling the number of ALT, quality score, MAF, missing rate, variant type, reclibrate position, split msnp to snp.'),
         ('NUM_ALT', 'filter number of alternative SNPs'),
         ('Missing', 'filter missing rate'),
         ('Heterozygous', 'filter SNPs with high heterozygous rates'),
         ('Bad_Indels', 'remove wrong INDELs'),
-        ('MAF', 'filter minor allele frequency'),
+        ('MAF_unimputed', 'filter minor allele frequency using bcftools'),
         ('Subsampling', 'choose part of samples from vcf'),
         ('GrepImputatedVcf', 'grep the SNPs with lower missing rate before imputation from whole imputed vcf'),
 )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
-
-def Preprocess(args):
-    """
-    %prog Preprocess dir
-    1, Only keep variants: number of ALT==1, quality score >=10, MAF>=0.01, missing rate>0.3, type is snp. 
-    2, split msnp to snps.
-    only applicable on the unimputed vcf files.
-    """
-    p = OptionParser(Preprocess.__doc__)
-    p.set_slurm_opts(jn=True)
-    opts, args = p.parse_args(args)
-
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    mydir, = args
-
-    allfiles = [i for i in os.listdir('.') if i.endswith('.vcf')]
-    print('Total %s .vcf files'%len(allfiles))
-    for i in allfiles:
-        SM = i.split('.')[0]
-        cmd = "bcftools view -i 'N_ALT==1 && QUAL>=10 && MAF>=0.01 && NS/N_SAMPLES > 0.3' -v 'snps' %s | bcftools -m -snps > %s.prprcss.vcf"%(i, SM)
-        jobfile = '%s.PreprocessVCF.slurm'%SM
-        f = open(jobfile, 'w')
-        header = Slurm_header%(opts.time, opts.memory, SM, SM, SM)
-        header += 'module load bcftools\n'
-        header += cmd
-        f.write(header)
-        f.close()
-    print('slurm file %s.PreprocessVCF.slurm has been created, now you can sbatch your job files.'%SM)
-
 
 def Subsampling(args):
     """
@@ -174,7 +144,7 @@ def Heterozygous(args):
             f1.write(i)
         else:
             a1, a2, h, m = genotypes_count(i)
-            if h < min(a1, a2) and h/float(a1+a2+h) < float(opts.h2_rate):
+            if h <= max(a1, a2) and h/float(a1+a2+h) <= float(opts.h2_rate):
                 f1.write(i)
     f0.close()
     f1.close()
@@ -185,28 +155,39 @@ def getSMsNum(vcffile):
     SMs_num = float(child.communicate()[0])
     return SMs_num
 
-def MAF(args):
+def MAF_unimputed(args):
     """
-    %prog vcf
-    Remove SNPs with rare MAF using bcftools.
+    %prog MAF_unimputed in_dir out_dir
+    do filtering on MAF using bcftools.
     """
-    p = OptionParser(MAF.__doc__)
+    p = OptionParser(MAF_unimputed.__doc__)
+    p.add_option("--pattern", default = '*.vcf', 
+            help="the pattern of vcf files, qutation needed") 
     p.add_option('--maf', default = '0.01',
-        help = 'specify the missing rate cutoff, MAF less than this cutoff will be removed.')
-    p.add_option('--imputed', choices=('yes', 'no'), default = 'no',
-        help = "specify if the vcf was imputed.")
+        help = 'specify the missing rate cutoff, MAF smaller than this cutoff will be removed.')
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    vcffile, = args   
+    in_dir, out_dir, = args   
     maf = float(opts.maf)
-    prefix = vcffile.split('.vcf')[0]
-    new_f = prefix + '.maf.vcf'
-    if opts.imputed == 'no':
-        call('module load bcftools', shell=True)
-        cmd = "bcftools view -i 'AF>=%s && AF<=%s' %s > %s"%(maf, 1-maf, vcffile, new_f)    
-        call(cmd, shell=True)
-        print('Done!, check %s'%new_f)
+
+    out_path = Path(out_dir)
+    if not out_path.exists():
+        sys.exit('%s does not exist...')
+    dir_path = Path(in_dir)
+    vcfs = dir_path.glob(opts.pattern)
+    for vcf in vcfs:
+        prf = vcf.name.split('.vcf')[0]
+        new_vcf = prf +'.maf.vcf'
+        cmd = "bcftools view -i 'AF>=%s && AF<=%s' %s > %s"%(maf, 1-maf, vcf, out_path/new_vcf) 
+        header = Slurm_header%(10, 5000, prf, prf, prf)
+        header += 'ml bcftools\n'
+        header += cmd
+        with open('%s.maf%s.slurm'%(prf, maf), 'w') as f:
+            f.write(header)
+
+def MAF_imputed(args):
+    '''
     else:
         f1 = open(new_f, 'w')
         with open(vcffile) as f0:
@@ -219,6 +200,7 @@ def MAF(args):
                     if maf >= float(opts.maf):
                         f1.write(i)
         f1.close()
+    '''
     
 def GrepImputatedVcf(args):
     """

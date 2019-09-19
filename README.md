@@ -12,4 +12,8 @@ Then add `export PYTHONPATH=~/MyRepo:$PYTHONPATH` to your `~/.bashrc` file and r
 * [Scipy](http://www.scipy.org)
 * [scikit-learn](https://scikit-learn.org/stable/)
 
+#### dependencies for some functions
+* [Pillow](https://pillow.readthedocs.io/en/stable/)
+* [opencv](https://pypi.org/project/opencv-python/)
+
 All the dependencies can be installed through `easy_install`, `pip` or `conda install`.
