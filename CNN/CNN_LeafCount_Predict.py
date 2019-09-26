@@ -8,21 +8,19 @@ import os
 
 class CornLeafRegressor(object):
     model = None
-    # TODO: Convert images to 256 or convert these vars to the image dims?
     img_height = 256
     img_width = 256
 
-    def __init__(self, model_dir, batch_size=2):
+    def __init__(self, model_dir, batch_size=9):
         """A network which predicts rosette leaf count via a convolutional neural net"""
         
         self.__dir_name = os.path.join(model_dir)
-        self.model = dpp.DPPModel(debug=False, load_from_saved=self.__dir_name)
+        self.model = dpp.RegressionModel(debug=False, load_from_saved=self.__dir_name)
         # Define model hyperparameters
         self.model.set_batch_size(batch_size)
         self.model.set_number_of_threads(1)
         self.model.set_image_dimensions(self.img_height, self.img_width, 3)
         self.model.set_resize_images(True)
-        self.model.set_problem_type('regression')
         self.model.set_augmentation_crop(True)
         # Define a model architecture
         self.model.add_input_layer()
