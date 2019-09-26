@@ -43,7 +43,7 @@ def dpp(args):
         help = 'tensorboard dir name')
     p.add_option('--epoch', default=500,
         help = 'number of epoches. set to 500 for leaf couting problem')
-    p.add_option('--split_ratio', default=0.2,
+    p.add_option('--split_ratio', default=0,
         help = 'the ratio of training dataset used for testing')
     p.add_option('--lr_n', default=1, type='int',
         help = 'train model with differnt learning rates. if n=1: set lr to 0.001. if n>1: try differnt lr from 1e-2 to 1e-5 n times')
