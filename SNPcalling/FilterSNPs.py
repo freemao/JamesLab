@@ -19,10 +19,11 @@ from schnablelab.apps.headers import Slurm_header
 def main():
     actions = (
         ('NUM_ALT', 'filter number of alternative SNPs'),
-        ('Missing', 'filter missing rate'),
+        ('Missing', 'filter missing rate using customized script'),
         ('Heterozygous', 'filter SNPs with high heterozygous rates'),
         ('Bad_Indels', 'remove wrong INDELs'),
-        ('MAF_unimputed', 'filter minor allele frequency using bcftools'),
+        ('MAF_bcftools', 'filter minor allele frequency using bcftools'),
+        ('MAF', 'filter minor allele frequency using customized script'),
         ('Subsampling', 'choose part of samples from vcf'),
         ('GrepImputatedVcf', 'grep the SNPs with lower missing rate before imputation from whole imputed vcf'),
 )
@@ -79,40 +80,33 @@ def NUM_ALT(args):
 
 def Missing(args):
     """
-    %prog vcf_or_vcf.gz
-    Remove SNPs with high missing rate (>0.4 by default)
+    %prog vcf
+    Remove SNPs with high missing rate
     """
     p = OptionParser(Missing.__doc__)
-    p.add_option('--missing_rate', default = 0.4, 
+    p.add_option('--missing_rate', default = 0.7, type='float', 
         help = 'specify the missing rate cutoff. SNPs with missing rate higher than this cutoff will be removed.')
-    p.add_option('--NS', default = 'NS', 
-        help = 'specify the tag name to calculate the number of nonmissing samples. If NS, NZ are unavilable, can specify AN cause AN/2==NS')
     p.set_slurm_opts(jn=True)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
     vcffile, = args
     prefix = vcffile.split('.vcf')[0]
-    new_f = prefix + '.mis.vcf'
-    nonMR = 1-float(opts.missing_rate)
+    new_f = prefix + '.mis%s.vcf'%opts.missing_rate
 
-    out = getSMsNum(vcffile)
-    print('Total %s Samples.'%out)
+    total_n = getSMsNum(vcffile)
+    print('Total %s Samples.'%total_n)
 
-    if opts.NS in ('NS', 'NZ'):
-        cmd = "bcftools view -i '%s/%s >= %.2f' %s > %s\n"%(opts.NS, out, nonMR, vcffile, new_f)
-    elif opts.NS == 'AN':
-        cmd = "bcftools view -i 'AN/%s >= %.2f' %s > %s\n"%(out*2, nonMR, vcffile, new_f)
-    else:
-        sys.exit('NS, NZ, AN only')
-
-    jobfile = '%s.mis.slurm'%prefix
-    f = open(jobfile, 'w')
-    header = Slurm_header%(opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += 'module load bcftools\n'
-    header += cmd
-    f.write(header)
-    print('slurm file %s.missR.slurm has been created, you can sbatch your job file.'%prefix)
+    with open(new_f, 'w') as f_out:
+        with open(vcffile) as f_in:
+            for i in f_in:
+                if i.startswith('#'):
+                    f_out.write(i)
+                else:
+                    _,_,_,m = genotypes_count(i)
+                    missing_rate = m/total_n
+                    if missing_rate <= opts.missing_rate:
+                        f_out.write(i)
 
 def genotypes_count(snp):
     """
@@ -126,19 +120,20 @@ def genotypes_count(snp):
 
 def Heterozygous(args):
     """
-    %prog vcf_in vcf_out
+    %prog vcf_in
     Remove bad and high heterizygous loci
     """
     p = OptionParser(Heterozygous.__doc__)
-    p.add_option('--h2_rate', default = 0.05,
+    p.add_option('--h2_rate', default = 0.1, type='float',
         help = 'specify the heterozygous rate cutoff, higher than this cutoff will be removed.')
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    vcffile, vcf_out, = args
+    vcffile, = args
     prefix = vcffile.split('.vcf')[0]
+    new_f = prefix + '.hete%s.vcf'%opts.h2_rate
     f0 = open(vcffile)
-    f1 = open(vcf_out, 'w')
+    f1 = open(new_f, 'w')
     for i in f0:
         if i.startswith('#'):
             f1.write(i)
@@ -155,15 +150,15 @@ def getSMsNum(vcffile):
     SMs_num = float(child.communicate()[0])
     return SMs_num
 
-def MAF_unimputed(args):
+def MAF_bcftools(args):
     """
     %prog MAF_unimputed in_dir out_dir
     do filtering on MAF using bcftools.
     """
-    p = OptionParser(MAF_unimputed.__doc__)
+    p = OptionParser(MAF_bcftools.__doc__)
     p.add_option("--pattern", default = '*.vcf', 
             help="the pattern of vcf files, qutation needed") 
-    p.add_option('--maf', default = '0.01',
+    p.add_option('--maf', default = '0.01', type = 'float',
         help = 'specify the missing rate cutoff, MAF smaller than this cutoff will be removed.')
     opts, args = p.parse_args(args)
     if len(args) == 0:
@@ -186,21 +181,34 @@ def MAF_unimputed(args):
         with open('%s.maf%s.slurm'%(prf, maf), 'w') as f:
             f.write(header)
 
-def MAF_imputed(args):
-    '''
-    else:
-        f1 = open(new_f, 'w')
-        with open(vcffile) as f0:
-            for i in f0:
-                if i.startswith('#'): f1.write(i)
+def MAF(args):
+    """
+    %prog MAF vcf
+    filter rare MAF SNPs
+    """
+    p = OptionParser(MAF.__doc__)
+    p.add_option('--maf', default = 0.01, type='float', help='specify MAF cutoff, MAF smaller than this cutoff will be removed.')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    vcffile, = args
+    prefix = vcffile.split('.vcf')[0]
+    new_f = prefix + '.maf%s.vcf'%opts.maf
+
+    total_n = getSMsNum(vcffile)
+    print('Total %s Samples.'%total_n)
+
+    with open(new_f, 'w') as f_out:
+        with open(vcffile) as f_in:
+            for i in f_in:
+                if i.startswith('#'):
+                    f_out.write(i)
                 else:
                     ref, alt, het, mis = genotypes_count(i)
                     an1, an2 = ref*2+het, alt*2+het
                     maf = min(an1,an2)/(an1+an2)
                     if maf >= float(opts.maf):
-                        f1.write(i)
-        f1.close()
-    '''
+                        f_out.write(i)
     
 def GrepImputatedVcf(args):
     """

@@ -337,21 +337,22 @@ def impute_beagle(args):
 
     if opts.parameter_file:
         df = pd.read_csv(opts.parameter_file)
-        df = df.set_index('fn')
+        df = df.set_index('chr')
     
     dir_path = Path(in_dir)
     vcfs = dir_path.glob(opts.pattern)
     for vcf in vcfs:
+        print(vcf.name)
+        chrom = int(vcf.name.split('.')[0].split('hr')[-1])
+        print('chr : %s'%chrom)
         sm = '.'.join(vcf.name.split('.')[0:-1])
         out_fn = sm+'.BG'
         out_fn_path = out_path/out_fn
         if opts.parameter_file:
-            if vcf.name in df.index:
-                window = df.loc[vcf.name, 'marker_5cm']
-                overlap = df.loc[vcf.name, 'marker_0.5cm']
-                cmd = 'beagle -Xmx60G gt=%s out=%s window=%s overlap=%s nthreads=10' % (vcf, out_fn_path, window, overlap)
-            else:
-                sys.exit('vcf file not in the parameter file')
+            window = df.loc[chrom, 'marker_10cm']
+            overlap = df.loc[chrom, 'marker_2cm']
+            print('window: %s; overlap: %s'%(window, overlap))
+            cmd = 'beagle -Xmx60G gt=%s out=%s window=%s overlap=%s nthreads=10' % (vcf, out_fn_path, window, overlap)
         else:
             cmd = 'beagle -Xmx60G gt=%s out=%s nthreads=10' % (begle, vcf, out_fn_path)
         header = multiCPU_header % (10, 167, 65000, sm, sm, sm)

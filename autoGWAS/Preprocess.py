@@ -58,9 +58,10 @@ def hmp2vcf(args):
         sys.exit(not p.print_help())
     hmpfile, = args
     prefix = '.'.join(hmpfile.split('.')[0:-1])
-    cmd = '%s -Xms512m -Xmx10G -fork1 -h %s -export -exportType VCF\n' % (tassel, hmpfile)
+    cmd = 'run_pipeline.pl -Xms512m -Xmx10G -fork1 -h %s -export -exportType VCF\n' % (hmpfile)
+    print(cmd)
     header = Slurm_header % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += 'module load java/1.8\n'
+    header += 'ml tassel/5.2\n'
     header += cmd
     f = open('%s.hmp2vcf.slurm' % prefix, 'w')
     f.write(header)

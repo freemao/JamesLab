@@ -25,53 +25,46 @@ def main():
 
 class fns(object):
     def __init__(self, model_name, tb_dir=None, n=1):
-        self.lrs = [0.001] if n==1 else [10**uniform(-2, -6) for i in range(n)]
+        self.lrs = [0.0001] if n==1 else [10**uniform(-2, -6) for i in range(n)]
         self.model_name = ['{}_{}'.format(model_name, i) for i in self.lrs]
         if tb_dir:
             self.tb_dirs = ['{}_{}'.format(tb_dir, i) for i in self.lrs]
  
 def dpp(args):
     '''
-    %prog training_data_dir label_fn model_results_dir
+    %prog training_data_dir ground_truth_csv model_dir
+        training_data_dir: where the training images are
+        ground_truth_csv: the label csv filename without dir prefix
+        model_dir: all the model results including tensorbord, model, slurm
 
-    Run dpp regression model
+    Run dpp regression and classification model
     '''
     p = OptionParser(dpp.__doc__)
-    p.add_option('--problem_type', default='classification',choices=('classification', 'regression'),
+    p.add_option('--problem_type', default='regression',choices=('classification', 'regression'),
         help = 'specify your problem type')
-    p.add_option('--tensorboard', default='infer',
-        help = 'tensorboard dir name')
-    p.add_option('--epoch', default=500,
-        help = 'number of epoches. set to 500 for leaf couting problem')
-    p.add_option('--split_ratio', default=0,
-        help = 'the ratio of training dataset used for testing')
-    p.add_option('--lr_n', default=1, type='int',
-        help = 'train model with differnt learning rates. if n=1: set lr to 0.0001. if n>1: try differnt lr from 1e-2 to 1e-5 n times')
+    p.add_option('--epoch', default=200,
+        help = 'number of epoches. 500 was suggested by dpp for the leaf couting problem')
+    p.add_option('--lr', default=0.0001, type='float',
+        help = 'learning rate')
     p.set_slurm_opts(gpu=True)
     opts, args = p.parse_args(args)
 
     if len(args) != 3:
         sys.exit(not p.print_help())
-
-    training_dir, label_fn, model_name, = args
-    tb_dir_name = 'tensorboard_{}'.format(model_name) if opts.tensorboard == 'infer' else opts.tensorboard
-    out_fns = fns(model_name, tb_dir=tb_dir_name, n=opts.lr_n)
-    for i in range(opts.lr_n):
-        try:
-            os.mkdir(out_fns.model_name[i])
-        except FileExistsError:
-            eprint("ERROR: Filename collision. The future output file `{}` exists".format(out_fns.model_name[i]))
-            sys.exit(1)
-        cmd = 'python -m schnablelab.CNN.dpp_%s %s %s %s %s %s %s %s'%\
-            (opts.problem_type, training_dir, label_fn, out_fns.model_name[i], out_fns.tb_dirs[i], opts.epoch, opts.split_ratio, out_fns.lrs[i])
-        SlurmHeader = Slurm_gpu_header%(opts.time, opts.memory, out_fns.model_name[i], out_fns.model_name[i], out_fns.model_name[i])
-        SlurmHeader += 'module load anaconda\nsource activate MCY\n'
-        SlurmHeader += cmd
-
-        f = open('%s.slurm'%out_fns.model_name[i], 'w')
-        f.write(SlurmHeader)
-        f.close()
-        print('slurm file %s.slurm has been created, now you can sbatch your job file.'%out_fns.model_name[i]) 
+    training_data_dir, ground_truth_csv, model_dir, = args
+    model_dir_path = Path(model_dir)
+    if not model_dir_path.exists():
+        model_dir_path.mkdir()
+    prefix = model_dir_path.name
+    slurm_fn = '%s.slurm'%prefix
+    with open(model_dir_path/slurm_fn, 'w') as f:
+        cmd = 'python -m schnablelab.CNN.dpp_%s %s %s %s %s %s'%\
+            (opts.problem_type, training_data_dir, ground_truth_csv, model_dir, opts.epoch, opts.lr)
+        header  = Slurm_gpu_header%(opts.time, opts.memory, prefix, prefix, prefix)
+        header += 'ml anaconda\nsource activate leafcounting\n'
+        header += cmd
+        f.write(header)
+    print('slurm file %s/%s.slurm has been created, now you can sbatch your job file.'%(model_dir, prefix)) 
 
 def keras_cnn(args):
     """
@@ -85,7 +78,6 @@ def keras_cnn(args):
         help = 'train model with differnt learning rates. if n=1: set lr to 0.001. if n>1: try differnt lr from 1e-2 to 1e-5 n times')
     p.set_slurm_opts(gpu=True)
     opts, args = p.parse_args(args)
-
     if len(args) != 4:
         sys.exit(not p.print_help())
 

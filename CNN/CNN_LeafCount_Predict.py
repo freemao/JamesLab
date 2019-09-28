@@ -1,6 +1,8 @@
 """
 make predictions using trained model based on deep plant phenomics pakcage
 """
+import warnings
+warnings.filterwarnings('ignore',category=FutureWarning)
 import numpy as np
 from pathlib import Path
 import deepplantphenomics as dpp
@@ -8,8 +10,8 @@ import os
 
 class CornLeafRegressor(object):
     model = None
-    img_height = 256
-    img_width = 256
+    img_height = 418
+    img_width = 283
 
     def __init__(self, model_dir, batch_size=9):
         """A network which predicts rosette leaf count via a convolutional neural net"""
@@ -19,9 +21,10 @@ class CornLeafRegressor(object):
         # Define model hyperparameters
         self.model.set_batch_size(batch_size)
         self.model.set_number_of_threads(1)
+        print(self.img_height, self.img_width)
         self.model.set_image_dimensions(self.img_height, self.img_width, 3)
         self.model.set_resize_images(True)
-        self.model.set_augmentation_crop(True)
+        #self.model.set_augmentation_crop(True)
         # Define a model architecture
         self.model.add_input_layer()
         self.model.add_convolutional_layer(filter_dimension=[5, 5, 3, 32], stride_length=1, activation_function='tanh')
@@ -51,7 +54,7 @@ def predict(model_dir, test_dir, output_fn):
 
     f1 = open('%s'%output_fn, 'w')
     for k,v in zip(images, leaf_counts):
-        f1.write('%s,%d\n'%(k.split('/')[-1], v))
+        f1.write('%s,%s\n'%(k.split('/')[-1], v[0]))
     f1.close()
 
 import sys

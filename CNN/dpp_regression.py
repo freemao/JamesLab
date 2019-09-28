@@ -1,6 +1,8 @@
 """
 train neural network to detect whether plant flowers or not
 """
+import warnings
+warnings.filterwarnings('ignore',category=FutureWarning)
 from glob import glob
 import numpy as np
 import pickle
@@ -9,22 +11,24 @@ from pathlib import Path
 import os
 import sys
 
-def train(train_dir, label_fn, model_name, tsrbrd_dir, epoch, lr):
+def train(train_dir, label_fn, model_dir, epoch, lr):
     """
     train_dir: the directory where your training images located
     label_fn: the file name of labels under train_dir. Just specify the file name don't inclde the path. 
-    model_name: the name of you model. Model results will be save to the dir in this name
-    tsrbrd_dir: dir to save the tensorboard results.
+    model_dir: the name of you model. Model results will be save to this dir
     epoch: specify the epoch. Based on dpp document suggest 100 for plant stress and 500 for counting.
-    split_ratio: the ration of validation images and testing images
     lr: specify learnning rate. 0.0001 used in dpp leaf counting example
     """
-
+    model_dir_path = Path(model_dir)
+    if not model_dir_path.exists():
+        model_dir_path.mkdir()
+    tensorboard_dir_path = model_dir_path/'tensorboard'
     img_dir = Path(train_dir)
-    model = dpp.RegressionModel(debug=True, save_checkpoints=True, report_rate=150, tensorboard_dir=tsrbrd_dir, save_dir=model_name)
+
+    model = dpp.RegressionModel(debug=True, save_checkpoints=True, report_rate=150, tensorboard_dir=str(tensorboard_dir_path), save_dir=str(model_dir_path))
     model.set_batch_size(45)
     model.set_number_of_threads(10)
-    model.set_image_dimensions(256, 256, 3)
+    model.set_image_dimensions(418, 283, 3)
     model.set_resize_images(True)
 
     model.set_num_regression_outputs(1)
@@ -38,7 +42,7 @@ def train(train_dir, label_fn, model_name, tsrbrd_dir, epoch, lr):
     model.set_augmentation_brightness_and_contrast(True)
     model.set_augmentation_flip_horizontal(True)
     model.set_augmentation_flip_vertical(True)
-    model.set_augmentation_crop(True)
+    #model.set_augmentation_crop(True)
     
     # Load labels and images
     model.load_multiple_labels_from_csv(img_dir/label_fn, id_column=0)
@@ -58,7 +62,7 @@ def train(train_dir, label_fn, model_name, tsrbrd_dir, epoch, lr):
     # Begin training the model
     model.begin_training()
 
-if len(sys.argv)==7:
+if len(sys.argv)==6:
     train(*sys.argv[1:])
 else:
-    print('train_dir', 'label_fn', 'model_name', "tensorboard_dir", 'epoch', 'lr')
+    print('train_dir', 'label_fn', 'model_dir', 'epoch', 'lr')

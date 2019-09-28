@@ -9,7 +9,7 @@ import sys
 import pandas as pd
 import numpy as np
 from schnablelab.apps.base import ActionDispatcher, OptionParser
-from schnablelab.apps.header import Slurm_header
+from schnablelab.apps.headers import Slurm_header
 from subprocess import call
 import pandas as pd
 import numpy as np
