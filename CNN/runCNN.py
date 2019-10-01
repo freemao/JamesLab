@@ -52,14 +52,15 @@ def dpp(args):
     if len(args) != 3:
         sys.exit(not p.print_help())
     training_data_dir, ground_truth_csv, model_dir, = args
-    model_dir_path = Path(model_dir)
+
+    model_dir_path = Path(model_dir).absolute()
     if not model_dir_path.exists():
         model_dir_path.mkdir()
     prefix = model_dir_path.name
     slurm_fn = '%s.slurm'%prefix
     with open(model_dir_path/slurm_fn, 'w') as f:
         cmd = 'python -m schnablelab.CNN.dpp_%s %s %s %s %s %s'%\
-            (opts.problem_type, training_data_dir, ground_truth_csv, model_dir, opts.epoch, opts.lr)
+            (opts.problem_type, Path(training_data_dir).absolute(), ground_truth_csv, model_dir_path, opts.epoch, opts.lr)
         header  = Slurm_gpu_header%(opts.time, opts.memory, prefix, prefix, prefix)
         header += 'ml anaconda\nsource activate leafcounting\n'
         header += cmd
