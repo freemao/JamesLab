@@ -10,6 +10,7 @@ from pathlib import Path
 import os.path as op
 import sys
 import pandas as pd
+import numpy as np
 from schnablelab.apps.base import ActionDispatcher, OptionParser, glob, iglob
 from schnablelab.apps.natsort import natsorted
 import subprocess
@@ -24,6 +25,7 @@ tassel = op.abspath(op.dirname(__file__)) + '/../apps/tassel-5-standalone/run_pi
 
 def main():
     actions = (
+        ('IndexVCF', 'index vcf using bgzip and tabix'),
         ('splitVCF', 'split a vcf to several smaller files with equal size'),
         ('merge_files', 'combine split vcf or hmp files'),
         ('combineFQ', 'combine split fqs'),
@@ -31,13 +33,76 @@ def main():
         ('vcf2hmp', 'convert vcf to hmp format'),
         ('FixIndelHmp', 'fix the indels problems in hmp file converted from tassel'),
         ('FilterVCF', 'remove bad snps using bcftools'),
-        ('onlyMissing', 'perform filtering only on missing data'),
-        ('rmHetero', 'remove high heterozygous loci'),
+        ('only_Missing', 'perform filtering only on missing data'),
+        ('only_ALT', 'filter number of ALT'),
+        ('only_MAF', 'filter MAF'),
+        ('only_Hetero', 'filter high heterozygous loci'),
         ('subsampling', 'subsampling and reorder vcf files'),
         ('fixGTsep', 'fix the allele separator for beagle imputation'),
+        ('SummarizeLD', 'summarize ld decay in log scale'),
+        ('EstimateLD', 'estimate ld using tassel'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def only_MAF(args):
+    """
+    %prog in_dir out_dir
+
+    filter MAF
+    """
+    p = OptionParser(only_MAF.__doc__)
+    p.add_option('--pattern', default='*.vcf',
+                 help='file pattern for vcf files in dir_in')
+    p.add_option('--maf', default='0.01',
+                 help='maf cutoff')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir, = args
+    out_path = Path(out_dir)
+    if not out_path.exists():
+        sys.exit('%s does not exist...')
+    dir_path = Path(in_dir)
+    vcfs = dir_path.glob(opts.pattern)
+    for vcffile in vcfs:
+        prefix = '.'.join(vcf.name.split('.')[0:-1])
+        new_f = prefix + '.maf.vcf'
+        cmd = "python -m schnablelab.SNPcalling.base MAF %s %s %s\n"%(vcffile, opts.maf, new_f)
+        with open('%s.maf.slurm'%prefix, 'w') as f:
+            header = Slurm_header%(opts.time, opts.memory, prefix, prefix, prefix)
+            header += cmd
+            f.write(header)
+            print('slurm file %s.maf.slurm has been created, you can sbatch your job file.'%prefix)
+
+def only_ALT(args):
+    """
+    %prog in_dir out_dir
+
+    filter number of ALT using bcftools
+    """
+    p = OptionParser(only_ALT.__doc__)
+    p.add_option('--pattern', default='*.vcf',
+                 help='file pattern for vcf files in dir_in')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir, = args
+    out_path = Path(out_dir)
+    if not out_path.exists():
+        sys.exit('%s does not exist...')
+    dir_path = Path(in_dir)
+    vcfs = dir_path.glob(opts.pattern)
+    for vcffile in vcfs:
+        prefix = '.'.join(vcf.name.split('.')[0:-1])
+        new_f = prefix + '.alt1.vcf'
+        cmd = "bcftools view -i 'N_ALT=1' %s > %s"%(vcffile, new_f)
+        with open('%s.alt1.slurm'%prefix, 'w') as f:
+            header = Slurm_header%(opts.time, opts.memory, prefix, prefix, prefix)
+            header += 'ml bacftools\n'
+            header += cmd
+            f.write(header)
+            print('slurm file %s.alt1.slurm has been created, you can sbatch your job file.'%prefix)
 
 def fixGTsep(args):
     """
@@ -95,15 +160,47 @@ def subsampling(args):
         header += cmd
         with open('%s.subsm.slurm'%sm, 'w') as f:
             f.write(header)
+        print('%s.subsm.slurm has been generated!'%sm)
 
-def rmHetero(args):
+def IndexVCF(args):
     """
-    %prog rmHetero in_dir out_dir
+    %prog IndexVCF in_dir out_dir
+
+    index vcf using bgzip and tabix
+    """
+    p = OptionParser(IndexVCF.__doc__)
+    p.add_option('--pattern', default='*.vcf',
+                 help='file pattern for vcf files in dir_in')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir, = args
+    out_path = Path(out_dir)
+    if not out_path.exists():
+        sys.exit('%s does not exist...')
+    dir_path = Path(in_dir)
+    vcfs = dir_path.glob(opts.pattern)
+    for vcf in vcfs:
+        sm = '.'.join(vcf.name.split('.')[0:-1])
+        out_fn = vcf.name+'.gz'
+        out_fn_path = out_path/out_fn
+        cmd1 = 'bgzip -c %s > %s\n'%(vcf, out_fn_path)
+        cmd2 = 'tabix -p vcf %s\n'%(out_fn_path)
+        header = Slurm_header%(10, 20000, sm, sm, sm)
+        header += 'ml tabix\n'
+        header += cmd1
+        header += cmd2
+        with open('%s.idxvcf.slurm'%sm, 'w') as f:
+            f.write(header)
+
+def only_Hetero(args):
+    """
+    %prog only_Hetero in_dir out_dir
 
     filter SNPs with high heterozygous rate
     """
 
-    p = OptionParser(rmHetero.__doc__)
+    p = OptionParser(only_Hetero.__doc__)
     p.add_option('--pattern', default='*.vcf',
                  help='file pattern for vcf files in dir_in')
     p.add_option('--rate', default='0.05',
@@ -120,9 +217,8 @@ def rmHetero(args):
     for vcf in vcfs:
         sm = '.'.join(vcf.name.split('.')[0:-1])
         out_fn = sm+'.rmHete.vcf'
-        cmd = 'python -m schnablelab.SNPcalling.FilterSNPs Heterozygous %s %s --h2_rate %s'%(vcf, out_path/out_fn, opts.rate)
+        cmd = 'python -m schnablelab.SNPcalling.base Heterozygous %s %s --h2_rate %s'%(vcf, out_path/out_fn, opts.rate)
         header = Slurm_header%(10, 20000, sm, sm, sm)
-        #header += 'conda activate MCY\n'
         header += cmd
         with open('%s.rmHete.slurm'%sm, 'w') as f:
             f.write(header)
@@ -186,54 +282,38 @@ def FilterVCF(args):
             f.write(header)
 
 def getSMsNum(vcffile):
-    call('module load bcftools', shell=True)
+    subprocess.call('module load bcftools', shell=True)
     child = subprocess.Popen('bcftools query -l %s|wc -l'%vcffile, shell=True, stdout=subprocess.PIPE)
-    SMs_num = float(child.communicate()[0])
+    SMs_num = int(child.communicate()[0])
     return SMs_num
 
 
-def onlyMissing(args):
+def only_Missing(args):
     """
-    %prog dir_in dir_out
-    Remove SNPs with high missing rate (>0.4 by default)
+    %prog dir_in
+    Remove SNPs with high missing rate (>0.7 by default)
     """
-    p = OptionParser(onlyMissing.__doc__)
+    p = OptionParser(only_Missing.__doc__)
     p.add_option('--pattern', default = '*.vcf',
         help = 'remove loci with high missing data rate')
     p.add_option('--missing_rate', default = 0.7,
         help = 'specify the missing rate cutoff. SNPs with missing rate higher than this cutoff will be removed.')
-    p.add_option('--software', default = 'GATK',
-        help = 'specify the software generating the vcf file.')
-    p.add_option('--total_sm', default = 'infer',
-        help = 'specify total samples in the vcf file.')
 
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    in_dir, out_dir, = args
-
-    out_path = Path(out_dir)
-    if not out_path.exists():
-        sys.exit('%s does not exist...')
+    in_dir, = args
     dir_path = Path(in_dir)
     vcfs = dir_path.glob(opts.pattern)
-    nonMR = 1-float(opts.missing_rate)
-
     for vcf in vcfs:
         prefix = '.'.join(vcf.name.split('.')[0:-1])
-        total_sm = getSMsNum(str(vcf)) if opts.total_sm == 'infer' else opts.total_sm
-        print('Total %s Samples.'%total_sm)
-        out_fn = prefix+'.mis.vcf'
-        out_fn_path = out_path/out_fn
-        if opts.software == 'GATK':
-            cmd = "bcftools view -i 'AN/%s >= %.2f' %s > %s\n"%(int(total_sm)*2, nonMR, vcf, out_fn_path)
-        else:
-            cmd = "bcftools view -i 'NS/%s >= %.2f' %s > %s\n"%(int(total_sm)*2, nonMR, vcf, out_fn_path)
-        header = Slurm_header%(10, 8000, prefix, prefix, prefix)
+        cmd = "python -m schnablelab.SNPcalling.base Missing %s --missing_rate %s\n"%(vcf, float(opts.missing_rate))
+        header = Slurm_header%(10, 5000, prefix, prefix, prefix)
         header += 'ml bcftools\n'
         header += cmd
-        with open('%s.mis.slurm'%prefix, 'w') as f:
+        with open('%s.mis%s.slurm'%(prefix, opts.missing_rate), 'w') as f:
             f.write(header)
+        print('%s.mis%s.slurm has been generated!'%(prefix, opts.missing_rate))
 
 def splitVCF(args):
     """
@@ -375,11 +455,12 @@ def vcf2hmp(args):
         sys.exit(not p.print_help())
     vcffile, = args
     prefix = '.'.join(vcffile.split('.')[0:-1])
-    cmd = '%s -Xms512m -Xmx10G -fork1 -vcf %s -export -exportType HapmapDiploid\n' % (tassel, vcffile) \
+    cmd = 'run_pipeline.pl -Xms512m -Xmx10G -fork1 -vcf %s -export -exportType HapmapDiploid\n'%vcffile \
         if opts.version == '2' \
-        else '%s -Xms512m -Xmx10G -fork1 -vcf %s -export -exportType Hapmap\n' % (tassel, vcffile)
+        else 'run_pipeline.pl -Xms512m -Xmx10G -fork1 -vcf %s -export -exportType Hapmap\n'%vcffile
     header = Slurm_header % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
     header += 'module load java/1.8\n'
+    header += 'module load tassel/5.2\n'
     header += cmd
     f = open('%s.vcf2hmp.slurm' % prefix, 'w')
     f.write(header)
@@ -430,9 +511,86 @@ def FixIndelHmp(args):
     f.close()
     f1.close()
 
+def EstimateLD(args):
+    """
+    %prog dir_in dir_out
+    run LD decay using tassel
+    """
+    p = OptionParser(EstimateLD.__doc__)
+    p.set_slurm_opts(jn=True)
+    p.add_option('--pattern', default='*vcf',
+                 help='pattern of vcf files')
+    p.add_option('--window_size', default='1000',
+                 help='specify how many SNPs in the sliding window')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    dir_in, dir_out = args
+    dir_out = Path(dir_out)
+    if not dir_out.exists():
+        dir_out.mkdir()
+    for vcf in Path(dir_in).glob(opts.pattern):
+        prefix = vcf.name.replace('.vcf', '')
+        out_fn = '%s.ld'%prefix
+        cmd = 'run_pipeline.pl -fork1 -vcf %s -ld -ldWinSize %s -ldType SlidingWindow -td_tab %s/%s\n'%(vcf, opts.window_size, dir_out, out_fn)
+        header = Slurm_header % (opts.time, opts.memory, prefix, prefix, prefix)
+        header += 'ml java/1.8\n'
+        header += 'ml tassel/5.2\n'
+        header += cmd
+        with open('%s.estLD.slurm' % prefix, 'w') as f:
+            f.write(header)
+        print('slurm file %s.estLD.slurm has been created, you can submit your job file.' % prefix)
 
-def downsampling(args):
-    pass
+def SummarizeLD(args):
+    """
+    %prog dir_in dir_out
+    summarize LD decay in log scale
+    """
+    p = OptionParser(EstimateLD.__doc__)
+    p.set_slurm_opts(jn=True)
+    p.add_option('--pattern', default='*.ld.txt',
+                 help='pattern of ld.txt files')
+    p.add_option('--max_dist', default='1,000,000',
+                 help='the maximum ld distance')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    dir_in, dir_out = args
+    dir_out = Path(dir_out)
+    if not dir_out.exists():
+        dir_out.mkdir()
+    num0 = opts.max_dist.count('0')
+
+    for fn in Path(dir_in).glob(opts.pattern):
+        prefix = '.'.join(fn.name.split('.')[0:-1])
+        out_fn = '%s.sum.csv'%prefix
+        cmd = 'python -m schnablelab.SNPcalling.base SummarizeLD %s %s %s/%s\n'%(fn, num0, dir_out, out_fn)
+        header = Slurm_header % (opts.time, opts.memory, prefix, prefix, prefix)
+        header += cmd
+        with open('%s.sumLD.slurm' % prefix, 'w') as f:
+            f.write(header)
+        print('slurm file %s.sumLD.slurm has been created, you can submit your job file.' % prefix)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 if __name__ == "__main__":

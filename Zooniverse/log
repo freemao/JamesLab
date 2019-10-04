@@ -1,0 +1,1641 @@
+### EXECUTION TIME: 2019-09-30T21:41:50.914519 ###
+### EXECUTION TIME: 2019-09-30T21:42:20.730079 ###
+Could not connect to zooniverse project
+> Could not find project with id='78185'
+### EXECUTION TIME: 2019-09-30T21:43:17.191369 ###
+Creating new subject set
+Generating manifest
+Manifest being generated with fields: [ id, filename ]
+DONE: 812 subjects written to manifest
+Loading images from manifest...
+File size of 863.432KB is larger than recommended 256KB
+1- 17_sim_angle10_499.png - success
+File size of 879.278KB is larger than recommended 256KB
+2- 14_sim_angle12_476.png - success
+File size of 894.596KB is larger than recommended 256KB
+3- 13_sim_angle5_367.png - success
+File size of 826.648KB is larger than recommended 256KB
+4- 9_sim_angle10_717.png - success
+File size of 863.188KB is larger than recommended 256KB
+5- 17_sim_angle1_1079.png - success
+File size of 837.208KB is larger than recommended 256KB
+6- 10_sim_angle20_325.png - success
+File size of 850.382KB is larger than recommended 256KB
+7- 14_sim_angle12_796.png - success
+File size of 844.954KB is larger than recommended 256KB
+8- 12_sim_angle18_1135.png - success
+File size of 908.335KB is larger than recommended 256KB
+9- 17_sim_angle16_537.png - success
+File size of 805.686KB is larger than recommended 256KB
+10- 8_sim_angle2_369.png - success
+File size of 821.368KB is larger than recommended 256KB
+11- 10_sim_angle10_949.png - success
+File size of 855.488KB is larger than recommended 256KB
+12- 13_sim_angle5_582.png - success
+File size of 821.264KB is larger than recommended 256KB
+13- 11_sim_angle5_1248.png - success
+File size of 823.859KB is larger than recommended 256KB
+14- 16_sim_angle5_105.png - success
+File size of 841.354KB is larger than recommended 256KB
+15- 11_sim_angle5_569.png - success
+File size of 816.106KB is larger than recommended 256KB
+16- 12_sim_angle18_895.png - success
+File size of 851.922KB is larger than recommended 256KB
+17- 14_sim_angle8_387.png - success
+File size of 863.618KB is larger than recommended 256KB
+18- 12_sim_angle9_1065.png - success
+File size of 834.33KB is larger than recommended 256KB
+19- 11_sim_angle13_226.png - success
+File size of 867.731KB is larger than recommended 256KB
+20- 14_sim_angle4_847.png - success
+File size of 841.706KB is larger than recommended 256KB
+21- 12_sim_angle18_982.png - success
+File size of 836.155KB is larger than recommended 256KB
+22- 14_sim_angle13_324.png - success
+File size of 835.166KB is larger than recommended 256KB
+23- 13_sim_angle6_458.png - success
+File size of 819.177KB is larger than recommended 256KB
+24- 9_sim_angle19_1033.png - success
+File size of 841.724KB is larger than recommended 256KB
+25- 13_sim_angle11_319.png - success
+File size of 853.752KB is larger than recommended 256KB
+26- 13_sim_angle19_679.png - success
+File size of 816.825KB is larger than recommended 256KB
+27- 9_sim_angle13_636.png - success
+File size of 847.344KB is larger than recommended 256KB
+28- 15_sim_angle4_307.png - success
+File size of 801.626KB is larger than recommended 256KB
+29- 8_sim_angle7_222.png - success
+File size of 868.004KB is larger than recommended 256KB
+30- 17_sim_angle6_940.png - success
+File size of 871.292KB is larger than recommended 256KB
+31- 15_sim_angle15_1194.png - success
+File size of 862.838KB is larger than recommended 256KB
+32- 17_sim_angle13_77.png - success
+File size of 826.308KB is larger than recommended 256KB
+33- 10_sim_angle12_795.png - success
+File size of 851.345KB is larger than recommended 256KB
+34- 14_sim_angle12_464.png - success
+File size of 857.144KB is larger than recommended 256KB
+35- 12_sim_angle1_738.png - success
+File size of 835.348KB is larger than recommended 256KB
+36- 12_sim_angle10_284.png - success
+File size of 861.444KB is larger than recommended 256KB
+37- 12_sim_angle8_653.png - success
+File size of 854.534KB is larger than recommended 256KB
+38- 16_sim_angle4_477.png - success
+File size of 846.096KB is larger than recommended 256KB
+39- 17_sim_angle19_1193.png - success
+File size of 847.285KB is larger than recommended 256KB
+40- 12_sim_angle12_911.png - success
+File size of 842.231KB is larger than recommended 256KB
+41- 14_sim_angle9_373.png - success
+File size of 831.731KB is larger than recommended 256KB
+42- 10_sim_angle1_1198.png - success
+File size of 869.006KB is larger than recommended 256KB
+43- 14_sim_angle5_27.png - success
+File size of 811.671KB is larger than recommended 256KB
+44- 9_sim_angle8_127.png - success
+File size of 818.524KB is larger than recommended 256KB
+45- 9_sim_angle13_835.png - success
+File size of 884.183KB is larger than recommended 256KB
+46- 14_sim_angle8_1244.png - success
+File size of 821.424KB is larger than recommended 256KB
+47- 8_sim_angle4_106.png - success
+File size of 816.215KB is larger than recommended 256KB
+48- 10_sim_angle14_1042.png - success
+File size of 835.51KB is larger than recommended 256KB
+49- 15_sim_angle14_1032.png - success
+File size of 820.451KB is larger than recommended 256KB
+50- 14_sim_angle6_295.png - success
+File size of 824.585KB is larger than recommended 256KB
+51- 10_sim_angle4_593.png - success
+File size of 851.491KB is larger than recommended 256KB
+52- 14_sim_angle13_288.png - success
+File size of 893.4KB is larger than recommended 256KB
+53- 16_sim_angle19_876.png - success
+File size of 788.622KB is larger than recommended 256KB
+54- 7_sim_angle5_1022.png - success
+File size of 830.805KB is larger than recommended 256KB
+55- 13_sim_angle16_162.png - success
+File size of 876.537KB is larger than recommended 256KB
+56- 16_sim_angle14_500.png - success
+File size of 819.808KB is larger than recommended 256KB
+57- 12_sim_angle19_306.png - success
+File size of 810.67KB is larger than recommended 256KB
+58- 8_sim_angle6_275.png - success
+File size of 885.556KB is larger than recommended 256KB
+59- 15_sim_angle15_950.png - success
+File size of 818.254KB is larger than recommended 256KB
+60- 8_sim_angle19_966.png - success
+File size of 901.608KB is larger than recommended 256KB
+61- 17_sim_angle10_231.png - success
+File size of 835.774KB is larger than recommended 256KB
+62- 13_sim_angle10_173.png - success
+File size of 857.448KB is larger than recommended 256KB
+63- 12_sim_angle7_152.png - success
+File size of 842.04KB is larger than recommended 256KB
+64- 17_sim_angle18_754.png - success
+File size of 832.271KB is larger than recommended 256KB
+65- 10_sim_angle13_244.png - success
+File size of 847.832KB is larger than recommended 256KB
+66- 14_sim_angle12_810.png - success
+File size of 835.296KB is larger than recommended 256KB
+67- 11_sim_angle9_560.png - success
+File size of 840.927KB is larger than recommended 256KB
+68- 13_sim_angle8_987.png - success
+File size of 818.874KB is larger than recommended 256KB
+69- 8_sim_angle19_561.png - success
+File size of 821.994KB is larger than recommended 256KB
+70- 10_sim_angle4_448.png - success
+File size of 834.987KB is larger than recommended 256KB
+71- 10_sim_angle6_878.png - success
+File size of 846.323KB is larger than recommended 256KB
+72- 13_sim_angle13_1246.png - success
+File size of 785.789KB is larger than recommended 256KB
+73- 7_sim_angle5_699.png - success
+File size of 846.052KB is larger than recommended 256KB
+74- 11_sim_angle10_735.png - success
+File size of 849.969KB is larger than recommended 256KB
+75- 14_sim_angle5_292.png - success
+File size of 841.581KB is larger than recommended 256KB
+76- 13_sim_angle17_503.png - success
+File size of 866.411KB is larger than recommended 256KB
+77- 13_sim_angle20_1112.png - success
+File size of 853.648KB is larger than recommended 256KB
+78- 12_sim_angle10_330.png - success
+File size of 859.481KB is larger than recommended 256KB
+79- 15_sim_angle12_160.png - success
+File size of 841.883KB is larger than recommended 256KB
+80- 10_sim_angle6_303.png - success
+File size of 835.687KB is larger than recommended 256KB
+81- 10_sim_angle5_643.png - success
+File size of 832.947KB is larger than recommended 256KB
+82- 13_sim_angle14_1301.png - success
+File size of 831.038KB is larger than recommended 256KB
+83- 13_sim_angle3_429.png - success
+File size of 832.346KB is larger than recommended 256KB
+84- 10_sim_angle11_23.png - success
+File size of 828.066KB is larger than recommended 256KB
+85- 11_sim_angle8_1213.png - success
+File size of 840.521KB is larger than recommended 256KB
+86- 12_sim_angle2_1259.png - success
+File size of 862.254KB is larger than recommended 256KB
+87- 16_sim_angle2_727.png - success
+File size of 824.172KB is larger than recommended 256KB
+88- 11_sim_angle15_267.png - success
+File size of 812.3KB is larger than recommended 256KB
+89- 7_sim_angle8_793.png - success
+File size of 820.808KB is larger than recommended 256KB
+90- 10_sim_angle18_693.png - success
+File size of 845.045KB is larger than recommended 256KB
+91- 9_sim_angle19_910.png - success
+File size of 857.186KB is larger than recommended 256KB
+92- 17_sim_angle13_420.png - success
+File size of 868.775KB is larger than recommended 256KB
+93- 14_sim_angle12_544.png - success
+File size of 850.998KB is larger than recommended 256KB
+94- 15_sim_angle16_956.png - success
+File size of 886.415KB is larger than recommended 256KB
+95- 16_sim_angle16_491.png - success
+File size of 874.766KB is larger than recommended 256KB
+96- 16_sim_angle14_1252.png - success
+File size of 858.458KB is larger than recommended 256KB
+97- 13_sim_angle1_837.png - success
+File size of 879.712KB is larger than recommended 256KB
+98- 14_sim_angle6_418.png - success
+File size of 809.828KB is larger than recommended 256KB
+99- 11_sim_angle5_618.png - success
+File size of 860.468KB is larger than recommended 256KB
+100- 14_sim_angle10_158.png - success
+File size of 864.027KB is larger than recommended 256KB
+101- 15_sim_angle7_1089.png - success
+File size of 846.784KB is larger than recommended 256KB
+102- 14_sim_angle16_1242.png - success
+File size of 833.288KB is larger than recommended 256KB
+103- 13_sim_angle8_1225.png - success
+File size of 846.851KB is larger than recommended 256KB
+104- 15_sim_angle6_436.png - success
+File size of 883.138KB is larger than recommended 256KB
+105- 16_sim_angle12_389.png - success
+File size of 830.24KB is larger than recommended 256KB
+106- 11_sim_angle8_704.png - success
+File size of 820.654KB is larger than recommended 256KB
+107- 9_sim_angle7_1237.png - success
+File size of 859.282KB is larger than recommended 256KB
+108- 12_sim_angle10_645.png - success
+File size of 898.16KB is larger than recommended 256KB
+109- 17_sim_angle16_475.png - success
+File size of 812.14KB is larger than recommended 256KB
+110- 9_sim_angle7_134.png - success
+File size of 832.98KB is larger than recommended 256KB
+111- 12_sim_angle5_39.png - success
+File size of 885.382KB is larger than recommended 256KB
+112- 16_sim_angle4_771.png - success
+File size of 869.689KB is larger than recommended 256KB
+113- 17_sim_angle6_454.png - success
+File size of 872.215KB is larger than recommended 256KB
+114- 16_sim_angle2_843.png - success
+File size of 840.918KB is larger than recommended 256KB
+115- 13_sim_angle7_345.png - success
+File size of 807.666KB is larger than recommended 256KB
+116- 9_sim_angle13_1234.png - success
+File size of 864.555KB is larger than recommended 256KB
+117- 16_sim_angle3_524.png - success
+File size of 834.958KB is larger than recommended 256KB
+118- 9_sim_angle18_1063.png - success
+File size of 825.938KB is larger than recommended 256KB
+119- 12_sim_angle9_1210.png - success
+File size of 856.969KB is larger than recommended 256KB
+120- 15_sim_angle18_898.png - success
+File size of 843.766KB is larger than recommended 256KB
+121- 14_sim_angle3_1113.png - success
+File size of 820.773KB is larger than recommended 256KB
+122- 11_sim_angle6_201.png - success
+File size of 805.401KB is larger than recommended 256KB
+123- 12_sim_angle13_86.png - success
+File size of 839.261KB is larger than recommended 256KB
+124- 10_sim_angle12_1273.png - success
+File size of 845.861KB is larger than recommended 256KB
+125- 14_sim_angle17_959.png - success
+File size of 810.26KB is larger than recommended 256KB
+126- 9_sim_angle2_766.png - success
+File size of 865.089KB is larger than recommended 256KB
+127- 16_sim_angle13_641.png - success
+File size of 827.978KB is larger than recommended 256KB
+128- 10_sim_angle20_1061.png - success
+File size of 838.512KB is larger than recommended 256KB
+129- 13_sim_angle2_496.png - success
+File size of 855.798KB is larger than recommended 256KB
+130- 16_sim_angle9_994.png - success
+File size of 850.844KB is larger than recommended 256KB
+131- 16_sim_angle19_506.png - success
+File size of 834.741KB is larger than recommended 256KB
+132- 11_sim_angle15_446.png - success
+File size of 854.448KB is larger than recommended 256KB
+133- 17_sim_angle20_96.png - success
+File size of 816.442KB is larger than recommended 256KB
+134- 9_sim_angle17_586.png - success
+File size of 847.495KB is larger than recommended 256KB
+135- 10_sim_angle19_406.png - success
+File size of 831.157KB is larger than recommended 256KB
+136- 10_sim_angle5_659.png - success
+File size of 877.922KB is larger than recommended 256KB
+137- 17_sim_angle1_979.png - success
+File size of 846.88KB is larger than recommended 256KB
+138- 15_sim_angle1_1184.png - success
+File size of 863.014KB is larger than recommended 256KB
+139- 16_sim_angle3_126.png - success
+File size of 893.758KB is larger than recommended 256KB
+140- 17_sim_angle4_203.png - success
+File size of 865.572KB is larger than recommended 256KB
+141- 16_sim_angle3_1047.png - success
+File size of 834.776KB is larger than recommended 256KB
+142- 10_sim_angle4_470.png - success
+File size of 855.526KB is larger than recommended 256KB
+143- 14_sim_angle19_724.png - success
+File size of 855.951KB is larger than recommended 256KB
+144- 13_sim_angle12_56.png - success
+File size of 856.905KB is larger than recommended 256KB
+145- 14_sim_angle10_613.png - success
+File size of 833.26KB is larger than recommended 256KB
+146- 11_sim_angle2_1222.png - success
+File size of 844.625KB is larger than recommended 256KB
+147- 14_sim_angle6_186.png - success
+File size of 866.024KB is larger than recommended 256KB
+148- 14_sim_angle14_1094.png - success
+File size of 834.036KB is larger than recommended 256KB
+149- 13_sim_angle18_1265.png - success
+File size of 834.225KB is larger than recommended 256KB
+150- 11_sim_angle15_721.png - success
+File size of 854.189KB is larger than recommended 256KB
+151- 11_sim_angle4_683.png - success
+File size of 818.938KB is larger than recommended 256KB
+152- 8_sim_angle6_280.png - success
+File size of 885.189KB is larger than recommended 256KB
+153- 16_sim_angle20_1056.png - success
+File size of 827.056KB is larger than recommended 256KB
+154- 12_sim_angle16_1142.png - success
+File size of 867.47KB is larger than recommended 256KB
+155- 16_sim_angle14_1055.png - success
+File size of 884.19KB is larger than recommended 256KB
+156- 17_sim_angle15_261.png - success
+File size of 864.412KB is larger than recommended 256KB
+157- 15_sim_angle19_828.png - success
+File size of 825.019KB is larger than recommended 256KB
+158- 12_sim_angle5_621.png - success
+File size of 817.611KB is larger than recommended 256KB
+159- 10_sim_angle14_833.png - success
+File size of 862.602KB is larger than recommended 256KB
+160- 15_sim_angle19_279.png - success
+File size of 843.157KB is larger than recommended 256KB
+161- 10_sim_angle12_1105.png - success
+File size of 835.163KB is larger than recommended 256KB
+162- 13_sim_angle14_598.png - success
+File size of 839.011KB is larger than recommended 256KB
+163- 13_sim_angle15_460.png - success
+File size of 881.571KB is larger than recommended 256KB
+164- 17_sim_angle3_375.png - success
+File size of 873.218KB is larger than recommended 256KB
+165- 15_sim_angle1_1124.png - success
+File size of 827.367KB is larger than recommended 256KB
+166- 10_sim_angle20_1152.png - success
+File size of 829.051KB is larger than recommended 256KB
+167- 8_sim_angle10_1304.png - success
+File size of 895.608KB is larger than recommended 256KB
+168- 16_sim_angle18_842.png - success
+File size of 867.452KB is larger than recommended 256KB
+169- 17_sim_angle13_821.png - success
+File size of 852.501KB is larger than recommended 256KB
+170- 13_sim_angle16_767.png - success
+File size of 845.872KB is larger than recommended 256KB
+171- 11_sim_angle6_815.png - success
+File size of 828.602KB is larger than recommended 256KB
+172- 13_sim_angle17_1306.png - success
+File size of 826.07KB is larger than recommended 256KB
+173- 10_sim_angle17_678.png - success
+File size of 852.57KB is larger than recommended 256KB
+174- 15_sim_angle8_626.png - success
+File size of 835.288KB is larger than recommended 256KB
+175- 9_sim_angle20_1162.png - success
+File size of 834.425KB is larger than recommended 256KB
+176- 12_sim_angle3_57.png - success
+File size of 819.085KB is larger than recommended 256KB
+177- 12_sim_angle8_999.png - success
+File size of 843.918KB is larger than recommended 256KB
+178- 16_sim_angle9_775.png - success
+File size of 822.063KB is larger than recommended 256KB
+179- 10_sim_angle8_42.png - success
+File size of 865.139KB is larger than recommended 256KB
+180- 13_sim_angle14_478.png - success
+File size of 833.812KB is larger than recommended 256KB
+181- 12_sim_angle8_441.png - success
+File size of 789.823KB is larger than recommended 256KB
+182- 7_sim_angle4_1148.png - success
+File size of 855.446KB is larger than recommended 256KB
+183- 14_sim_angle18_109.png - success
+File size of 822.931KB is larger than recommended 256KB
+184- 8_sim_angle11_520.png - success
+File size of 824.982KB is larger than recommended 256KB
+185- 12_sim_angle3_168.png - success
+File size of 849.558KB is larger than recommended 256KB
+186- 11_sim_angle12_839.png - success
+File size of 881.314KB is larger than recommended 256KB
+187- 17_sim_angle17_619.png - success
+File size of 840.684KB is larger than recommended 256KB
+188- 10_sim_angle9_635.png - success
+File size of 858.561KB is larger than recommended 256KB
+189- 14_sim_angle12_1076.png - success
+File size of 850.766KB is larger than recommended 256KB
+190- 16_sim_angle8_19.png - success
+File size of 843.432KB is larger than recommended 256KB
+191- 15_sim_angle9_991.png - success
+File size of 840.552KB is larger than recommended 256KB
+192- 14_sim_angle3_150.png - success
+File size of 834.157KB is larger than recommended 256KB
+193- 12_sim_angle2_332.png - success
+File size of 826.722KB is larger than recommended 256KB
+194- 11_sim_angle19_1067.png - success
+File size of 850.922KB is larger than recommended 256KB
+195- 12_sim_angle14_419.png - success
+File size of 886.849KB is larger than recommended 256KB
+196- 15_sim_angle14_250.png - success
+File size of 894.986KB is larger than recommended 256KB
+197- 17_sim_angle16_525.png - success
+File size of 836.629KB is larger than recommended 256KB
+198- 10_sim_angle4_38.png - success
+File size of 876.595KB is larger than recommended 256KB
+199- 16_sim_angle6_969.png - success
+File size of 846.354KB is larger than recommended 256KB
+200- 11_sim_angle8_220.png - success
+File size of 818.032KB is larger than recommended 256KB
+201- 13_sim_angle2_634.png - success
+File size of 845.57KB is larger than recommended 256KB
+202- 9_sim_angle15_221.png - success
+File size of 834.769KB is larger than recommended 256KB
+203- 16_sim_angle10_413.png - success
+File size of 865.779KB is larger than recommended 256KB
+204- 15_sim_angle9_541.png - success
+File size of 856.533KB is larger than recommended 256KB
+205- 13_sim_angle20_538.png - success
+File size of 831.614KB is larger than recommended 256KB
+206- 9_sim_angle11_486.png - success
+File size of 869.747KB is larger than recommended 256KB
+207- 16_sim_angle20_554.png - success
+File size of 853.83KB is larger than recommended 256KB
+208- 13_sim_angle10_67.png - success
+File size of 866.622KB is larger than recommended 256KB
+209- 14_sim_angle11_579.png - success
+File size of 845.492KB is larger than recommended 256KB
+210- 13_sim_angle6_1230.png - success
+File size of 825.025KB is larger than recommended 256KB
+211- 12_sim_angle3_803.png - success
+File size of 833.174KB is larger than recommended 256KB
+212- 14_sim_angle6_1156.png - success
+File size of 822.518KB is larger than recommended 256KB
+213- 11_sim_angle17_808.png - success
+File size of 832.471KB is larger than recommended 256KB
+214- 11_sim_angle15_1128.png - success
+File size of 850.969KB is larger than recommended 256KB
+215- 14_sim_angle12_1078.png - success
+File size of 869.808KB is larger than recommended 256KB
+216- 16_sim_angle1_119.png - success
+File size of 838.973KB is larger than recommended 256KB
+217- 10_sim_angle15_744.png - success
+File size of 831.496KB is larger than recommended 256KB
+218- 11_sim_angle9_403.png - success
+File size of 869.44KB is larger than recommended 256KB
+219- 17_sim_angle2_241.png - success
+File size of 850.016KB is larger than recommended 256KB
+220- 13_sim_angle6_1044.png - success
+File size of 840.178KB is larger than recommended 256KB
+221- 15_sim_angle5_848.png - success
+File size of 846.399KB is larger than recommended 256KB
+222- 16_sim_angle12_370.png - success
+File size of 843.568KB is larger than recommended 256KB
+223- 13_sim_angle3_716.png - success
+File size of 866.843KB is larger than recommended 256KB
+224- 14_sim_angle7_953.png - success
+File size of 852.365KB is larger than recommended 256KB
+225- 13_sim_angle1_944.png - success
+File size of 838.355KB is larger than recommended 256KB
+226- 12_sim_angle14_1170.png - success
+File size of 853.435KB is larger than recommended 256KB
+227- 14_sim_angle12_577.png - success
+File size of 837.592KB is larger than recommended 256KB
+228- 9_sim_angle9_20.png - success
+File size of 824.779KB is larger than recommended 256KB
+229- 12_sim_angle14_240.png - success
+File size of 825.551KB is larger than recommended 256KB
+230- 8_sim_angle8_1130.png - success
+File size of 867.095KB is larger than recommended 256KB
+231- 16_sim_angle13_649.png - success
+File size of 850.953KB is larger than recommended 256KB
+232- 11_sim_angle4_557.png - success
+File size of 843.046KB is larger than recommended 256KB
+233- 12_sim_angle2_548.png - success
+File size of 867.48KB is larger than recommended 256KB
+234- 17_sim_angle15_301.png - success
+File size of 789.689KB is larger than recommended 256KB
+235- 8_sim_angle6_169.png - success
+File size of 828.671KB is larger than recommended 256KB
+236- 12_sim_angle8_351.png - success
+File size of 869.44KB is larger than recommended 256KB
+237- 15_sim_angle10_84.png - success
+File size of 854.785KB is larger than recommended 256KB
+238- 17_sim_angle20_264.png - success
+File size of 822.685KB is larger than recommended 256KB
+239- 9_sim_angle13_757.png - success
+File size of 838.045KB is larger than recommended 256KB
+240- 10_sim_angle20_946.png - success
+File size of 827.959KB is larger than recommended 256KB
+241- 11_sim_angle4_378.png - success
+File size of 853.305KB is larger than recommended 256KB
+242- 12_sim_angle11_786.png - success
+File size of 853.771KB is larger than recommended 256KB
+243- 13_sim_angle4_1102.png - success
+File size of 878.969KB is larger than recommended 256KB
+244- 17_sim_angle9_118.png - success
+File size of 825.768KB is larger than recommended 256KB
+245- 16_sim_angle2_551.png - success
+File size of 853.268KB is larger than recommended 256KB
+246- 16_sim_angle3_1092.png - success
+File size of 824.144KB is larger than recommended 256KB
+247- 10_sim_angle11_654.png - success
+File size of 802.045KB is larger than recommended 256KB
+248- 8_sim_angle7_81.png - success
+File size of 828.218KB is larger than recommended 256KB
+249- 11_sim_angle3_912.png - success
+File size of 852.591KB is larger than recommended 256KB
+250- 16_sim_angle17_824.png - success
+File size of 851.254KB is larger than recommended 256KB
+251- 12_sim_angle3_1218.png - success
+File size of 857.804KB is larger than recommended 256KB
+252- 13_sim_angle1_1103.png - success
+File size of 818.653KB is larger than recommended 256KB
+253- 11_sim_angle20_29.png - success
+File size of 871.231KB is larger than recommended 256KB
+254- 17_sim_angle18_954.png - success
+File size of 848.559KB is larger than recommended 256KB
+255- 13_sim_angle18_348.png - success
+File size of 844.59KB is larger than recommended 256KB
+256- 11_sim_angle17_1052.png - success
+File size of 880.608KB is larger than recommended 256KB
+257- 15_sim_angle12_1154.png - success
+File size of 834.011KB is larger than recommended 256KB
+258- 10_sim_angle4_111.png - success
+File size of 839.417KB is larger than recommended 256KB
+259- 9_sim_angle19_1131.png - success
+File size of 850.341KB is larger than recommended 256KB
+260- 13_sim_angle4_71.png - success
+File size of 853.171KB is larger than recommended 256KB
+261- 12_sim_angle15_515.png - success
+File size of 822.385KB is larger than recommended 256KB
+262- 9_sim_angle8_840.png - success
+File size of 843.497KB is larger than recommended 256KB
+263- 14_sim_angle8_536.png - success
+File size of 848.447KB is larger than recommended 256KB
+264- 13_sim_angle6_748.png - success
+File size of 835.708KB is larger than recommended 256KB
+265- 12_sim_angle13_945.png - success
+File size of 825.182KB is larger than recommended 256KB
+266- 9_sim_angle12_1014.png - success
+File size of 825.001KB is larger than recommended 256KB
+267- 9_sim_angle7_773.png - success
+File size of 878.51KB is larger than recommended 256KB
+268- 16_sim_angle5_531.png - success
+File size of 876.001KB is larger than recommended 256KB
+269- 14_sim_angle11_228.png - success
+File size of 833.401KB is larger than recommended 256KB
+270- 9_sim_angle8_392.png - success
+File size of 878.818KB is larger than recommended 256KB
+271- 15_sim_angle2_1238.png - success
+File size of 838.761KB is larger than recommended 256KB
+272- 12_sim_angle16_970.png - success
+File size of 873.903KB is larger than recommended 256KB
+273- 16_sim_angle14_1281.png - success
+File size of 850.829KB is larger than recommended 256KB
+274- 16_sim_angle11_352.png - success
+File size of 833.287KB is larger than recommended 256KB
+275- 10_sim_angle3_908.png - success
+File size of 834.095KB is larger than recommended 256KB
+276- 10_sim_angle8_347.png - success
+File size of 855.578KB is larger than recommended 256KB
+277- 15_sim_angle4_867.png - success
+File size of 820.927KB is larger than recommended 256KB
+278- 9_sim_angle11_1220.png - success
+File size of 876.946KB is larger than recommended 256KB
+279- 14_sim_angle20_1298.png - success
+File size of 811.609KB is larger than recommended 256KB
+280- 8_sim_angle2_507.png - success
+File size of 840.941KB is larger than recommended 256KB
+281- 13_sim_angle17_927.png - success
+File size of 870.745KB is larger than recommended 256KB
+282- 14_sim_angle9_715.png - success
+File size of 823.512KB is larger than recommended 256KB
+283- 9_sim_angle7_509.png - success
+File size of 834.429KB is larger than recommended 256KB
+284- 16_sim_angle9_1059.png - success
+File size of 821.047KB is larger than recommended 256KB
+285- 12_sim_angle20_1064.png - success
+File size of 879.45KB is larger than recommended 256KB
+286- 16_sim_angle17_329.png - success
+File size of 886.797KB is larger than recommended 256KB
+287- 15_sim_angle14_747.png - success
+File size of 833.712KB is larger than recommended 256KB
+288- 14_sim_angle5_1029.png - success
+File size of 857.725KB is larger than recommended 256KB
+289- 13_sim_angle4_1279.png - success
+File size of 865.112KB is larger than recommended 256KB
+290- 14_sim_angle8_868.png - success
+File size of 840.364KB is larger than recommended 256KB
+291- 13_sim_angle18_157.png - success
+File size of 867.719KB is larger than recommended 256KB
+292- 14_sim_angle10_628.png - success
+File size of 857.438KB is larger than recommended 256KB
+293- 16_sim_angle19_742.png - success
+File size of 809.603KB is larger than recommended 256KB
+294- 7_sim_angle6_652.png - success
+File size of 845.233KB is larger than recommended 256KB
+295- 12_sim_angle10_728.png - success
+File size of 879.29KB is larger than recommended 256KB
+296- 15_sim_angle9_984.png - success
+File size of 846.776KB is larger than recommended 256KB
+297- 11_sim_angle17_631.png - success
+File size of 839.259KB is larger than recommended 256KB
+298- 12_sim_angle19_788.png - success
+File size of 835.194KB is larger than recommended 256KB
+299- 9_sim_angle20_453.png - success
+File size of 825.177KB is larger than recommended 256KB
+300- 11_sim_angle4_1171.png - success
+File size of 858.782KB is larger than recommended 256KB
+301- 16_sim_angle7_1200.png - success
+File size of 878.418KB is larger than recommended 256KB
+302- 15_sim_angle11_1149.png - success
+File size of 872.048KB is larger than recommended 256KB
+303- 13_sim_angle15_1261.png - success
+File size of 830.954KB is larger than recommended 256KB
+304- 17_sim_angle2_907.png - success
+File size of 863.558KB is larger than recommended 256KB
+305- 10_sim_angle11_594.png - success
+File size of 885.196KB is larger than recommended 256KB
+306- 16_sim_angle14_623.png - success
+File size of 850.943KB is larger than recommended 256KB
+307- 10_sim_angle16_401.png - success
+File size of 845.495KB is larger than recommended 256KB
+308- 12_sim_angle8_140.png - success
+File size of 865.851KB is larger than recommended 256KB
+309- 12_sim_angle9_1309.png - success
+File size of 845.236KB is larger than recommended 256KB
+310- 9_sim_angle6_534.png - success
+File size of 828.323KB is larger than recommended 256KB
+311- 12_sim_angle17_505.png - success
+File size of 854.533KB is larger than recommended 256KB
+312- 16_sim_angle14_971.png - success
+File size of 806.121KB is larger than recommended 256KB
+313- 8_sim_angle1_892.png - success
+File size of 800.797KB is larger than recommended 256KB
+314- 9_sim_angle1_1285.png - success
+File size of 825.222KB is larger than recommended 256KB
+315- 10_sim_angle3_870.png - success
+File size of 865.938KB is larger than recommended 256KB
+316- 15_sim_angle10_472.png - success
+File size of 862.363KB is larger than recommended 256KB
+317- 17_sim_angle15_262.png - success
+File size of 829.995KB is larger than recommended 256KB
+318- 12_sim_angle7_11.png - success
+File size of 827.715KB is larger than recommended 256KB
+319- 11_sim_angle8_533.png - success
+File size of 817.419KB is larger than recommended 256KB
+320- 9_sim_angle7_372.png - success
+File size of 808.55KB is larger than recommended 256KB
+321- 8_sim_angle17_320.png - success
+File size of 813.432KB is larger than recommended 256KB
+322- 8_sim_angle13_872.png - success
+File size of 851.894KB is larger than recommended 256KB
+323- 13_sim_angle12_138.png - success
+File size of 879.112KB is larger than recommended 256KB
+324- 15_sim_angle11_558.png - success
+File size of 823.703KB is larger than recommended 256KB
+325- 11_sim_angle14_689.png - success
+File size of 816.274KB is larger than recommended 256KB
+326- 7_sim_angle20_1299.png - success
+File size of 823.1KB is larger than recommended 256KB
+327- 14_sim_angle20_680.png - success
+File size of 856.492KB is larger than recommended 256KB
+328- 13_sim_angle15_672.png - success
+File size of 839.778KB is larger than recommended 256KB
+329- 12_sim_angle8_281.png - success
+File size of 865.397KB is larger than recommended 256KB
+330- 15_sim_angle10_777.png - success
+File size of 859.505KB is larger than recommended 256KB
+331- 17_sim_angle10_339.png - success
+File size of 841.277KB is larger than recommended 256KB
+332- 9_sim_angle3_1253.png - success
+File size of 857.818KB is larger than recommended 256KB
+333- 16_sim_angle7_564.png - success
+File size of 820.67KB is larger than recommended 256KB
+334- 10_sim_angle15_1294.png - success
+File size of 849.489KB is larger than recommended 256KB
+335- 14_sim_angle18_342.png - success
+File size of 848.904KB is larger than recommended 256KB
+336- 12_sim_angle8_527.png - success
+File size of 891.085KB is larger than recommended 256KB
+337- 16_sim_angle12_543.png - success
+File size of 853.474KB is larger than recommended 256KB
+338- 13_sim_angle17_253.png - success
+File size of 824.759KB is larger than recommended 256KB
+339- 8_sim_angle1_1256.png - success
+File size of 858.097KB is larger than recommended 256KB
+340- 14_sim_angle1_185.png - success
+File size of 845.063KB is larger than recommended 256KB
+341- 11_sim_angle5_368.png - success
+File size of 881.689KB is larger than recommended 256KB
+342- 16_sim_angle5_860.png - success
+File size of 813.361KB is larger than recommended 256KB
+343- 10_sim_angle13_24.png - success
+File size of 803.664KB is larger than recommended 256KB
+344- 9_sim_angle9_888.png - success
+File size of 831.275KB is larger than recommended 256KB
+345- 11_sim_angle7_314.png - success
+File size of 842.222KB is larger than recommended 256KB
+346- 10_sim_angle3_393.png - success
+File size of 861.521KB is larger than recommended 256KB
+347- 14_sim_angle20_374.png - success
+File size of 861.77KB is larger than recommended 256KB
+348- 15_sim_angle17_875.png - success
+File size of 826.153KB is larger than recommended 256KB
+349- 13_sim_angle4_633.png - success
+File size of 906.732KB is larger than recommended 256KB
+350- 16_sim_angle9_734.png - success
+File size of 861.968KB is larger than recommended 256KB
+351- 13_sim_angle3_110.png - success
+File size of 844.959KB is larger than recommended 256KB
+352- 16_sim_angle18_184.png - success
+File size of 852.066KB is larger than recommended 256KB
+353- 15_sim_angle13_690.png - success
+File size of 830.874KB is larger than recommended 256KB
+354- 10_sim_angle9_358.png - success
+File size of 891.642KB is larger than recommended 256KB
+355- 16_sim_angle19_481.png - success
+File size of 813.163KB is larger than recommended 256KB
+356- 10_sim_angle15_171.png - success
+File size of 849.435KB is larger than recommended 256KB
+357- 12_sim_angle6_858.png - success
+File size of 826.591KB is larger than recommended 256KB
+358- 8_sim_angle15_466.png - success
+File size of 885.664KB is larger than recommended 256KB
+359- 17_sim_angle14_218.png - success
+File size of 845.173KB is larger than recommended 256KB
+360- 17_sim_angle18_147.png - success
+File size of 871.313KB is larger than recommended 256KB
+361- 13_sim_angle2_517.png - success
+File size of 792.93KB is larger than recommended 256KB
+362- 8_sim_angle18_600.png - success
+File size of 842.668KB is larger than recommended 256KB
+363- 14_sim_angle13_760.png - success
+File size of 823.728KB is larger than recommended 256KB
+364- 9_sim_angle9_430.png - success
+File size of 862.349KB is larger than recommended 256KB
+365- 16_sim_angle2_866.png - success
+File size of 828.904KB is larger than recommended 256KB
+366- 12_sim_angle17_1030.png - success
+File size of 833.844KB is larger than recommended 256KB
+367- 10_sim_angle19_1143.png - success
+File size of 806.086KB is larger than recommended 256KB
+368- 9_sim_angle3_532.png - success
+File size of 800.266KB is larger than recommended 256KB
+369- 10_sim_angle10_1209.png - success
+File size of 841.149KB is larger than recommended 256KB
+370- 11_sim_angle16_252.png - success
+File size of 823.851KB is larger than recommended 256KB
+371- 12_sim_angle10_457.png - success
+File size of 871.105KB is larger than recommended 256KB
+372- 16_sim_angle7_703.png - success
+File size of 856.681KB is larger than recommended 256KB
+373- 15_sim_angle15_28.png - success
+File size of 817.847KB is larger than recommended 256KB
+374- 11_sim_angle12_756.png - success
+File size of 800.156KB is larger than recommended 256KB
+375- 7_sim_angle12_74.png - success
+File size of 846.052KB is larger than recommended 256KB
+376- 12_sim_angle11_1179.png - success
+File size of 855.979KB is larger than recommended 256KB
+377- 17_sim_angle9_78.png - success
+File size of 864.947KB is larger than recommended 256KB
+378- 14_sim_angle10_298.png - success
+File size of 809.405KB is larger than recommended 256KB
+379- 8_sim_angle19_1009.png - success
+File size of 818.312KB is larger than recommended 256KB
+380- 8_sim_angle7_1268.png - success
+File size of 837.797KB is larger than recommended 256KB
+381- 11_sim_angle5_97.png - success
+File size of 842.445KB is larger than recommended 256KB
+382- 12_sim_angle11_296.png - success
+File size of 812.626KB is larger than recommended 256KB
+383- 8_sim_angle2_1077.png - success
+File size of 836.527KB is larger than recommended 256KB
+384- 12_sim_angle10_900.png - success
+File size of 843.6KB is larger than recommended 256KB
+385- 10_sim_angle13_568.png - success
+File size of 811.045KB is larger than recommended 256KB
+386- 8_sim_angle10_933.png - success
+File size of 879.31KB is larger than recommended 256KB
+387- 13_sim_angle19_210.png - success
+File size of 878.232KB is larger than recommended 256KB
+388- 15_sim_angle13_763.png - success
+File size of 799.828KB is larger than recommended 256KB
+389- 9_sim_angle11_521.png - success
+File size of 847.42KB is larger than recommended 256KB
+390- 11_sim_angle7_1119.png - success
+File size of 855.467KB is larger than recommended 256KB
+391- 15_sim_angle17_25.png - success
+File size of 812.413KB is larger than recommended 256KB
+392- 11_sim_angle5_163.png - success
+File size of 836.007KB is larger than recommended 256KB
+393- 11_sim_angle12_1231.png - success
+File size of 856.088KB is larger than recommended 256KB
+394- 13_sim_angle18_879.png - success
+File size of 804.883KB is larger than recommended 256KB
+395- 8_sim_angle7_426.png - success
+File size of 878.593KB is larger than recommended 256KB
+396- 16_sim_angle4_749.png - success
+File size of 854.905KB is larger than recommended 256KB
+397- 12_sim_angle16_708.png - success
+File size of 911.343KB is larger than recommended 256KB
+398- 12_sim_angle5_597.png - success
+File size of 819.079KB is larger than recommended 256KB
+399- 8_sim_angle1_129.png - success
+File size of 856.812KB is larger than recommended 256KB
+400- 13_sim_angle13_1072.png - success
+File size of 846.743KB is larger than recommended 256KB
+401- 14_sim_angle15_817.png - success
+File size of 869.956KB is larger than recommended 256KB
+402- 16_sim_angle7_1202.png - success
+File size of 842.633KB is larger than recommended 256KB
+403- 11_sim_angle15_113.png - success
+File size of 832.493KB is larger than recommended 256KB
+404- 11_sim_angle12_1164.png - success
+File size of 836.443KB is larger than recommended 256KB
+405- 11_sim_angle4_447.png - success
+File size of 808.567KB is larger than recommended 256KB
+406- 8_sim_angle13_887.png - success
+File size of 804.699KB is larger than recommended 256KB
+407- 7_sim_angle16_1013.png - success
+File size of 851.269KB is larger than recommended 256KB
+408- 11_sim_angle17_305.png - success
+File size of 851.546KB is larger than recommended 256KB
+409- 16_sim_angle20_388.png - success
+File size of 837.845KB is larger than recommended 256KB
+410- 12_sim_angle3_166.png - success
+File size of 858.289KB is larger than recommended 256KB
+411- 16_sim_angle13_4.png - success
+File size of 853.661KB is larger than recommended 256KB
+412- 13_sim_angle3_72.png - success
+File size of 870.827KB is larger than recommended 256KB
+413- 16_sim_angle14_1134.png - success
+File size of 858.46KB is larger than recommended 256KB
+414- 13_sim_angle4_3.png - success
+File size of 846.923KB is larger than recommended 256KB
+415- 14_sim_angle14_130.png - success
+File size of 855.281KB is larger than recommended 256KB
+416- 17_sim_angle3_869.png - success
+File size of 841.732KB is larger than recommended 256KB
+417- 12_sim_angle17_952.png - success
+File size of 816.713KB is larger than recommended 256KB
+418- 8_sim_angle7_668.png - success
+File size of 812.784KB is larger than recommended 256KB
+419- 9_sim_angle12_456.png - success
+File size of 836.866KB is larger than recommended 256KB
+420- 9_sim_angle1_22.png - success
+File size of 834.999KB is larger than recommended 256KB
+421- 13_sim_angle20_172.png - success
+File size of 809.685KB is larger than recommended 256KB
+422- 12_sim_angle10_1004.png - success
+File size of 837.96KB is larger than recommended 256KB
+423- 16_sim_angle3_928.png - success
+File size of 816.063KB is larger than recommended 256KB
+424- 8_sim_angle11_37.png - success
+File size of 885.384KB is larger than recommended 256KB
+425- 16_sim_angle20_211.png - success
+File size of 860.084KB is larger than recommended 256KB
+426- 14_sim_angle8_1010.png - success
+File size of 830.396KB is larger than recommended 256KB
+427- 11_sim_angle7_976.png - success
+File size of 826.926KB is larger than recommended 256KB
+428- 9_sim_angle13_487.png - success
+File size of 877.087KB is larger than recommended 256KB
+429- 17_sim_angle11_851.png - success
+File size of 826.637KB is larger than recommended 256KB
+430- 10_sim_angle7_846.png - success
+File size of 844.77KB is larger than recommended 256KB
+431- 12_sim_angle6_863.png - success
+File size of 839.001KB is larger than recommended 256KB
+432- 11_sim_angle1_1197.png - success
+File size of 817.898KB is larger than recommended 256KB
+433- 10_sim_angle2_438.png - success
+File size of 853.101KB is larger than recommended 256KB
+434- 13_sim_angle8_614.png - success
+File size of 840.863KB is larger than recommended 256KB
+435- 13_sim_angle9_920.png - success
+File size of 880.143KB is larger than recommended 256KB
+436- 17_sim_angle6_640.png - success
+File size of 860.177KB is larger than recommended 256KB
+437- 14_sim_angle19_583.png - success
+File size of 827.167KB is larger than recommended 256KB
+438- 9_sim_angle11_488.png - success
+File size of 851.599KB is larger than recommended 256KB
+439- 11_sim_angle12_402.png - success
+File size of 894.922KB is larger than recommended 256KB
+440- 17_sim_angle18_1049.png - success
+File size of 864.033KB is larger than recommended 256KB
+441- 14_sim_angle10_1296.png - success
+File size of 836.786KB is larger than recommended 256KB
+442- 13_sim_angle14_34.png - success
+File size of 812.681KB is larger than recommended 256KB
+443- 8_sim_angle13_1233.png - success
+File size of 807.276KB is larger than recommended 256KB
+444- 9_sim_angle7_894.png - success
+File size of 805.857KB is larger than recommended 256KB
+445- 10_sim_angle19_1207.png - success
+File size of 808.446KB is larger than recommended 256KB
+446- 7_sim_angle7_785.png - success
+File size of 853.952KB is larger than recommended 256KB
+447- 15_sim_angle16_238.png - success
+File size of 846.161KB is larger than recommended 256KB
+448- 13_sim_angle18_705.png - success
+File size of 839.168KB is larger than recommended 256KB
+449- 10_sim_angle6_318.png - success
+File size of 845.237KB is larger than recommended 256KB
+450- 12_sim_angle7_989.png - success
+File size of 815.947KB is larger than recommended 256KB
+451- 8_sim_angle12_360.png - success
+File size of 854.888KB is larger than recommended 256KB
+452- 12_sim_angle2_31.png - success
+File size of 847.338KB is larger than recommended 256KB
+453- 12_sim_angle3_939.png - success
+File size of 886.997KB is larger than recommended 256KB
+454- 16_sim_angle12_906.png - success
+File size of 852.918KB is larger than recommended 256KB
+455- 15_sim_angle8_217.png - success
+File size of 820.817KB is larger than recommended 256KB
+456- 9_sim_angle3_468.png - success
+File size of 880.058KB is larger than recommended 256KB
+457- 17_sim_angle9_926.png - success
+File size of 869.699KB is larger than recommended 256KB
+458- 17_sim_angle15_43.png - success
+File size of 824.983KB is larger than recommended 256KB
+459- 11_sim_angle14_563.png - success
+File size of 845.679KB is larger than recommended 256KB
+460- 12_sim_angle6_1057.png - success
+File size of 853.118KB is larger than recommended 256KB
+461- 13_sim_angle9_646.png - success
+File size of 826.877KB is larger than recommended 256KB
+462- 11_sim_angle8_340.png - success
+File size of 804.557KB is larger than recommended 256KB
+463- 8_sim_angle19_1172.png - success
+File size of 876.451KB is larger than recommended 256KB
+464- 17_sim_angle13_313.png - success
+File size of 873.929KB is larger than recommended 256KB
+465- 15_sim_angle4_746.png - success
+File size of 834.504KB is larger than recommended 256KB
+466- 13_sim_angle20_1300.png - success
+File size of 886.216KB is larger than recommended 256KB
+467- 14_sim_angle5_390.png - success
+File size of 837.628KB is larger than recommended 256KB
+468- 13_sim_angle7_317.png - success
+File size of 811.197KB is larger than recommended 256KB
+469- 11_sim_angle15_620.png - success
+File size of 830.416KB is larger than recommended 256KB
+470- 17_sim_angle11_315.png - success
+File size of 871.992KB is larger than recommended 256KB
+471- 15_sim_angle11_1120.png - success
+File size of 841.5KB is larger than recommended 256KB
+472- 11_sim_angle11_695.png - success
+File size of 822.36KB is larger than recommended 256KB
+473- 8_sim_angle11_1109.png - success
+File size of 807.414KB is larger than recommended 256KB
+474- 8_sim_angle6_710.png - success
+File size of 886.339KB is larger than recommended 256KB
+475- 16_sim_angle7_46.png - success
+File size of 853.553KB is larger than recommended 256KB
+476- 14_sim_angle9_266.png - success
+File size of 818.351KB is larger than recommended 256KB
+477- 10_sim_angle19_694.png - success
+File size of 828.95KB is larger than recommended 256KB
+478- 10_sim_angle14_1017.png - success
+File size of 851.096KB is larger than recommended 256KB
+479- 13_sim_angle20_291.png - success
+File size of 893.279KB is larger than recommended 256KB
+480- 16_sim_angle13_1177.png - success
+File size of 825.563KB is larger than recommended 256KB
+481- 10_sim_angle18_1157.png - success
+File size of 858.246KB is larger than recommended 256KB
+482- 12_sim_angle7_1266.png - success
+File size of 837.909KB is larger than recommended 256KB
+483- 14_sim_angle20_671.png - success
+File size of 874.75KB is larger than recommended 256KB
+484- 11_sim_angle13_65.png - success
+File size of 829.333KB is larger than recommended 256KB
+485- 13_sim_angle13_1293.png - success
+File size of 868.27KB is larger than recommended 256KB
+486- 16_sim_angle14_1039.png - success
+File size of 814.545KB is larger than recommended 256KB
+487- 8_sim_angle2_948.png - success
+File size of 854.536KB is larger than recommended 256KB
+488- 13_sim_angle7_451.png - success
+File size of 817.528KB is larger than recommended 256KB
+489- 9_sim_angle3_463.png - success
+File size of 828.742KB is larger than recommended 256KB
+490- 10_sim_angle10_890.png - success
+File size of 882.639KB is larger than recommended 256KB
+491- 16_sim_angle18_686.png - success
+File size of 838.208KB is larger than recommended 256KB
+492- 9_sim_angle1_170.png - success
+File size of 838.323KB is larger than recommended 256KB
+493- 14_sim_angle7_599.png - success
+File size of 825.935KB is larger than recommended 256KB
+494- 11_sim_angle13_685.png - success
+File size of 795.165KB is larger than recommended 256KB
+495- 8_sim_angle9_1278.png - success
+File size of 891.33KB is larger than recommended 256KB
+496- 14_sim_angle9_1115.png - success
+File size of 807.257KB is larger than recommended 256KB
+497- 9_sim_angle13_498.png - success
+File size of 868.605KB is larger than recommended 256KB
+498- 17_sim_angle3_874.png - success
+File size of 866.589KB is larger than recommended 256KB
+499- 16_sim_angle2_745.png - success
+File size of 857.391KB is larger than recommended 256KB
+500- 16_sim_angle1_790.png - success
+File size of 847.593KB is larger than recommended 256KB
+501- 10_sim_angle19_941.png - success
+File size of 798.343KB is larger than recommended 256KB
+502- 8_sim_angle19_1136.png - success
+File size of 869.56KB is larger than recommended 256KB
+503- 13_sim_angle9_391.png - success
+File size of 840.092KB is larger than recommended 256KB
+504- 14_sim_angle2_353.png - success
+File size of 895.832KB is larger than recommended 256KB
+505- 17_sim_angle10_1280.png - success
+File size of 837.599KB is larger than recommended 256KB
+506- 13_sim_angle2_1008.png - success
+File size of 816.676KB is larger than recommended 256KB
+507- 9_sim_angle17_1138.png - success
+File size of 828.205KB is larger than recommended 256KB
+508- 9_sim_angle13_1062.png - success
+File size of 810.551KB is larger than recommended 256KB
+509- 10_sim_angle4_1160.png - success
+File size of 838.454KB is larger than recommended 256KB
+510- 12_sim_angle11_647.png - success
+File size of 843.003KB is larger than recommended 256KB
+511- 12_sim_angle7_362.png - success
+File size of 831.037KB is larger than recommended 256KB
+512- 15_sim_angle13_973.png - success
+File size of 835.886KB is larger than recommended 256KB
+513- 9_sim_angle17_346.png - success
+File size of 855.246KB is larger than recommended 256KB
+514- 16_sim_angle11_143.png - success
+File size of 821.729KB is larger than recommended 256KB
+515- 8_sim_angle7_935.png - success
+File size of 864.729KB is larger than recommended 256KB
+516- 12_sim_angle7_1240.png - success
+File size of 884.171KB is larger than recommended 256KB
+517- 15_sim_angle5_395.png - success
+File size of 857.659KB is larger than recommended 256KB
+518- 17_sim_angle1_52.png - success
+File size of 811.883KB is larger than recommended 256KB
+519- 10_sim_angle8_1236.png - success
+File size of 875.074KB is larger than recommended 256KB
+520- 16_sim_angle3_85.png - success
+File size of 854.087KB is larger than recommended 256KB
+521- 15_sim_angle4_1043.png - success
+File size of 886.706KB is larger than recommended 256KB
+522- 17_sim_angle4_344.png - success
+File size of 837.412KB is larger than recommended 256KB
+523- 12_sim_angle20_5.png - success
+File size of 825.019KB is larger than recommended 256KB
+524- 9_sim_angle19_145.png - success
+File size of 857.839KB is larger than recommended 256KB
+525- 10_sim_angle4_68.png - success
+File size of 852.405KB is larger than recommended 256KB
+526- 15_sim_angle4_919.png - success
+File size of 867.975KB is larger than recommended 256KB
+527- 17_sim_angle17_585.png - success
+File size of 858.467KB is larger than recommended 256KB
+528- 15_sim_angle1_1129.png - success
+File size of 857.844KB is larger than recommended 256KB
+529- 15_sim_angle18_246.png - success
+File size of 884.073KB is larger than recommended 256KB
+530- 17_sim_angle10_225.png - success
+File size of 847.087KB is larger than recommended 256KB
+531- 11_sim_angle20_80.png - success
+File size of 855.893KB is larger than recommended 256KB
+532- 14_sim_angle12_519.png - success
+File size of 818.056KB is larger than recommended 256KB
+533- 9_sim_angle14_844.png - success
+File size of 825.484KB is larger than recommended 256KB
+534- 14_sim_angle5_1262.png - success
+File size of 834.866KB is larger than recommended 256KB
+535- 12_sim_angle5_421.png - success
+File size of 824.62KB is larger than recommended 256KB
+536- 12_sim_angle2_139.png - success
+File size of 802.647KB is larger than recommended 256KB
+537- 8_sim_angle4_985.png - success
+File size of 823.276KB is larger than recommended 256KB
+538- 9_sim_angle20_1137.png - success
+File size of 845.692KB is larger than recommended 256KB
+539- 13_sim_angle12_311.png - success
+File size of 826.627KB is larger than recommended 256KB
+540- 11_sim_angle20_1003.png - success
+File size of 872.948KB is larger than recommended 256KB
+541- 15_sim_angle1_1125.png - success
+File size of 826.635KB is larger than recommended 256KB
+542- 10_sim_angle14_1185.png - success
+File size of 846.832KB is larger than recommended 256KB
+543- 11_sim_angle16_566.png - success
+File size of 848.71KB is larger than recommended 256KB
+544- 13_sim_angle20_972.png - success
+File size of 862.095KB is larger than recommended 256KB
+545- 11_sim_angle14_278.png - success
+File size of 839.849KB is larger than recommended 256KB
+546- 13_sim_angle8_857.png - success
+File size of 803.164KB is larger than recommended 256KB
+547- 8_sim_angle12_963.png - success
+File size of 883.561KB is larger than recommended 256KB
+548- 14_sim_angle5_136.png - success
+File size of 855.549KB is larger than recommended 256KB
+549- 13_sim_angle3_1153.png - success
+File size of 869.548KB is larger than recommended 256KB
+550- 13_sim_angle5_35.png - success
+File size of 797.614KB is larger than recommended 256KB
+551- 7_sim_angle12_819.png - success
+File size of 823.897KB is larger than recommended 256KB
+552- 10_sim_angle8_1070.png - success
+File size of 850.8KB is larger than recommended 256KB
+553- 13_sim_angle19_88.png - success
+File size of 851.893KB is larger than recommended 256KB
+554- 16_sim_angle13_1048.png - success
+File size of 846.302KB is larger than recommended 256KB
+555- 14_sim_angle7_1308.png - success
+File size of 850.928KB is larger than recommended 256KB
+556- 14_sim_angle4_26.png - success
+File size of 816.091KB is larger than recommended 256KB
+557- 10_sim_angle8_542.png - success
+File size of 864.966KB is larger than recommended 256KB
+558- 14_sim_angle12_177.png - success
+File size of 839.553KB is larger than recommended 256KB
+559- 10_sim_angle18_662.png - success
+File size of 835.049KB is larger than recommended 256KB
+560- 14_sim_angle4_61.png - success
+File size of 824.218KB is larger than recommended 256KB
+561- 8_sim_angle15_94.png - success
+File size of 839.115KB is larger than recommended 256KB
+562- 15_sim_angle19_737.png - success
+File size of 829.462KB is larger than recommended 256KB
+563- 10_sim_angle18_820.png - success
+File size of 834.883KB is larger than recommended 256KB
+564- 10_sim_angle11_424.png - success
+File size of 843.97KB is larger than recommended 256KB
+565- 12_sim_angle6_797.png - success
+File size of 854.266KB is larger than recommended 256KB
+566- 12_sim_angle14_1006.png - success
+File size of 822.857KB is larger than recommended 256KB
+567- 7_sim_angle20_1224.png - success
+File size of 857.745KB is larger than recommended 256KB
+568- 14_sim_angle12_960.png - success
+File size of 849.12KB is larger than recommended 256KB
+569- 14_sim_angle5_1141.png - success
+File size of 810.774KB is larger than recommended 256KB
+570- 9_sim_angle8_983.png - success
+File size of 818.074KB is larger than recommended 256KB
+571- 12_sim_angle7_758.png - success
+File size of 832.818KB is larger than recommended 256KB
+572- 10_sim_angle17_670.png - success
+File size of 846.05KB is larger than recommended 256KB
+573- 13_sim_angle17_1217.png - success
+File size of 834.486KB is larger than recommended 256KB
+574- 11_sim_angle10_224.png - success
+File size of 841.141KB is larger than recommended 256KB
+575- 14_sim_angle16_834.png - success
+File size of 839.59KB is larger than recommended 256KB
+576- 13_sim_angle17_1307.png - success
+File size of 837.085KB is larger than recommended 256KB
+577- 12_sim_angle18_1096.png - success
+File size of 833.063KB is larger than recommended 256KB
+578- 9_sim_angle11_893.png - success
+File size of 875.771KB is larger than recommended 256KB
+579- 15_sim_angle12_922.png - success
+File size of 853.8KB is larger than recommended 256KB
+580- 11_sim_angle12_327.png - success
+File size of 839.703KB is larger than recommended 256KB
+581- 13_sim_angle19_806.png - success
+File size of 871.882KB is larger than recommended 256KB
+582- 13_sim_angle10_151.png - success
+File size of 844.724KB is larger than recommended 256KB
+583- 14_sim_angle7_677.png - success
+File size of 819.71KB is larger than recommended 256KB
+584- 8_sim_angle14_467.png - success
+File size of 870.701KB is larger than recommended 256KB
+585- 14_sim_angle15_772.png - success
+File size of 857.401KB is larger than recommended 256KB
+586- 14_sim_angle18_1205.png - success
+File size of 851.468KB is larger than recommended 256KB
+587- 13_sim_angle10_929.png - success
+File size of 817.27KB is larger than recommended 256KB
+588- 11_sim_angle8_1255.png - success
+File size of 858.625KB is larger than recommended 256KB
+589- 12_sim_angle16_1098.png - success
+File size of 906.956KB is larger than recommended 256KB
+590- 17_sim_angle9_55.png - success
+File size of 859.747KB is larger than recommended 256KB
+591- 14_sim_angle1_479.png - success
+File size of 841.632KB is larger than recommended 256KB
+592- 10_sim_angle16_1144.png - success
+File size of 816.949KB is larger than recommended 256KB
+593- 9_sim_angle19_567.png - success
+File size of 810.259KB is larger than recommended 256KB
+594- 9_sim_angle19_687.png - success
+File size of 829.448KB is larger than recommended 256KB
+595- 14_sim_angle9_769.png - success
+File size of 852.835KB is larger than recommended 256KB
+596- 14_sim_angle10_200.png - success
+File size of 882.235KB is larger than recommended 256KB
+597- 16_sim_angle14_642.png - success
+File size of 859.076KB is larger than recommended 256KB
+598- 16_sim_angle2_923.png - success
+File size of 855.787KB is larger than recommended 256KB
+599- 14_sim_angle11_1226.png - success
+File size of 828.938KB is larger than recommended 256KB
+600- 11_sim_angle8_365.png - success
+File size of 844.466KB is larger than recommended 256KB
+601- 12_sim_angle9_297.png - success
+File size of 884.686KB is larger than recommended 256KB
+602- 15_sim_angle3_1108.png - success
+File size of 832.641KB is larger than recommended 256KB
+603- 10_sim_angle16_1085.png - success
+File size of 874.072KB is larger than recommended 256KB
+604- 17_sim_angle12_1206.png - success
+File size of 819.737KB is larger than recommended 256KB
+605- 10_sim_angle7_107.png - success
+File size of 818.612KB is larger than recommended 256KB
+606- 9_sim_angle16_781.png - success
+File size of 927.766KB is larger than recommended 256KB
+607- 11_sim_angle12_595.png - success
+File size of 856.724KB is larger than recommended 256KB
+608- 15_sim_angle5_452.png - success
+File size of 867.73KB is larger than recommended 256KB
+609- 15_sim_angle12_14.png - success
+File size of 859.541KB is larger than recommended 256KB
+610- 16_sim_angle7_639.png - success
+File size of 845.906KB is larger than recommended 256KB
+611- 10_sim_angle18_359.png - success
+File size of 852.886KB is larger than recommended 256KB
+612- 13_sim_angle17_1132.png - success
+File size of 820.319KB is larger than recommended 256KB
+613- 9_sim_angle4_578.png - success
+File size of 836.87KB is larger than recommended 256KB
+614- 13_sim_angle6_176.png - success
+File size of 809.938KB is larger than recommended 256KB
+615- 9_sim_angle15_90.png - success
+File size of 830.527KB is larger than recommended 256KB
+616- 11_sim_angle16_584.png - success
+File size of 806.91KB is larger than recommended 256KB
+617- 12_sim_angle13_108.png - success
+File size of 838.633KB is larger than recommended 256KB
+618- 14_sim_angle19_1000.png - success
+File size of 845.038KB is larger than recommended 256KB
+619- 13_sim_angle1_336.png - success
+File size of 884.293KB is larger than recommended 256KB
+620- 17_sim_angle4_938.png - success
+File size of 823.012KB is larger than recommended 256KB
+621- 9_sim_angle12_607.png - success
+File size of 846.743KB is larger than recommended 256KB
+622- 17_sim_angle9_811.png - success
+File size of 839.044KB is larger than recommended 256KB
+623- 11_sim_angle10_366.png - success
+File size of 833.347KB is larger than recommended 256KB
+624- 9_sim_angle7_1114.png - success
+File size of 884.22KB is larger than recommended 256KB
+625- 17_sim_angle9_64.png - success
+File size of 864.316KB is larger than recommended 256KB
+626- 16_sim_angle14_407.png - success
+File size of 854.511KB is larger than recommended 256KB
+627- 12_sim_angle3_198.png - success
+File size of 899.988KB is larger than recommended 256KB
+628- 17_sim_angle10_131.png - success
+File size of 843.473KB is larger than recommended 256KB
+629- 14_sim_angle14_245.png - success
+File size of 848.931KB is larger than recommended 256KB
+630- 13_sim_angle9_302.png - success
+File size of 825.238KB is larger than recommended 256KB
+631- 9_sim_angle18_1287.png - success
+File size of 859.913KB is larger than recommended 256KB
+632- 12_sim_angle13_688.png - success
+File size of 844.618KB is larger than recommended 256KB
+633- 13_sim_angle17_827.png - success
+File size of 884.71KB is larger than recommended 256KB
+634- 17_sim_angle6_379.png - success
+File size of 869.972KB is larger than recommended 256KB
+635- 16_sim_angle16_1146.png - success
+File size of 857.15KB is larger than recommended 256KB
+636- 15_sim_angle1_469.png - success
+File size of 871.616KB is larger than recommended 256KB
+637- 16_sim_angle11_337.png - success
+File size of 784.704KB is larger than recommended 256KB
+638- 7_sim_angle5_883.png - success
+File size of 863.708KB is larger than recommended 256KB
+639- 14_sim_angle10_1081.png - success
+File size of 826.547KB is larger than recommended 256KB
+640- 11_sim_angle2_251.png - success
+File size of 848.835KB is larger than recommended 256KB
+641- 14_sim_angle20_1127.png - success
+File size of 843.084KB is larger than recommended 256KB
+642- 10_sim_angle1_1002.png - success
+File size of 858.761KB is larger than recommended 256KB
+643- 14_sim_angle1_432.png - success
+File size of 820.314KB is larger than recommended 256KB
+644- 9_sim_angle2_290.png - success
+File size of 860.778KB is larger than recommended 256KB
+645- 14_sim_angle2_829.png - success
+File size of 826.1KB is larger than recommended 256KB
+646- 8_sim_angle9_765.png - success
+File size of 835.506KB is larger than recommended 256KB
+647- 14_sim_angle7_1107.png - success
+File size of 890.13KB is larger than recommended 256KB
+648- 14_sim_angle9_726.png - success
+File size of 809.38KB is larger than recommended 256KB
+649- 11_sim_angle2_331.png - success
+File size of 882.129KB is larger than recommended 256KB
+650- 16_sim_angle13_1083.png - success
+File size of 814.543KB is larger than recommended 256KB
+651- 9_sim_angle18_580.png - success
+File size of 832.591KB is larger than recommended 256KB
+652- 9_sim_angle14_609.png - success
+File size of 834.16KB is larger than recommended 256KB
+653- 10_sim_angle20_1091.png - success
+File size of 853.278KB is larger than recommended 256KB
+654- 12_sim_angle13_260.png - success
+File size of 867.629KB is larger than recommended 256KB
+655- 16_sim_angle11_40.png - success
+File size of 897.151KB is larger than recommended 256KB
+656- 17_sim_angle7_1183.png - success
+File size of 844.183KB is larger than recommended 256KB
+657- 12_sim_angle11_559.png - success
+File size of 826.686KB is larger than recommended 256KB
+658- 17_sim_angle1_333.png - success
+File size of 882.647KB is larger than recommended 256KB
+659- 17_sim_angle5_529.png - success
+File size of 855.009KB is larger than recommended 256KB
+660- 12_sim_angle6_207.png - success
+File size of 846.513KB is larger than recommended 256KB
+661- 10_sim_angle10_759.png - success
+File size of 868.546KB is larger than recommended 256KB
+662- 13_sim_angle7_1196.png - success
+File size of 864.543KB is larger than recommended 256KB
+663- 17_sim_angle16_265.png - success
+File size of 818.54KB is larger than recommended 256KB
+664- 9_sim_angle3_229.png - success
+File size of 829.615KB is larger than recommended 256KB
+665- 12_sim_angle6_494.png - success
+File size of 821.197KB is larger than recommended 256KB
+666- 9_sim_angle11_1123.png - success
+File size of 818.918KB is larger than recommended 256KB
+667- 10_sim_angle7_739.png - success
+File size of 856.847KB is larger than recommended 256KB
+668- 13_sim_angle17_712.png - success
+File size of 857.588KB is larger than recommended 256KB
+669- 13_sim_angle5_1277.png - success
+File size of 861.555KB is larger than recommended 256KB
+670- 16_sim_angle2_530.png - success
+File size of 855.47KB is larger than recommended 256KB
+671- 14_sim_angle10_831.png - success
+File size of 835.893KB is larger than recommended 256KB
+672- 12_sim_angle7_937.png - success
+File size of 803.392KB is larger than recommended 256KB
+673- 10_sim_angle19_696.png - success
+File size of 900.576KB is larger than recommended 256KB
+674- 17_sim_angle7_414.png - success
+File size of 858.407KB is larger than recommended 256KB
+675- 17_sim_angle19_1053.png - success
+File size of 863.142KB is larger than recommended 256KB
+676- 15_sim_angle19_276.png - success
+File size of 868.168KB is larger than recommended 256KB
+677- 15_sim_angle9_637.png - success
+File size of 826.102KB is larger than recommended 256KB
+678- 10_sim_angle5_33.png - success
+File size of 849.947KB is larger than recommended 256KB
+679- 12_sim_angle4_8.png - success
+File size of 808.822KB is larger than recommended 256KB
+680- 10_sim_angle1_1016.png - success
+File size of 818.779KB is larger than recommended 256KB
+681- 11_sim_angle13_1121.png - success
+File size of 870.734KB is larger than recommended 256KB
+682- 14_sim_angle1_799.png - success
+File size of 824.943KB is larger than recommended 256KB
+683- 16_sim_angle5_423.png - success
+File size of 853.266KB is larger than recommended 256KB
+684- 12_sim_angle20_1243.png - success
+File size of 811.242KB is larger than recommended 256KB
+685- 9_sim_angle14_1241.png - success
+File size of 851.8KB is larger than recommended 256KB
+686- 14_sim_angle10_437.png - success
+File size of 821.637KB is larger than recommended 256KB
+687- 10_sim_angle10_968.png - success
+File size of 877.042KB is larger than recommended 256KB
+688- 16_sim_angle14_1214.png - success
+File size of 814.819KB is larger than recommended 256KB
+689- 8_sim_angle4_701.png - success
+File size of 836.315KB is larger than recommended 256KB
+690- 9_sim_angle10_556.png - success
+File size of 860.817KB is larger than recommended 256KB
+691- 14_sim_angle1_601.png - success
+File size of 822.538KB is larger than recommended 256KB
+692- 11_sim_angle2_179.png - success
+File size of 862.74KB is larger than recommended 256KB
+693- 14_sim_angle20_190.png - success
+File size of 805.438KB is larger than recommended 256KB
+694- 10_sim_angle9_1034.png - success
+File size of 791.007KB is larger than recommended 256KB
+695- 8_sim_angle10_480.png - success
+File size of 818.982KB is larger than recommended 256KB
+696- 10_sim_angle8_230.png - success
+File size of 866.44KB is larger than recommended 256KB
+697- 17_sim_angle7_386.png - success
+File size of 866.667KB is larger than recommended 256KB
+698- 15_sim_angle12_1.png - success
+File size of 846.5KB is larger than recommended 256KB
+699- 11_sim_angle3_1199.png - success
+File size of 854.243KB is larger than recommended 256KB
+700- 14_sim_angle15_376.png - success
+File size of 853.184KB is larger than recommended 256KB
+701- 16_sim_angle15_1040.png - success
+File size of 866.256KB is larger than recommended 256KB
+702- 17_sim_angle18_650.png - success
+File size of 844.493KB is larger than recommended 256KB
+703- 10_sim_angle17_444.png - success
+File size of 882.932KB is larger than recommended 256KB
+704- 17_sim_angle16_161.png - success
+File size of 812.315KB is larger than recommended 256KB
+705- 9_sim_angle18_209.png - success
+File size of 838.963KB is larger than recommended 256KB
+706- 11_sim_angle16_7.png - success
+File size of 851.097KB is larger than recommended 256KB
+707- 15_sim_angle10_816.png - success
+File size of 800.454KB is larger than recommended 256KB
+708- 8_sim_angle9_294.png - success
+File size of 832.297KB is larger than recommended 256KB
+709- 11_sim_angle6_128.png - success
+File size of 827.81KB is larger than recommended 256KB
+710- 9_sim_angle11_159.png - success
+File size of 878.236KB is larger than recommended 256KB
+711- 15_sim_angle13_411.png - success
+File size of 798.354KB is larger than recommended 256KB
+712- 8_sim_angle18_178.png - success
+File size of 830.903KB is larger than recommended 256KB
+713- 10_sim_angle4_1075.png - success
+File size of 872.61KB is larger than recommended 256KB
+714- 16_sim_angle16_651.png - success
+File size of 828.633KB is larger than recommended 256KB
+715- 10_sim_angle9_516.png - success
+File size of 845.84KB is larger than recommended 256KB
+716- 14_sim_angle9_89.png - success
+File size of 843.422KB is larger than recommended 256KB
+717- 14_sim_angle19_141.png - success
+File size of 867.55KB is larger than recommended 256KB
+718- 16_sim_angle1_82.png - success
+File size of 841.083KB is larger than recommended 256KB
+719- 14_sim_angle9_167.png - success
+File size of 856.115KB is larger than recommended 256KB
+720- 13_sim_angle10_399.png - success
+File size of 827.033KB is larger than recommended 256KB
+721- 11_sim_angle18_1295.png - success
+File size of 852.596KB is larger than recommended 256KB
+722- 12_sim_angle8_901.png - success
+File size of 831.872KB is larger than recommended 256KB
+723- 13_sim_angle16_54.png - success
+File size of 870.953KB is larger than recommended 256KB
+724- 13_sim_angle12_13.png - success
+File size of 873.328KB is larger than recommended 256KB
+725- 14_sim_angle10_59.png - success
+File size of 862.656KB is larger than recommended 256KB
+726- 13_sim_angle17_664.png - success
+File size of 796.593KB is larger than recommended 256KB
+727- 10_sim_angle1_490.png - success
+File size of 861.033KB is larger than recommended 256KB
+728- 16_sim_angle11_293.png - success
+File size of 824.466KB is larger than recommended 256KB
+729- 9_sim_angle4_1161.png - success
+File size of 883.78KB is larger than recommended 256KB
+730- 17_sim_angle13_1106.png - success
+File size of 857.51KB is larger than recommended 256KB
+731- 16_sim_angle11_274.png - success
+File size of 815.721KB is larger than recommended 256KB
+732- 11_sim_angle7_958.png - success
+File size of 814.624KB is larger than recommended 256KB
+733- 9_sim_angle2_761.png - success
+File size of 871.128KB is larger than recommended 256KB
+734- 14_sim_angle5_1110.png - success
+File size of 842.205KB is larger than recommended 256KB
+735- 12_sim_angle16_725.png - success
+File size of 833.693KB is larger than recommended 256KB
+736- 10_sim_angle6_194.png - success
+File size of 837.115KB is larger than recommended 256KB
+737- 10_sim_angle10_838.png - success
+File size of 841.461KB is larger than recommended 256KB
+738- 13_sim_angle16_299.png - success
+File size of 823.602KB is larger than recommended 256KB
+739- 9_sim_angle17_1303.png - success
+File size of 834.781KB is larger than recommended 256KB
+740- 11_sim_angle19_212.png - success
+File size of 861.831KB is larger than recommended 256KB
+741- 14_sim_angle17_449.png - success
+File size of 825.308KB is larger than recommended 256KB
+742- 10_sim_angle15_377.png - success
+File size of 885.836KB is larger than recommended 256KB
+743- 14_sim_angle10_153.png - success
+File size of 885.954KB is larger than recommended 256KB
+744- 17_sim_angle4_1140.png - success
+File size of 852.813KB is larger than recommended 256KB
+745- 14_sim_angle5_1163.png - success
+File size of 875.241KB is larger than recommended 256KB
+746- 15_sim_angle11_1024.png - success
+File size of 890.114KB is larger than recommended 256KB
+747- 16_sim_angle10_183.png - success
+File size of 848.965KB is larger than recommended 256KB
+748- 14_sim_angle13_236.png - success
+File size of 860.48KB is larger than recommended 256KB
+749- 14_sim_angle19_965.png - success
+File size of 861.317KB is larger than recommended 256KB
+750- 14_sim_angle15_1051.png - success
+File size of 829.799KB is larger than recommended 256KB
+751- 12_sim_angle11_1176.png - success
+File size of 845.42KB is larger than recommended 256KB
+752- 12_sim_angle19_270.png - success
+File size of 840.091KB is larger than recommended 256KB
+753- 11_sim_angle11_70.png - success
+File size of 865.886KB is larger than recommended 256KB
+754- 16_sim_angle3_751.png - success
+File size of 858.023KB is larger than recommended 256KB
+755- 13_sim_angle13_6.png - success
+File size of 887.391KB is larger than recommended 256KB
+756- 17_sim_angle4_408.png - success
+File size of 844.403KB is larger than recommended 256KB
+757- 13_sim_angle17_10.png - success
+File size of 839.504KB is larger than recommended 256KB
+758- 11_sim_angle3_720.png - success
+File size of 840.277KB is larger than recommended 256KB
+759- 12_sim_angle16_629.png - success
+File size of 876.761KB is larger than recommended 256KB
+760- 14_sim_angle13_356.png - success
+File size of 861.603KB is larger than recommended 256KB
+761- 12_sim_angle8_233.png - success
+File size of 841.757KB is larger than recommended 256KB
+762- 10_sim_angle12_258.png - success
+File size of 786.043KB is larger than recommended 256KB
+763- 7_sim_angle18_493.png - success
+File size of 843.411KB is larger than recommended 256KB
+764- 14_sim_angle2_550.png - success
+File size of 851.929KB is larger than recommended 256KB
+765- 13_sim_angle15_1001.png - success
+File size of 803.699KB is larger than recommended 256KB
+766- 8_sim_angle6_981.png - success
+File size of 870.073KB is larger than recommended 256KB
+767- 15_sim_angle1_124.png - success
+File size of 860.672KB is larger than recommended 256KB
+768- 16_sim_angle20_1174.png - success
+File size of 850.559KB is larger than recommended 256KB
+769- 15_sim_angle18_192.png - success
+File size of 878.602KB is larger than recommended 256KB
+770- 14_sim_angle12_1158.png - success
+File size of 896.797KB is larger than recommended 256KB
+771- 16_sim_angle6_381.png - success
+File size of 835.517KB is larger than recommended 256KB
+772- 10_sim_angle6_21.png - success
+File size of 858.665KB is larger than recommended 256KB
+773- 13_sim_angle8_825.png - success
+File size of 856.348KB is larger than recommended 256KB
+774- 14_sim_angle17_978.png - success
+File size of 831.119KB is larger than recommended 256KB
+775- 11_sim_angle2_1145.png - success
+File size of 819.982KB is larger than recommended 256KB
+776- 9_sim_angle4_706.png - success
+File size of 844.764KB is larger than recommended 256KB
+777- 10_sim_angle5_917.png - success
+File size of 855.242KB is larger than recommended 256KB
+778- 17_sim_angle2_853.png - success
+File size of 827.743KB is larger than recommended 256KB
+779- 13_sim_angle13_809.png - success
+File size of 882.131KB is larger than recommended 256KB
+780- 17_sim_angle9_1173.png - success
+File size of 866.076KB is larger than recommended 256KB
+781- 16_sim_angle2_1189.png - success
+File size of 805.016KB is larger than recommended 256KB
+782- 9_sim_angle12_913.png - success
+File size of 846.178KB is larger than recommended 256KB
+783- 11_sim_angle4_223.png - success
+File size of 841.919KB is larger than recommended 256KB
+784- 11_sim_angle3_967.png - success
+File size of 859.687KB is larger than recommended 256KB
+785- 17_sim_angle17_1028.png - success
+File size of 849.545KB is larger than recommended 256KB
+786- 14_sim_angle5_784.png - success
+File size of 871.724KB is larger than recommended 256KB
+787- 13_sim_angle15_1027.png - success
+File size of 876.011KB is larger than recommended 256KB
+788- 16_sim_angle20_268.png - success
+File size of 864.175KB is larger than recommended 256KB
+789- 12_sim_angle3_1068.png - success
+File size of 848.745KB is larger than recommended 256KB
+790- 17_sim_angle15_1086.png - success
+File size of 840.059KB is larger than recommended 256KB
+791- 11_sim_angle20_625.png - success
+File size of 884.054KB is larger than recommended 256KB
+792- 17_sim_angle14_702.png - success
+File size of 845.047KB is larger than recommended 256KB
+793- 9_sim_angle3_902.png - success
+File size of 849.383KB is larger than recommended 256KB
+794- 12_sim_angle9_545.png - success
+File size of 836.377KB is larger than recommended 256KB
+795- 10_sim_angle6_986.png - success
+File size of 840.441KB is larger than recommended 256KB
+796- 10_sim_angle13_1275.png - success
+File size of 852.378KB is larger than recommended 256KB
+797- 11_sim_angle3_154.png - success
+File size of 830.854KB is larger than recommended 256KB
+798- 11_sim_angle11_232.png - success
+File size of 832.07KB is larger than recommended 256KB
+799- 12_sim_angle1_361.png - success
+File size of 840.153KB is larger than recommended 256KB
+800- 8_sim_angle5_852.png - success
+File size of 832.648KB is larger than recommended 256KB
+801- 12_sim_angle2_397.png - success
+File size of 874.616KB is larger than recommended 256KB
+802- 16_sim_angle20_1087.png - success
+File size of 850.316KB is larger than recommended 256KB
+803- 12_sim_angle1_753.png - success
+File size of 881.827KB is larger than recommended 256KB
+804- 16_sim_angle11_462.png - success
+File size of 861.501KB is larger than recommended 256KB
+805- 12_sim_angle13_1101.png - success
+File size of 852.709KB is larger than recommended 256KB
+806- 15_sim_angle16_44.png - success
+File size of 874.184KB is larger than recommended 256KB
+807- 16_sim_angle14_144.png - success
+File size of 831.064KB is larger than recommended 256KB
+808- 12_sim_angle6_1090.png - success
+File size of 832.601KB is larger than recommended 256KB
+809- 11_sim_angle1_930.png - success
+File size of 840.444KB is larger than recommended 256KB
+810- 13_sim_angle2_1288.png - success
+File size of 825.74KB is larger than recommended 256KB
+811- 12_sim_angle1_32.png - success
+File size of 815.394KB is larger than recommended 256KB
+812- 8_sim_angle8_148.png - success
+DONE
+Summary:
+  Upload completed at: 21:56:43 09/30/19
+  812 of 812 images loaded
+
+
+Remember to link your workflow to this subject set

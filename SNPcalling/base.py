@@ -7,6 +7,7 @@ https://samtools.github.io/bcftools/bcftools.html
 """
 
 import pandas as pd
+import numpy as np
 import os.path as op
 import sys
 from pathlib import Path
@@ -18,65 +19,51 @@ from schnablelab.apps.headers import Slurm_header
 
 def main():
     actions = (
-        ('NUM_ALT', 'filter number of alternative SNPs'),
         ('Missing', 'filter missing rate using customized script'),
+        ('MAF', 'filter minor allele frequency using customized script'),
         ('Heterozygous', 'filter SNPs with high heterozygous rates'),
         ('Bad_Indels', 'remove wrong INDELs'),
-        ('MAF_bcftools', 'filter minor allele frequency using bcftools'),
-        ('MAF', 'filter minor allele frequency using customized script'),
-        ('Subsampling', 'choose part of samples from vcf'),
         ('GrepImputatedVcf', 'grep the SNPs with lower missing rate before imputation from whole imputed vcf'),
+        ('SummarizeLD', 'ld decay in log scale'),
 )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
-def Subsampling(args):
+def SummarizeLD(args):
     """
-    %prog Subsampling SMs_file vcf_or_vcf.gz
-    Subsampling vcf file using bcftools. The samples order will also change following the order in SMs_file.
-    """
-    p = OptionParser(Subsampling.__doc__)
-    p.set_slurm_opts(jn=True)
-    opts, args = p.parse_args(args)
+    %prog ld.csv num0 out.txt
+    ld.csv: ld tab delimited file generated from tassel
+    num0: 0s in the distance
 
+    summarize ld decay in log scale 0-100kb
+    """
+    p = OptionParser(SummarizeLD.__doc__)
+    opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    SMsfile, vcffile, = args
-    
-    prefix = vcffile.split('/')[-1].split('.vcf')[0]
-    new_f = prefix + '.subsm.vcf'
-    cmd = "bcftools view -S %s %s > %s\n"%(SMsfile, vcffile, new_f)
-    print(cmd)
-    jobfile = '%s.subsm.slurm'%prefix
-    f = open(jobfile, 'w')
-    header = Slurm_header%(opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += 'module load bcftools\n'
-    header += cmd
-    f.write(header) 
-    print('slurm file %s.subsm.slurm has been created, you can sbatch your job file.'%prefix)
+    ld_fn,num0,out_fn, = args
+    df = pd.read_csv(ld_fn, delim_whitespace=True, usecols=['Dist_bp', 'R^2'])
+    df = df.dropna().sort_values('Dist_bp').reset_index(drop=True)
 
-def NUM_ALT(args):
-    """
-    %prog NUM_ALT vcf_or_vcf.gz
-    only retain SNPs with only one ALT    
-    """
-    p = OptionParser(NUM_ALT.__doc__)
-    p.set_slurm_opts(jn=True)
-    opts, args = p.parse_args(args)
+    mybin = [10**i for i in np.arange(0, float(num0)+0.1, 0.1)]
+    blockPreIndex = np.histogram(df['Dist_bp'].values, bins=mybin)[0]
+
+    a = list(blockPreIndex)
+    a.insert(0,0)
+    boxlist = []
+    for idx,ele in enumerate(a):
+        st = sum(a[0:idx])
+        ed = sum(a[0:idx+1])
+        boxlist.append(df['R^2'][st:ed].values)
+    boxlist.pop(0)
     
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    vcffile, = args
-    prefix = vcffile.split('.')[0]
-    new_f = prefix + '.alt1.vcf'
-    cmd = "bcftools view -i 'N_ALT=1' %s > %s"%(vcffile, new_f)
-    jobfile = '%s.alt1.slurm'%prefix
-    f = open(jobfile, 'w')
-    header = Slurm_header%(opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += 'module load bacftools\n'
-    header += cmd
-    f.write(header) 
-    print('slurm file %s.alt1.slurm has been created, you can sbatch your job file.'%prefix)
+    with open(out_fn, 'w') as f:
+        for idx,ele in enumerate(boxlist):
+            if len(ele) >= 1:
+                averageR2, sd = sum(ele)/float(len(ele)), np.var(ele)
+            elif len(ele) == 0:
+                averageR2, sd = '',''
+            f.write('%s\t%s\t%s\t%s\n'%(10**(idx*0.1),(10**((idx+1)*0.1)), averageR2, sd))
 
 def Missing(args):
     """
@@ -86,17 +73,14 @@ def Missing(args):
     p = OptionParser(Missing.__doc__)
     p.add_option('--missing_rate', default = 0.7, type='float', 
         help = 'specify the missing rate cutoff. SNPs with missing rate higher than this cutoff will be removed.')
-    p.set_slurm_opts(jn=True)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
     vcffile, = args
     prefix = vcffile.split('.vcf')[0]
     new_f = prefix + '.mis%s.vcf'%opts.missing_rate
-
     total_n = getSMsNum(vcffile)
     print('Total %s Samples.'%total_n)
-
     with open(new_f, 'w') as f_out:
         with open(vcffile) as f_in:
             for i in f_in:
@@ -150,50 +134,19 @@ def getSMsNum(vcffile):
     SMs_num = float(child.communicate()[0])
     return SMs_num
 
-def MAF_bcftools(args):
-    """
-    %prog MAF_unimputed in_dir out_dir
-    do filtering on MAF using bcftools.
-    """
-    p = OptionParser(MAF_bcftools.__doc__)
-    p.add_option("--pattern", default = '*.vcf', 
-            help="the pattern of vcf files, qutation needed") 
-    p.add_option('--maf', default = '0.01', type = 'float',
-        help = 'specify the missing rate cutoff, MAF smaller than this cutoff will be removed.')
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    in_dir, out_dir, = args   
-    maf = float(opts.maf)
-
-    out_path = Path(out_dir)
-    if not out_path.exists():
-        sys.exit('%s does not exist...')
-    dir_path = Path(in_dir)
-    vcfs = dir_path.glob(opts.pattern)
-    for vcf in vcfs:
-        prf = vcf.name.split('.vcf')[0]
-        new_vcf = prf +'.maf.vcf'
-        cmd = "bcftools view -i 'AF>=%s && AF<=%s' %s > %s"%(maf, 1-maf, vcf, out_path/new_vcf) 
-        header = Slurm_header%(10, 5000, prf, prf, prf)
-        header += 'ml bcftools\n'
-        header += cmd
-        with open('%s.maf%s.slurm'%(prf, maf), 'w') as f:
-            f.write(header)
-
 def MAF(args):
     """
-    %prog MAF vcf
+    %prog MAF vcf maf out_fn
+
     filter rare MAF SNPs
     """
     p = OptionParser(MAF.__doc__)
-    p.add_option('--maf', default = 0.01, type='float', help='specify MAF cutoff, MAF smaller than this cutoff will be removed.')
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    vcffile, = args
+    vcffile, maf, = args
     prefix = vcffile.split('.vcf')[0]
-    new_f = prefix + '.maf%s.vcf'%opts.maf
+    new_f = prefix + '.maf%s.vcf'%maf
 
     total_n = getSMsNum(vcffile)
     print('Total %s Samples.'%total_n)
@@ -207,7 +160,7 @@ def MAF(args):
                     ref, alt, het, mis = genotypes_count(i)
                     an1, an2 = ref*2+het, alt*2+het
                     maf = min(an1,an2)/(an1+an2)
-                    if maf >= float(opts.maf):
+                    if maf >= float(maf):
                         f_out.write(i)
     
 def GrepImputatedVcf(args):
