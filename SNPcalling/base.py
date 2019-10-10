@@ -129,14 +129,14 @@ def Heterozygous(args):
     f1.close()
 
 def getSMsNum(vcffile):
-    call('module load bcftools', shell=True)
+    call('ml bcftools', shell=True)
     child = subprocess.Popen('bcftools query -l %s|wc -l'%vcffile, shell=True, stdout=subprocess.PIPE)
-    SMs_num = float(child.communicate()[0])
+    SMs_num = int(child.communicate()[0])
     return SMs_num
 
 def MAF(args):
     """
-    %prog MAF vcf maf out_fn
+    %prog MAF vcf maf
 
     filter rare MAF SNPs
     """

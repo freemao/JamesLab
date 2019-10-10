@@ -52,6 +52,7 @@ def only_MAF(args):
     filter MAF
     """
     p = OptionParser(only_MAF.__doc__)
+    p.set_slurm_opts(jn=True)
     p.add_option('--pattern', default='*.vcf',
                  help='file pattern for vcf files in dir_in')
     p.add_option('--maf', default='0.01',
@@ -66,11 +67,11 @@ def only_MAF(args):
     dir_path = Path(in_dir)
     vcfs = dir_path.glob(opts.pattern)
     for vcffile in vcfs:
-        prefix = '.'.join(vcf.name.split('.')[0:-1])
-        new_f = prefix + '.maf.vcf'
-        cmd = "python -m schnablelab.SNPcalling.base MAF %s %s %s\n"%(vcffile, opts.maf, new_f)
+        prefix = '.'.join(vcffile.name.split('.')[0:-1])
+        cmd = "python -m schnablelab.SNPcalling.base MAF %s %s\n"%(vcffile, opts.maf)
         with open('%s.maf.slurm'%prefix, 'w') as f:
             header = Slurm_header%(opts.time, opts.memory, prefix, prefix, prefix)
+            header += 'ml bcftools\n'
             header += cmd
             f.write(header)
             print('slurm file %s.maf.slurm has been created, you can sbatch your job file.'%prefix)
@@ -82,6 +83,7 @@ def only_ALT(args):
     filter number of ALT using bcftools
     """
     p = OptionParser(only_ALT.__doc__)
+    p.set_slurm_opts(jn=True)
     p.add_option('--pattern', default='*.vcf',
                  help='file pattern for vcf files in dir_in')
     opts, args = p.parse_args(args)
@@ -532,8 +534,8 @@ def EstimateLD(args):
     for vcf in Path(dir_in).glob(opts.pattern):
         prefix = vcf.name.replace('.vcf', '')
         out_fn = '%s.ld'%prefix
-        cmd = 'run_pipeline.pl -fork1 -vcf %s -ld -ldWinSize %s -ldType SlidingWindow -td_tab %s/%s\n'%(vcf, opts.window_size, dir_out, out_fn)
-        header = Slurm_header % (opts.time, opts.memory, prefix, prefix, prefix)
+        cmd = 'run_pipeline.pl -Xms512m -Xmx14g -fork1 -vcf %s -ld -ldWinSize %s -ldType SlidingWindow -td_tab %s/%s\n'%(vcf, opts.window_size, dir_out, out_fn)
+        header = Slurm_header % (opts.time, 15000, prefix, prefix, prefix)
         header += 'ml java/1.8\n'
         header += 'ml tassel/5.2\n'
         header += cmd
