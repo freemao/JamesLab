@@ -13,7 +13,7 @@ import os.path as op
 import sys
 from schnablelab.apps.base import ActionDispatcher, OptionParser, glob,iglob
 from schnablelab.apps.natsort import natsorted
-from schnablelab.apps.header import Slurm_header
+from schnablelab.apps.headers import Slurm_header
 from subprocess import call
 from subprocess import Popen
 import subprocess
@@ -21,9 +21,25 @@ import subprocess
 def main():
     actions = (
         ('action1', 'list, open, read, close files in dirs under purge policy'),
+        ('action2', 'use find touch command to avoid purge on a dir'),
             )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def action2(args):
+    """
+    %prog dir
+    use the find command to avoid the purge policy on a directory
+    """
+    p = OptionParser(action2.__doc__)
+    p.add_option("--num", default='10',
+                 help="one num-th files will be read.")
+    opts, args = p.parse_args(args)
+    if len(args) != 1:
+        sys.exit(not p.print_help())
+    folder, = args
+    cmd = 'find %s -print0 | xargs -0 touch'%folder
+    print(cmd)
 
 def action1(args):
     """
