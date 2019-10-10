@@ -32,13 +32,11 @@ def action2(args):
     use the find command to avoid the purge policy on a directory
     """
     p = OptionParser(action2.__doc__)
-    p.add_option("--num", default='10',
-                 help="one num-th files will be read.")
     opts, args = p.parse_args(args)
     if len(args) != 1:
         sys.exit(not p.print_help())
     folder, = args
-    cmd = 'find %s -print0 | xargs -0 touch'%folder
+    cmd = 'find %s -exec touch {} +'%folder
     print(cmd)
 
 def action1(args):
