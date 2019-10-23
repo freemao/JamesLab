@@ -5,6 +5,7 @@ Convert GWAS dataset to particular formats for GEMMA, GAPIT, FarmCPU, and MVP.
 """
 
 import os.path as op
+from pathlib import Path
 import sys
 import pandas as pd
 import numpy as np
@@ -298,9 +299,10 @@ def hmp2ped(args):
         sys.exit(not p.print_help())
     hmp, = args
     prefix = '.'.join(hmp.split('.')[0:-1])
-    cmd = '%s -Xms512m -Xmx38G -fork1 -h %s -export -exportType Plink\n' % (tassel, hmp)
+    cmd = 'run_pipeline.pl -Xms512m -Xmx38G -fork1 -h %s -export -exportType Plink\n' %hmp
     header = Slurm_header % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += 'module load java/1.8\n'
+    header += 'ml java/1.8\n'
+    header += 'ml tassel/5.2\n'
     header += cmd
     f = open('%s.hmp2ped.slurm' % prefix, 'w')
     f.write(header)
@@ -346,9 +348,10 @@ def ped2bed(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     ped_prefix, = args
-    cmd = '%s --noweb --file %s --make-bed --out %s\n' % (plink, ped_prefix, ped_prefix)
+    cmd = 'plink --noweb --file %s --make-bed --out %s\n' % (ped_prefix, ped_prefix)
     print('run cmd on local:\n%s' % cmd)
     header = Slurm_header % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
+    header += 'ml plink\n'
     header += cmd
     f = open('%s.ped2bed.slurm' % ped_prefix, 'w')
     f.write(header)
@@ -430,10 +433,11 @@ def genPCA(args):
         sys.exit(not p.print_help())
     hmp, N, = args
     out_prefix = hmp.replace('.hmp', '')
-    cmd = '%s -Xms28g -Xmx29g -fork1 -h %s -PrincipalComponentsPlugin -ncomponents %s -covariance true -endPlugin -export %s_%sPCA -runfork1\n' % (tassel, hmp, N, out_prefix, N)
+    cmd = 'run_pipeline.pl -Xms28g -Xmx29g -fork1 -h %s -PrincipalComponentsPlugin -ncomponents %s -covariance true -endPlugin -export %s_%sPCA -runfork1\n' % (hmp, N, out_prefix, N)
 
     h = Slurm_header
-    h += 'module load java/1.8\n'
+    h += 'ml java/1.8\n'
+    h += 'ml tassel/5.2\n'
     header = h % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
     header += cmd
     f = open('%s.PCA%s.slurm' %(out_prefix,N), 'w')
@@ -493,11 +497,13 @@ def reorgnzGemmaKinship(args):
 
 def genGemmaPheno(args):
     """
-    %prog genGemmaPheno normalPheno
+    %prog genGemmaPheno dir_in dir_out
 
     Change the phenotype format so that can be fed to GEMMA (missing value will be changed to NA)
     """
     p = OptionParser(genGemmaPheno.__doc__)
+    p.add_option('--pattern', default='*.csv',
+                 help='pattern of the normal phenotype files')
     p.add_option('--header', default=True,
                  help='whether a header exist in your normal phenotype file')
     p.add_option('--sep', default='\t', choices=('\t', ','),
@@ -505,13 +511,19 @@ def genGemmaPheno(args):
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    normalPheno, = args
-    df = pd.read_csv(normalPheno, sep=opts.sep) \
-        if opts.header == True \
-        else pd.read_csv(normalPheno, sep=opts.sep, header=None)
-    output = 'gemma.' + normalPheno
-    df.iloc[:, 1].to_csv(output, index=False, header=False, na_rep='NA')
-    print('Finished! %s has been generated.' % output)
+    in_dir, out_dir, = args
+    out_path = Path(out_dir)
+    if not out_path.exists():
+        sys.exit('%s does not exist...')
+    dir_path = Path(in_dir)
+    old_pheno = dir_path.glob(opts.pattern)
+    for ophe in old_pheno: 
+        df = pd.read_csv(ophe, sep=opts.sep) \
+            if opts.header == True \
+            else pd.read_csv(ophe, sep=opts.sep, header=None)
+        output = ophe.name+'.gemma'
+        df.iloc[:, 1].to_csv(out_path/output, index=False, header=False, na_rep='NA')
+        print('Finished! %s has been generated.' % output)
 
 
 def MAFandparalogous(row):

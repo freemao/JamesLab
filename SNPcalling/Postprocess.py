@@ -383,7 +383,7 @@ def merge_files(args):
     pattern,out_fn, = args
 
     fns = [str(i) for i in list(Path('.').glob(pattern))]
-    fns_sorted = sorted(fns, key=lambda x: int(x.split('_')[1].split('-')[0]))
+    fns_sorted = sorted(fns, key=lambda x: int(x.split('.')[0][3:]))
     print(fns_sorted)
     print('%s files found!'%len(fns_sorted))
 
