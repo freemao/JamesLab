@@ -106,7 +106,7 @@ def keras_snn(args):
         help = 'specify the number of hidden layers')
     #p.add_option('--epc', default=30,
     #    help = 'specify epoches')
-    p.set_slurm_opts(array=True)
+    p.set_slurm_opts()
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
