@@ -6,6 +6,7 @@
 make predictions using trained model
 """
 import os
+import math
 import os.path as op
 import sys
 import numpy as np
@@ -19,11 +20,14 @@ from schnablelab.apps.headers import Slurm_header, Slurm_gpu_header
 from schnablelab.apps.natsort import natsorted
 from glob import glob
 from pathlib import Path
+from subprocess import run
 
 def main():
     actions = (
         ('Plot', 'plot training model history'),
-        ('Predict', 'using trained model to make prediction'),
+        ('Predict', 'using trained neural network to make prediction'),
+        ('Predict_Rmodels', 'using trained model to make prediction'),
+        ('Predict_Rmodels_slurms', 'generate slurm  jobs for predict_Rmodels'),
         ('PredictSlurmCPU', 'generate slurm CPU job of prediction'),
         ('PredictSlurmGPU', 'generate slurm GPU job of prediction'),
         ('Imgs2Arrs', 'convert hyperspectral images under a dir to a numpy array object'),
@@ -31,6 +35,66 @@ def main():
             )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def Predict_Rmodels(args):
+    """
+    %prog Predict_Rmodels model_name input_2d_npy/csv corresponding_3d_npy
+    using R models to make prediciton on the whole hyper image
+    """
+    p = OptionParser(Predict_Rmodels.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args) != 3:
+        sys.exit(not p.print_help())
+    model_name, npy2d, npy3d, = args
+    h,_,_ = np.load(npy3d).shape
+    Rfile = op.abspath(op.dirname(__file__)) + '/R_models/%s_Predict.R'%model_name
+    cmd0 = 'ml R'
+    cmd1 = 'R CMD BATCH -%s -%s %s'%(npy2d, h, Rfile)
+    print(cmd0)
+    print(cmd1)
+    run(cmd1, shell=True)
+
+def Predict_Rmodels_slurms(args):
+    '''
+    %prog Predict_Rmodels_slurms input_2dcsv/npy_dir corresponding_3dnpy_dir
+    
+    generate slurm file for Predict_Rmodels
+    '''
+    p = OptionParser(Predict_Rmodels_slurms.__doc__)
+    p.add_option("--model", default='LDA', choices=('LDA', 'MLR', 'SVM', 'PLSDA', 'RF', 'QDA', 'LASSO'),
+        help="input 2d array format")
+    p.add_option("--input_format", default='npy', choices=('csv', 'npy'),
+        help="input 2d array format")
+    p.add_option('--pattern', default='*.2d.npy',choices=('*.2d.csv', '*.2d.npy'),
+        help='2d npy/csv file patterns in dir')
+    p.add_option("--n", default=10,type='int',
+        help="number of commands in each slurm file")
+    opts, args = p.parse_args(args)
+    if len(args) != 2:
+        sys.exit(not p.print_help())
+    in_dir, npy3d_dir, = args
+
+    dir_path = Path(in_dir)
+    csvs = list(dir_path.glob(opts.pattern))
+    csvs_n = len(csvs)
+
+    npy_dir = Path(npy_dir)
+    print('%s 2d array files found...'%csvs_n)
+    for i in range(math.ceil(csvs_n/opts.n)):
+        batch_csvs = csvs[i*opts.n: (i+1)*opts.n]
+        print('batch%s'%i, len(batch_csvs))
+        cmd = ''
+        for csv in batch_csvs:
+            npy3d_fn = csv.name.replace('.2d.csv', '.npy') if opts.input_format=='csv' else csv.name.replace('.2d.npy', '.npy')
+            npy3d = npy3d_dir/npy3d_fn
+            cmd += 'python -m schnablelab.CNN.Predict_snn Predict_Rmodels %s %s %s\n'%(opts.model, csv, npy3d)
+        prefix = '%s_Predict_batch%s'%(opts.model, i)
+        header = Slurm_header%(10, 10000, prefix, prefix, prefix)
+        header += 'conda activate MCY\n'
+        header += 'module load R\n'
+        header += cmd
+        with open('%s.slurm'%prefix, 'w') as f:
+            f.write(header)
 
 def Imgs2Arrs(args):
     '''
@@ -84,7 +148,7 @@ def Imgs2ArrsBatch(args):
 def Predict(args):
     """
     %prog model_name npy_pattern('CM*.npy')
-    using your trained model to make predictions on selected npy files.
+    using your trained model to make predictions on selected npy (2d or 3d) files.
     The pred_data is a numpy array object which has the same number of columns as the training data.
     """
     from keras.models import load_model
@@ -115,7 +179,7 @@ def Predict(args):
         np_dim = len(npy_shape)
         test_npy_2d = test_npy.reshape(npy_shape[0]*npy_shape[1], npy_shape[2]) if np_dim==3 else test_npy
         print('testing data shape:', test_npy_2d.shape)
-        pre_prob = my_model.predict(test_npy_2d)
+        pre_prob = my_model.predict(test_npy_2d/255)
         predictions = pre_prob.argmax(axis=1) # this is a numpy array
 
         if np_dim == 3:

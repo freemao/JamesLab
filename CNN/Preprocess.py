@@ -64,7 +64,7 @@ def three2two_slurms(args):
             else:
                 cmd += 'python -m schnablelab.CNN.Preprocess three2two %s %s --format %s\n'%(npy, out_npy_path, opts.out_format)
         prefix = 'three2two_batch%s'%i
-        header = Slurm_header%(10, 2000, prefix, prefix, prefix)
+        header = Slurm_header%(10, 10000, prefix, prefix, prefix)
         header += 'conda activate MCY\n'
         header += cmd
         with open('three2two_%s.slurm'%i, 'w') as f:
@@ -89,13 +89,15 @@ def three2two(args):
     if opts.crops:
         left, up, right, down = opts.crops.split(',')
         npy = npy[int(up):int(down),int(left):int(right),:]
-    npy_2d = npy.reshape(npy.shape[0]*npy.shape[1], npy.shape[2])
+    h,w,d = npy.shape
+    print(h, w, d)
+    npy_2d = npy.reshape(h*w, d)
     if opts.format=='csv':
-        out_fn = "%s.csv"%out_prefix
+        out_fn = "%s.2d.csv"%out_prefix
         np.savetxt(out_fn, npy_2d, delimiter=",")
     else:
-        out_fn = "%s.npy"%out_prefix
-        np.save(out_fn, npy_2d)
+        out_fn = "%s.2d.npy"%out_prefix
+        np.save(out_fn, npy_2d.astype(np.float64))
     print('Done!')
 
 def crop_png(args):
