@@ -24,4 +24,4 @@ error_rate_for_homo2: 0.01
 
 [Section4]
 #lenght of the sliding window (must be odd numbers)
-Sliding_window_size: 15
+Sliding_window_size: 11
