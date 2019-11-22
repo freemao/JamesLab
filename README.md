@@ -17,3 +17,10 @@ Then add `export PYTHONPATH=~/MyRepo:$PYTHONPATH` to your `~/.bashrc` file and r
 * [opencv](https://pypi.org/project/opencv-python/)
 
 All the dependencies can be installed through `easy_install`, `pip` or `conda install`.
+
+### set up the running environment using conda
+```
+conda create --name my_env --file spec_file.csv
+conda activate my_env
+python -m schnablelab ...
+```
