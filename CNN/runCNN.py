@@ -121,10 +121,10 @@ def keras_snn(args):
     #gpu = ['p100', 'p100', 'k40', 'k40', 'k40', 'k20', 'k20', 'k20']
     
     lyr = int(opts.layer)
+    lrs = 10**uniform(-2, -6, int(opts.lr))
     print('the hidden layers: %s'%lyr)
     for unit in units:
-        for count in range(int(opts.lr)):
-            lr = 10**uniform(-2, -6)
+        for lr in lrs:
             cmd = 'python %s %s %s %s %s %s\n'%(LNN_py, np_x, np_y, lyr, unit, lr)
             prefix = 'lyr%s_uni%s_lr%s'%(lyr, unit, lr)
             SlurmHeader = Slurm_gpu_header%(opts.memory, prefix,prefix,prefix,opts.gpu)\
