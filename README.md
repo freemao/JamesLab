@@ -18,7 +18,7 @@ Then add `export PYTHONPATH=~/MyRepo:$PYTHONPATH` to your `~/.bashrc` file and r
 
 All the dependencies can be installed through `easy_install`, `pip` or `conda install`.
 
-### set up the running environment using conda
+### instead of installing dependencies one by one, you can set up the running environment using conda like below:
 ```
 conda create --name my_env --file spec_file.csv
 conda activate my_env
