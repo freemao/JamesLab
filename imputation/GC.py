@@ -479,7 +479,7 @@ def qc_hetero(args):
     p = OptionParser(qc_hetero.__doc__)
     p.add_option("-i", "--input", help=SUPPRESS_HELP)
     p.add_option("-o", "--output", help=SUPPRESS_HELP)
-    p.add_option("--read_len", default=150, type='int',
+    p.add_option("--read_len", default=100, type='int',
                 help="read length for SNP calling")
     p.add_option("--logfile", default='GC.qc_hetero.info',
                 help="specify the file saving binning info")
@@ -903,6 +903,27 @@ def vcf2map(args):
     vcffile.close()
     print('Done!')
 
+def sortPos(args):
+    """
+    %prog sortPos input.map output.sorted.map
+
+    sort markers based on position 
+    """
+    p = OptionParser(sortPos.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args) != 2:
+        sys.exit(not p.print_help())
+
+    inmap, outmap, = args
+    
+    if Path(outmap).exists():
+        eprint("ERROR: Filename collision. The future output file `{}` exists".format(outputmatrix))
+        sys.exit(1)
+    df = pd.read_csv(inmap, delim_whitespace=True)
+    idx_col = list(df.columns[0:2])
+    df.sort_values(idx_col).to_csv(outmap, sep='\t', index=False)
+    print('Done! Check %s file.'%outmap)
+
 def main():
     actions = (
         ('qc_missing', 'quality control of the missing gneotypes'),
@@ -913,6 +934,7 @@ def main():
         ('cleanup', 'clean redundant info in the tmp matirx file'),
         ('format', 'convert genotype matix file to other formats for the genetic map construction'),
         ('vcf2map', 'convert vcf to genotype matrix file'),
+        ('sortPos', 'sort makers based on position'),
             )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
