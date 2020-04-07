@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitecatalog xmlns="http://pegasus.isi.edu/schema/sitecatalog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pegasus.isi.edu/schema/sitecatalog http://pegasus.isi.edu/schema/sc-4.1.xsd" version="4.1">
+
+    <!-- The local site contains information about the submit host -->
+    <site handle="local" arch="x86_64" os="LINUX">
+        <!-- This is where intermediate data will be stored -->
+        <directory type="shared-scratch" path="${PWD}/scratch">
+            <file-server operation="all" url="file://${PWD}/scratch"/>
+        </directory>
+        <!-- This is where output data will be stored -->
+        <directory type="shared-storage" path="${PWD}/output">
+            <file-server operation="all" url="file://${PWD}/output"/>
+        </directory>
+    </site>
+
+    <site handle="condorpool" arch="x86_64" os="LINUX">
+        <!-- These profiles tell Pegasus that the site is a plain Condor pool -->
+        <profile namespace="pegasus" key="style">condor</profile>
+        <profile namespace="condor" key="universe">vanilla</profile>
+        <!-- This profile tells Pegasus to create two clustered jobs
+            per level of the workflow, when horizontal clustering is
+            enabled -->
+	<profile namespace="pegasus" key="clusters.num" >2</profile>
+    </site>
+
+    <site  handle="local-hcc" arch="x86_64" os="LINUX">
+        <directory type="shared-scratch" path="${PWD}/scratch">
+            <file-server operation="all" url="file://${PWD}/scratch"/>
+        </directory>
+        <directory type="local-storage" path="${PWD}/output">
+            <file-server operation="all" url="file://${PWD}/output"/>
+        </directory>
+        <profile namespace="pegasus" key="style">glite</profile>
+        <!-- tell pegasus that local-hcc is accessible on submit host -->
+        <profile namespace="pegasus" key="auxillary.local">true</profile>
+        <profile namespace="condor" key="grid_resource">batch slurm</profile>
+        <profile namespace="pegasus" key="queue">batch,tmp_anvil</profile>
+        <profile namespace="env" key="PEGASUS_HOME">/usr</profile>
+        <profile namespace="condor" key="request_memory"> ifthenelse(isundefined(DAGNodeRetry) || DAGNodeRetry == 0, 4000, 6000) </profile>
+    </site>
+
+</sitecatalog>

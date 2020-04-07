@@ -1,0 +1,27 @@
+#!/bin/bash
+
+tr python_preprocess {
+    site local-hcc {
+	profile pegasus "clusters.size" "50"
+       	pfn "file://${PWD}/run_python.sh"
+    }
+}
+
+tr python_predict {
+    site local-hcc {
+	profile pegasus "clusters.size" "50"
+        pfn "file://${PWD}/run_python.sh"
+    }
+}
+
+tr python_measure {
+    site local-hcc {
+        pfn "file://${PWD}/run_python.sh"
+    }
+}
+
+tr python_visualize {
+    site local-hcc {
+        pfn "file://${PWD}/run_python.sh"
+    }
+}

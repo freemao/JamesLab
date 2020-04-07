@@ -1,0 +1,11 @@
+IdTag: 49-635-js87-124
+Color: 0
+Creator: vincent
+Comment: 
+CarTag: 1635
+Measurement: 4-9-18_Schnable
+Timestamp: 05/13/2018 13:15:35
+Weight before [g]: 6118
+Weight after [g]: 6484
+Water amount [ml]: 382
+Overall config id: 1006300
