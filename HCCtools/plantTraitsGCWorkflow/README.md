@@ -88,7 +88,7 @@ This is to show the error message of the workflow if there was any error.
 ![](https://github.com/freemao/schnablelab/blob/master/HCCtools/plantTraitsGCWorkflow/illustrations/view_workflow_directory.png)
 3. Let us check the files that need to be configured to properly run the workflow. Here is the file_paths_config.py file that contains the paths to the dataset and the model that we want to use to predict the images. Here is shows the path to my test dataset and the model I want to use.
 ![](https://github.com/freemao/schnablelab/blob/master/HCCtools/plantTraitsGCWorkflow/illustrations/file_paths_config.png)
-4. Let us now check run_python.sh. We see that PYTHONPATH is set to the directory that schnablelab is in. We se that it also activates my anaconda environment sd.
+4. Let us now check run_python.sh. We see that PYTHONPATH is set to the directory that schnablelab is in. We see that it also activates my anaconda environment sd.
 ![](https://github.com/freemao/schnablelab/blob/master/HCCtools/plantTraitsGCWorkflow/illustrations/run_python.png)
 5. We now need to convert all of the shell scripts into executables. We do this with `chmod +x [file name]` as shown below. The files are now in green after `ls`.
 ![](https://github.com/freemao/schnablelab/blob/master/HCCtools/plantTraitsGCWorkflow/illustrations/chmod.png)
