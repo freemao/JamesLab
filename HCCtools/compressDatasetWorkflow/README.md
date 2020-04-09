@@ -17,9 +17,8 @@
 ## Modifying Workflow Paths to Work with File Structure (Need to do only once)
 1. Modify file\_paths\_config.py located in the zip folder:
     * Change the data value to reference all of the dataset’s plant folders.
-    * Example (numpy arrays):
-    ` 'data': '/work/csesd/pnnguyen/plant-phenotyping/pics2predictions/test_data/*',`
-    ` 'model': 'fold3_model_4_300_0.0005.h5'`
+    * Example:
+    ` 'data': '/work/csesd/pnnguyen/schnablelab/compressDatasetWorkflow/test_data/*',`
     * data needs to be in this structure for workflow to work for hyperspectral images:
         * data (does not have to be called data)
             * [plant folder name]

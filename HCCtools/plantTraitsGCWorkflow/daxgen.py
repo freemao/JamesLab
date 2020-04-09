@@ -28,8 +28,6 @@ path_list = glob(paths.file_paths['data'])
 path_to_data = paths.file_paths['data'].replace("*","")
 path_list_index = paths.file_paths['data'].split('/').index('*')
 current_dir = os.getcwd()
-plant_phenotyping_index = current_dir.split('/').index('plant-phenotyping')
-plant_phenotyping_path = "/".join(current_dir.split('/')[:plant_phenotyping_index + 1])
 plant_predict_jobs =  {}
 plant_extract_jobs = {}
 plant_predict_files = {}
@@ -76,12 +74,12 @@ for plant_name in plant_extract_jobs:
 	csv = File(csv_name)
 	job.uses(csv, link=Link.OUTPUT, transfer=True, register=True)
 	job.setStdout(csv)
-	job.addArguments(plant_phenotyping_path + "/traits_extraction.py", "-i", plant_name, "-f", *plant_predict_files[plant_name])
+	job.addArguments("-m", "schnablelab.ImageProcessing.traits_extraction", "-i", plant_name, "-f", *plant_predict_files[plant_name])
 	dax.addJob(job)
 	graphs_name = plant_name + "_growth_curve.png"
 	graphs = File(graphs_name)
 	visualize = Job("python_visualize")
-	visualize.addArguments(plant_phenotyping_path + "/visualize.py", "-p", csv)
+	visualize.addArguments("-m", "schnablelab.ImageProcessing.visualize", "-p", csv)
 	visualize.uses(csv, link=Link.INPUT)
 	visualize.uses(graphs, link=Link.OUTPUT, transfer=True, register=False)
 	visualize.setStdout(graphs)
