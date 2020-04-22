@@ -1,0 +1,3 @@
+Camera label: Hyp_SV_90
+MM pro pixel X: 0
+MM pro pixel Y: 0

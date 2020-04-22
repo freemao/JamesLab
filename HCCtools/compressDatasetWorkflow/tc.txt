@@ -1,0 +1,6 @@
+tr zip {
+    site local-hcc {
+	profile pegasus "clusters.size" "50" 
+       	pfn "file://${PWD}/preprocess.sh"
+    }
+}
