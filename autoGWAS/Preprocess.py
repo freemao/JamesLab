@@ -42,10 +42,32 @@ def main():
         ('ResidualPheno', 'generate residual phenotype from two associated phenotypes'),
         ('combineHmp', 'combine split chromosome Hmps to a single large one'),
         ('IndePvalue', 'calculate the number of independent SNPs and estiamte the bonferroni p value'),
+        ('CheckHeader', 'check file header'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
+
+def CheckHeader(args):
+    """
+    %prog CheckHeader file_name
+    check sample information in the header
+    """
+    p = OptionParser(CheckHeader.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args) != 1:
+        sys.exit(not p.print_help())
+    fn, = args
+
+    if fn.endswith('.hmp'):
+        with open(fn) as f:
+            sms = f.readline().split()[11:]
+            print(len(sms))
+            print(sms)
+    elif fn.endswith('.vcf'):
+        pass
+    else:
+        print('only support hmp or vcf file')
 
 def hmp2vcf(args):
     """
@@ -254,6 +276,8 @@ def genKinship(args):
     p = OptionParser(genKinship.__doc__)
     p.add_option('--type', default='1', choices=('1', '2'),
                  help='specify the way to calculate the relateness, 1: centered; 2: standardized')
+    p.add_option('--out_dir', default='.',
+                 help='specify the output dir')
     p.set_slurm_opts(jn=True)
     opts, args = p.parse_args(args)
     if len(args) == 0:
@@ -272,15 +296,14 @@ def genKinship(args):
 
     # the location of gemma executable file
     gemma = op.abspath(op.dirname(__file__)) + '/../apps/gemma'
-
-    cmd = '%s -g %s -p %s -gk %s -outdir . -o gemma.centered.%s' \
-        % (gemma, geno_mean, tmp_pheno, opts.type, mean_prefix)
+    cmd = '%s -g %s -p %s -gk %s -outdir %s -o gemma.centered.%s' \
+        % (gemma, geno_mean, tmp_pheno, opts.type, opts.out_dir, Path(mean_prefix).name)
     print('The kinship command running on the local node:\n%s' % cmd)
 
     h = Slurm_header
     header = h % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
     header += cmd
-    f = open('%s.kinship.slurm' % mean_prefix, 'w')
+    f = open('%s.kinship.slurm' % Path(mean_prefix).name, 'w')
     f.write(header)
     f.close()
     print('slurm file %s.kinship.slurm has been created, you can sbatch your job file.' % mean_prefix)
@@ -461,8 +484,7 @@ def reorgnzTasselPCA(args):
     pc1, = args
     df = pd.read_csv(pc1, delim_whitespace=True, header=2)
     df1 = df[df.columns[1:]]
-    prefix = '.'.join(pc1.split('.')[0:2])
-    gapit_pca, farm_pca, gemma_pca = prefix + '.gapit', prefix + '.farmcpu', prefix + '.gemmaMVP'
+    gapit_pca, farm_pca, gemma_pca = pc1 + '.gapit', pc1 + '.farmcpu', pc1 + '.gemmaMVP'
     df.to_csv(gapit_pca, sep='\t', index=False)
     df1.to_csv(farm_pca, sep='\t', index=False)
     df1.to_csv(gemma_pca, sep='\t', index=False, header=False)
@@ -533,16 +555,13 @@ def MAFandparalogous(row):
     ref, alt = row[1].split('/')
     genos = row[11:]
     refnum, altnum, refaltnum = (genos == ref * 2).sum(), (genos == alt * 2).sum(), (genos == ref + alt).sum() + (genos == alt + ref).sum()
-    totalA = float((refnum + altnum + refaltnum) * 2)
-    #print(refnum, altnum, refaltnum)
-    af1, af2 = (refnum * 2 + refaltnum) / totalA, (altnum * 2 + refaltnum) / totalA
-    #print(af1, af2)
+    total_geno = float(refnum + altnum + refaltnum)
+    total_ale = total_geno * 2
+    af1, af2 = (refnum * 2 + refaltnum) / total_ale, (altnum * 2 + refaltnum) / total_ale
     maf = True if min(af1, af2) >= 0.01 else False
-    paralogous = True if refaltnum < min(refnum, altnum) else False
+    paralogous = True if refaltnum < min(refnum, altnum) and refaltnum/total_geno<0.05 else False
     TF = maf and paralogous
-    #print(maf, paralogous)
     return TF
-
 
 def subsampling(args):
     """
@@ -565,7 +584,7 @@ def subsampling(args):
     hmp_df = pd.read_csv(hmp, delim_whitespace=True)
     print('read SMs file...')
     SMs_df = pd.read_csv(SMs_file, delim_whitespace=True) \
-        if opts.header \
+        if opts.header == 'yes' \
         else pd.read_csv(SMs_file, delim_whitespace=True, header=None)
     #SMs_df = SMs_df.dropna(axis=0)
     SMs = SMs_df.iloc[:, 0].astype('str')

@@ -179,7 +179,7 @@ def Predict(args):
         np_dim = len(npy_shape)
         test_npy_2d = test_npy.reshape(npy_shape[0]*npy_shape[1], npy_shape[2]) if np_dim==3 else test_npy
         print('testing data shape:', test_npy_2d.shape)
-        pre_prob = my_model.predict(test_npy_2d/255)
+        pre_prob = my_model.predict(test_npy_2d)
         predictions = pre_prob.argmax(axis=1) # this is a numpy array
 
         if np_dim == 3:

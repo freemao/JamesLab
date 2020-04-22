@@ -7,6 +7,7 @@ Find more details at HCC document:
 """
 
 import os.path as op
+from pathlib import Path
 import sys
 from schnablelab.apps.base import ActionDispatcher, OptionParser, glob,iglob
 from schnablelab.apps.natsort import natsorted
@@ -44,7 +45,7 @@ def submit(args):
     folder, = args
     #partition = '' if opts.partition=='batch' else '-p %s'%opts.partition
     partition = '-p %s'%opts.partition
-    alljobs = ['sbatch %s %s'%(partition, i) for i in glob(folder, opts.pattern)]
+    alljobs = ['sbatch %s %s'%(partition, i) for i in Path(folder).glob(opts.pattern)]
     print("Total %s jobs under '%s'"%(len(alljobs), folder))
 
     if opts.range == 'all':
@@ -80,13 +81,15 @@ def cancel(args):
     running_jobs, pending_jobs, others = [], [], []
     for i in myjobs.split('\n'):
         j = i.strip().split()
-        if len(j) == 8:
+        try:
             if j[4] == 'R':
                 running_jobs.append(j[0])
             elif j[4] == 'PD':
                 pending_jobs.append(j[0])
             else:
                 others.append(j[0])
+        except:
+            pass
     cmd = 'scancel %s' %(' '.join(running_jobs)) \
         if opts.status == 'running' \
         else 'scancel %s' %(' '.join(pending_jobs))

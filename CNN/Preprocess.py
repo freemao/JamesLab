@@ -262,7 +262,9 @@ def hyp2arr(args):
     img_arrs = []
     for i in imgs:
         if not i.name in discard_imgs:
+            print(i)
             arr = cv2.imread(str(i), cv2.IMREAD_GRAYSCALE)
+            print(i.name, arr.shape)
             img_arrs.append(arr)
     img_array = np.stack(img_arrs, axis=2)
     print(img_array.shape)

@@ -319,20 +319,20 @@ def fetchGenoVCF(args):
 
 def fetchGene(args):
     """
-    %prog SNPlist gene.gff3 output_prefix
+    %prog SNPlist gene.gff3
 
-    extract gene names
+    extract gene names (remember to customize the rule to get gene name in gff3, and the chr name in gff3)
     """
     p = OptionParser(fetchGene.__doc__)
     p.add_option('--header', default = 'yes', choices=('yes', 'no'),
         help = 'specify if there is a header in your SNP list file')
-    p.add_option('--col_idx', default = '3,4,5',
+    p.add_option('--col_idx', default = '1,2,0',
         help = 'specify the index of Chr, Pos, SNP columns')
     opts, args = p.parse_args(args)
 
     if len(args) == 0:
         sys.exit(not p.print_help())
-    SNPlist, gff, out_prefix, = args
+    SNPlist, gff, = args
 
     df0 = pd.read_csv(SNPlist, delim_whitespace=True, header=None) \
         if opts.header == 'no' \
@@ -344,54 +344,28 @@ def fetchGene(args):
     df0 = df0.reset_index(drop=True)
 
     df1 = pd.read_csv(gff, sep='\t', header=None)
-    df1['gene'] = df1.iloc[:,8].str.split('gene:').str.get(1).str.split(';').str.get(0)
+# customize the rule right below
+    df1['gene'] = df1.iloc[:,8].apply(lambda x: x.split(';')[1].split('=')[1])
     df1 = df1[[0,3,4, 'gene']]
     df1.columns = ['chr', 'start', 'end', 'gene']
-    f0 = open('%s.info'%out_prefix, 'w')
-    f1 = open('%s.genes'%out_prefix, 'w')
+    print(df1.head())
 
     for g in df0.groupby('chr'):
-        chrom = str(g[0])
-        f0.write('Chromosome: %s\n'%chrom)
+        chrom = g[0]
+        print('chr: %s'%chrom)
         SNPs = list(g[1]['snp'].unique())
-        f0.write('Causal SNPs(%s):\n %s\n'%(len(SNPs), ','.join(SNPs)))
+        print('sig SNPs: %s'%SNPs)
         Genes = []
         for pos in g[1]['pos']:
             print('SNP position: %s'%pos)
-            df2 = df1[df1['chr'] == chrom]
-            df2['dist'] = np.abs(df2['end'] - df2['start'])
+# customize the chr name in gff3
+            chrom_gff = 'Chr%02d'%chrom
+            df2 = df1[df1['chr'] == chrom_gff]
+            df2['gene_length'] = np.abs(df2['end'] - df2['start'])
             df2['st_dist'] = np.abs(pos - df2['start'])
             df2['ed_dist'] = np.abs(pos - df2['end'])
-            min_idx_1, min_idx_2 = df2['st_dist'].idxmin(), df2['ed_dist'].idxmin()
-            min_val_1, min_val_2 = df2['st_dist'].min(), df2['ed_dist'].min()
-
-            if (min_idx_1 == min_idx_2) and \
-                (min_val_1 <=  df2.loc[min_idx_1, :]['dist']) and \
-                (min_val_2 <=  df2.loc[min_idx_1, :]['dist']):
-                gene = df2.loc[min_idx_1,'gene']
-                if gene in Genes:
-                    pass
-                else: 
-                    Genes.append(gene)
-            else:
-                if pos > df2.loc[min_idx_1, :][3]:
-                    gene = df2.loc[[min_idx_1, min_idx_1+1], 'gene'].tolist()
-                elif pos < df2.loc[min_idx_1, :][3]:
-                    gene = df2.loc[[min_idx_1-1, min_idx_1], 'gene'].tolist()
-                else:
-                    print('wrong position!!!')
-                for i in gene:
-                    if i in Genes:
-                        pass
-                    else: 
-                        Genes.append(i)
-        f0.write('Candidate genes(%s):\n %s\n\n'%(len(Genes), ','.join(Genes)))
-        
-        for  i in Genes:
-            f1.write(i+'\n')
-    f0.close()
-    f1.close()
-    print('Done! Check results:\n%s\n%s\n'%(out_prefix+'.info', out_prefix+'.genes'))
+            df2['min_dist'] = df2[['st_dist', 'ed_dist']].min(axis=1)
+            df2[df2['min_dist']<5000].to_csv('%s_%s_genes.csv'%(chrom, pos), index=False, sep='\t')
 
 def fetchFunc(args):
     """
