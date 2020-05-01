@@ -160,7 +160,7 @@ def train_model_regression(model, dataloaders, criterion, optimizer, model_name_
     print('Best val loss: {:4f}'.format(early_stopping.val_loss_min))
 
     # load best model weights
-    model.load_state_dict(torch.load('checkpoint.pt'))
+    model.load_state_dict(torch.load('%s.pt'%model_name_prefix))
     return model, train_loss_history, valid_loss_history
 
 def set_parameter_requires_grad(model, feature_extracting):
