@@ -25,9 +25,9 @@ def regression(args):
     """
     %prog regression train_csv, train_dir, valid_csv, valid_dir, model_name_prefix
     Args:
-        train_csv: csv file (comma separated without header) containing all training image filenames.
+        train_csv: csv file (comma separated without header) containing all training image filenames
         train_dir: directory where training images are located
-        valid_csv: csv file (comma separated without header) containing all validation image filenames.
+        valid_csv: csv file (comma separated without header) containing all validation image filenames
         valid_dir: directory where validation images are located
         model_name_prefix: the prefix of the output model name 
     """
