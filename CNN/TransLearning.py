@@ -4,7 +4,7 @@
 Transfer learning for feature extracting or finetuning. 
 """
 from schnablelab.apps.base import OptionParser, ActionDispatcher
-from base import EarlyStopping, LeafcountingDataset, image_transforms, initialize_model, train_model_regression 
+from schnablelab.CNN.base import EarlyStopping, LeafcountingDataset, image_transforms, initialize_model, train_model_regression 
 import sys
 import time
 import torch
@@ -76,17 +76,17 @@ def regression(args):
         for name, param in model.named_parameters():
             if param.requires_grad == True:
                 params_to_update.append(param)
-                logging.debug("\t",name)
+                logging.debug("\t%s"%name)
     else:
         for name, param in model.named_parameters():
             if param.requires_grad == True:
-                logging.debug("\t",name)
+                logging.debug("\t%s"%name)
     # optimizer
     sgd_optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
     # loss
     criterion = nn.MSELoss()
     # train and validation
-    inception = True if opts.model_name=='inception' else False
+    inception = True if opts.pretrained_mn=='inception' else False
     since = time.time()
     model_ft, train_hist, valid_hist = train_model_regression(model, dataloaders_dict, 
                                                             criterion, sgd_optimizer,

@@ -9,10 +9,10 @@ from torchvision import transforms, models
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, model_name_prefix, patience=20, verbose=True, delta=0):
+    def __init__(self, mn_prefix, patience=20, verbose=True, delta=0):
         """
         Args:
-            model_name_prefix (str): the prefix of the saved model name.
+            mn_prefix (str): the prefix of the saved model name.
             patience (int): How long to wait after last time validation loss improved.
                             Default: 20
             verbose (bool): If True, prints a message for each validation loss improvement. 
@@ -27,6 +27,7 @@ class EarlyStopping:
         self.early_stop = False
         self.val_loss_min = np.Inf
         self.delta = delta
+        self.mn_prefix = mn_prefix
 
     def __call__(self, val_loss, model):
         score = -val_loss
@@ -48,7 +49,7 @@ class EarlyStopping:
         '''Saves model when validation loss decrease.'''
         if self.verbose:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), '%s.pt'%model_name_prefix)
+        torch.save(model.state_dict(), '%s.pt'%self.mn_prefix)
         self.val_loss_min = val_loss
 
 class LeafcountingDataset(Dataset):
@@ -104,7 +105,7 @@ image_transforms = {
 }
 
 def train_model_regression(model, dataloaders, criterion, optimizer, model_name_prefix, patience=10, num_epochs=10, is_inception=False):
-    
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     valid_loss_history = []
     train_loss_history = []
     
