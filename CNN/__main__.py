@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 """
-Build CNN, etc.
+machine learning related scripts.
 """
 
 from schnablelab.apps.base import dmain

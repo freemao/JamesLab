@@ -1,7 +1,10 @@
+# -*- coding: UTF-8 -*-
 
+"""
+Transfer learning for feature extracting or finetuning. 
+"""
 from schnablelab.apps.base import OptionParser, ActionDispatcher
-from base import EarlyStopping, LeafcountingDataset, 
-                image_transforms, initialize_model, train_model_regression 
+from base import EarlyStopping, LeafcountingDataset, image_transforms, initialize_model, train_model_regression 
 import time
 import torch
 import torch.nn as nn
@@ -41,9 +44,9 @@ def regression(args):
     p.add_option('--tl_type', default='fe', choices=('feature_extract', 'finetuning'),
                     help='transfer learning type')
     p.add_option('-log', '--logfile', default='training.log',
-                    help = 'the file saving log'
+                    help = 'the file saving log')
     p.add_option('--history', default='history_loss.csv',
-                    help = 'the file saving training and validation losses.'
+                    help = 'the file saving training and validation losses.')
 
     opts, args = p.parse_args(args)
     if len(args) != 5:
