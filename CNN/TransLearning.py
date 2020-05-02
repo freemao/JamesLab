@@ -14,6 +14,11 @@ from torch.utils.data import DataLoader
 import logging
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
+plt.style.use('bmh')
+rcParams['xtick.direction'] = 'out'
+rcParams['ytick.direction'] = 'out'
 
 
 def main():
@@ -99,10 +104,20 @@ def regression(args):
                                                             is_inception=inception)
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    # save train and validation loss.
+    
+    # save training and validation loss.
     logging.debug('saving loss history...')
-    df = pd.DataFrame(dict(zip(['training_loss', 'validation_loss'], [train_hist, valid_hist])))
+    df = pd.DataFrame(dict(zip(['training', 'validation'], [train_hist, valid_hist])))
     df.to_csv(opts.history, index=False)
+    
+    # plot training and validation loss
+    logging.debug('plot loss history...')
+    fig, ax = plt.subplots(figsize=(4, 3))
+    ax = df.plot(ax=ax)
+    ax.set_xlabel('Epoch', fontsize=12)
+    ax.set_ylabel('Loss', fontsize=12)
+    plt.tight_layout()
+    plt.savefig('%s.png'%opts.history, dpi=200)
 
 def prediction(args):
     """
@@ -129,6 +144,8 @@ def prediction(args):
         # turn all gradients off
         for param in model.parameters():
             param.requires_grad = False
+    else:
+        sys.exit('not implemented yet...')
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.load_state_dict(torch.load(saved_model, map_location=device))
