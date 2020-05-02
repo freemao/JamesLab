@@ -10,10 +10,12 @@ import pandas as pd
 import numpy as np
 from schnablelab.apps.base import ActionDispatcher, OptionParser
 from schnablelab.apps.headers import Slurm_header
+from schnablelab.autoGWAS.base import parse_gwasfile
 from subprocess import call
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 # the location of plink executale file
 plink = op.abspath(op.dirname(__file__))+'/../apps/plink'
@@ -31,10 +33,69 @@ def main():
         ('fetchFunc', 'fetch functions of candidate genes'),
         ('fetchProSeq', 'fetch corresponding sequences of condidated genes'),
         ('PlotEVs', 'plot histgram of effect sizes'),
-        ('PlotMAF', 'plot histgram of maf'),
+        ('UniquePeaks', 'calculate the number of unique peaks identified in a GWAS run')
+        #('PlotMAF', 'plot histgram of maf'),
             )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def UniquePeaks(args):
+    """
+    %prog UniquePeaks GWASfile OutputFilePrefix
+    Args:
+        GWASfile: GWAS file to be parsed
+        OutputFilePrefix: The prefix of output files.  
+    
+    Identify peaks in the output of a GWAS run
+    """
+    p = OptionParser(UniquePeaks.__doc__)
+    p.add_option('--software', default='gemma', choices=('gemma', 'mvp', 'farmcpu', 'gapit'),
+        help = 'softare where the GWAS result came from')
+    p.add_option('--WindowSize', type='int', default=150_000,
+        help = 'Maximum distance between two significant SNPs in same peak in base pairs')
+    p.add_option('--MeRatio', type='float', default = 1.0,
+        help = "specify the ratio of independent SNPs, maize is 0.32, sorghum is 0.53")
+    opts, args = p.parse_args(args)
+    
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    gwasfile, outprefix = args
+    df = parse_gwasfile(gwasfile, opts.software)
+    cutoff = -np.log10(0.05/(opts.MeRatio * df.shape[0]))
+    df = df[df['-log10Pvalue'] >= cutoff]
+    print('number of significant SNPs: %s'%df.shape[0])
+
+    # find peaks in each chromosome
+    peaks = []
+    n = 0
+    for idx, grp in df.groupby('chr'):
+        print('chr: %s'%idx)
+        last_pos = (-1 * opts.WindowSize) - 1
+        for idx, row in grp.iterrows():
+            pos = row['pos']
+            if pos - last_pos < opts.WindowSize:
+                peaks.append(n)
+                last_pos = pos
+            else:
+                n += 1
+                last_pos = pos
+                peaks.append(n)
+    df['peaks'] = peaks
+    # summarize information in each peak
+    f0 = open('%s.summary.csv'%outprefix, 'w')
+    f0.write('Peak,#_of_SNPs,PeakStartPos,PeakStopPos,PeakLength,MostSigSNP,-log10Pvalue\n')
+    for idx, grp in df.groupby('peaks'):
+        st, ed = grp['pos'].min(), grp['pos'].max()
+        distance = ed - st
+        most_sig_snp = grp.loc[grp['-log10Pvalue'].idxmax(), 'snp']
+        largest_pvalue = grp['-log10Pvalue'].max()
+        snp_number = grp.shape[0]
+        f0.write('%s,%s,%s,%s,%s,%s,%.3f\n'%(idx, snp_number, st, ed, distance, most_sig_snp, largest_pvalue))
+    f0.close()
+    df['-log10Pvalue'] = df['-log10Pvalue'].apply(lambda x: '%.3f'%x)
+    df.to_csv('%s.csv'%outprefix, index=False)
+
+    print('Done, check %s.csv and %s.summary.csv!'%(outprefix, outprefix))
 
 def parseMAF(i):
     j = i.split()
