@@ -1,3 +1,8 @@
+# -*- coding: UTF-8 -*-
+
+"""
+base class and functions used in training, prediction, plotting
+"""
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -81,7 +86,7 @@ class LeafcountingDataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return image, label, img_name
 
 image_transforms = {
     # Train uses data augmentation

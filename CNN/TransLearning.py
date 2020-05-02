@@ -12,11 +12,14 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import logging
+import numpy as np
 import pandas as pd
+
 
 def main():
     actions = (
         ('regression', 'using pretrained model to solve regression problem'),
+        ('prediction', 'make predictions using trained model')
             )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
@@ -100,6 +103,56 @@ def regression(args):
     logging.debug('saving loss history...')
     df = pd.DataFrame(dict(zip(['training_loss', 'validation_loss'], [train_hist, valid_hist])))
     df.to_csv(opts.history, index=False)
+
+def prediction(args):
+    """
+    %prog prediction saved_model test_csv, test_dir, output
+    Args:
+        saved_model: saved model with either a .pt or .pth file extension
+        test_csv: csv file (comma separated without header) containing all testing image filenames
+        test_dir: directory where testing images are located
+        output: csv file saving prediction results
+    """
+    p = OptionParser(prediction.__doc__)
+    p.add_option('--batchsize', default=36, type='int', 
+                    help='batch size')
+    p.add_option('--pretrained_mn', default=None,
+                    help='specifiy pretrained model name if a pretrained model was used')
+
+    opts, args = p.parse_args(args)
+    if len(args) != 4:
+        sys.exit(not p.print_help())
+    saved_model, test_csv, test_dir, output = args
+
+    if opts.pretrained_mn:
+        model, input_size = initialize_model(model_name=opts.pretrained_mn)
+        # turn all gradients off
+        for param in model.parameters():
+            param.requires_grad = False
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model.load_state_dict(torch.load(saved_model, map_location=device))
+    model.eval()
+
+    test_dataset = LeafcountingDataset(test_csv, test_dir, image_transforms['valid'])
+    test_loader = DataLoader(test_dataset, batch_size=opts.batchsize)
+
+    ground_truths, predicts, filenames = [],[],[]
+    for phase, (inputs, labels, fns) in enumerate(test_loader, 1): # fns is a tuple
+        print('phase %s'%phase)
+        inputs = inputs.to(device)
+        outputs = model(inputs)
+        ground_truths.append(labels.squeeze().numpy())
+        filenames.append(np.array(fns))
+        if torch.cuda.is_available():
+            predicts.append(outputs.squeeze().to('cpu').numpy())
+        else:
+            predicts.append(outputs.squeeze().numpy())
+    ground_truths = np.concatenate(ground_truths)
+    predicts = np.concatenate(predicts)
+    filenames = np.concatenate(filenames)
+    df = pd.DataFrame(dict(zip(['fn', 'groundtruth', 'prediction'], [filenames, ground_truths, predicts])))
+    df.to_csv(output, index=False)
 
 if __name__ == "__main__":
     main()
