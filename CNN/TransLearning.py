@@ -23,11 +23,15 @@ rcParams['ytick.direction'] = 'out'
 
 def main():
     actions = (
-        ('regression', 'using pretrained model to solve regression problem'),
-        ('prediction', 'make predictions using trained model')
+        ('regression', 'using pretrained model to solve regression problems'),
+        ('prediction', 'make predictions using the trained model'),
+        ('classification', 'using pretrained model to solve classification problems'),
             )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def classification(args):
+    pass
 
 def regression(args):
     """
