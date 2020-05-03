@@ -34,11 +34,81 @@ def main():
         ('fetchProSeq', 'fetch corresponding sequences of condidated genes'),
         ('PlotEVs', 'plot histgram of effect sizes'),
         ('PlotMAFs', 'density plot of MAF'),
-        ('UniquePeaks', 'calculate the number of unique peaks identified in a GWAS run')
+        ('UniquePeaks', 'calculate the number of unique peaks identified in a GWAS run'),
+        ('Manhattan', 'make manhattan plot')
         #('PlotMAF', 'plot histgram of maf'),
             )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def Manhattan(args):
+    """
+    %prog Manhattan GWAS_result Figure_title
+    
+    Mamhattan plot
+    """
+    p = OptionParser(Manhattan.__doc__)
+    p.add_option('--software', default='gemma', choices=('gemma', 'mvp', 'farmcpu', 'gapit'),
+        help = 'softare where the GWAS result came from')
+    p.add_option('--pvalue', default=0.05, choices=(0.05, 0.01),
+        help = 'choose the pvalue cutoff')
+    p.add_option('--MeRatio', type='float', default = 1.0,
+        help = "specify the ratio of independent SNPs, maize is 0.32, sorghum is 0.53")
+    p.add_option('--sort', default=False, action='store_true',
+        help = "If GWAS file needs to be sorted based on chromosome and position")
+    opts, args = p.parse_args(args)
+
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    gwasfile, title = args
+
+    gwas0 = ReadGWASfile(gwasfile, opts.software, needsort=opts.sort)
+    df_plot = gwas0.df
+    chr_pos_df = df_plot.groupby('chr').max()
+    chr_lens = chr_pos_df['pos'].cumsum().tolist()[0:-1]
+    chr_lens.insert(0,0)
+    chr_len_df = pd.DataFrame(chr_lens, index=chr_pos_df.index, columns=['chr_offset']).reset_index()
+    df_plot = df_plot.merge(right=chr_len_df, on='chr')
+    df_plot['x'] = df_plot['pos'] + df_plot['chr_offset']
+    df_plot = df_plot[['chr', 'pos', 'x', '-log10Pvalue']]
+
+    plt.rcParams['xtick.labelsize'] = 8
+    plt.rcParams['ytick.labelsize'] = 8
+    plt.rcParams['xtick.major.pad'] = 1.5
+    plt.rcParams['ytick.major.pad'] = 1.5
+    colors = {1:'#a6cee3', 2:'#1f78b4', 3:'#b2df8a', 4:'#33a02c', 5:'#fb9a99', 6:'#e31a1c', 7:'#fdbf6f', 8:'#ff7f00', 9:'#cab2d6', 10:'#6a3d9a'}
+    f, ax = plt.subplots(figsize=(6.8, 1.9))
+    labels, label_POS = [], []
+    color_idx = 1
+    for chr, grp in df_plot.groupby(by='chr'):
+        labels.append(chr)
+        grp.plot(kind='scatter', x='x', y='-log10Pvalue', s=3.5, color=colors[color_idx], ax=ax)
+        label_pos = grp['x'].iloc[-1] - (grp['x'].iloc[-1] - grp['x'].iloc[0])/2
+        label_POS.append(label_pos)
+        color_idx += 1
+    
+    cutoff = -np.log10(opts.pvalue/(opts.MeRatio * gwas0.numberofSNPs))
+    ax.axhline(cutoff, linestyle=':', linewidth=0.6, color='k', alpha=0.7)
+      
+    x_limit_right = df_plot['x'].iloc[-1]
+    ax.set_xticks(label_POS)
+    ax.set_xticklabels(labels)
+    ax.set_xlim(-8000000, x_limit_right+8000000)
+    
+    y_limit_top = np.ceil(df_plot['-log10Pvalue'].max())
+    y_ticks = np.arange(0, y_limit_top+1, 3)
+    ax.set_yticks(y_ticks)
+    ax.set_yticklabels(y_ticks.astype('int'))
+    ax.set_ylim(-y_limit_top*0.04, y_limit_top+0.5)
+
+    ax.set_ylabel(r'$\rm -log_{10}(\it{p})$',fontsize=12, labelpad=1)
+    ax.set_xlabel('Chromosome',fontsize=12, labelpad=1)
+
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.set_title(title, fontsize=12)
+    plt.tight_layout()
+    plt.savefig('%s_Manhattan.png'%title, dpi=300)
 
 def UniquePeaks(args):
     """
@@ -56,12 +126,14 @@ def UniquePeaks(args):
         help = 'Maximum distance between two significant SNPs in same peak in base pairs')
     p.add_option('--MeRatio', type='float', default = 1.0,
         help = "specify the ratio of independent SNPs, maize is 0.32, sorghum is 0.53")
+    p.add_option('--sort', default=False, action='store_true',
+        help = "If GWAS file needs to be sorted based on chromosome and position")
     opts, args = p.parse_args(args)
     
     if len(args) == 0:
         sys.exit(not p.print_help())
     gwasfile, outprefix = args
-    gwas0 = ReadGWASfile(gwasfile, opts.software, needsort=False)
+    gwas0 = ReadGWASfile(gwasfile, opts.software, needsort=opts.sort)
     df = gwas0.SignificantSNPs(p_cutoff=0.05, MeRatio=opts.MeRatio)
     print('number of significant SNPs: %s'%df.shape[0])
 
@@ -532,7 +604,6 @@ def PlotMAFs(args):
     ax.set_ylabel('Density', fontsize=12)
     plt.tight_layout()
     plt.savefig('MAF_density.png', dpi=300)
-
 
 if __name__ == '__main__':
     main()
