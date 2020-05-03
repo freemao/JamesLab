@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from schnablelab.apps.base import ActionDispatcher, OptionParser
 from schnablelab.apps.headers import Slurm_header
-from schnablelab.autoGWAS.base import parse_gwasfile
+from schnablelab.autoGWAS.base import ReadGWASfile, ParseHmp
 from subprocess import call
 import pandas as pd
 import numpy as np
@@ -23,7 +23,7 @@ faOneRecord = op.abspath(op.dirname(__file__))+'/../apps/faOneRecord'
 def main():
     actions = (
         ('fetchMAF', 'calculate the MAFs of selected SNPs'),
-        ('allMAF', 'calculate the MAFs for all SNPs in hmp'),
+        ('AllMAFs', 'calculate the MAFs for all SNPs in hmp'),
         ('SigSNPs', 'fetch the first n significant SNPs'),
         ('SharedSigSNPs', 'find shared significant SNPs between gemma and farmcpu'),
         ('fetchEVs', 'fetch effect sizes of selected SNPs'),
@@ -33,6 +33,7 @@ def main():
         ('fetchFunc', 'fetch functions of candidate genes'),
         ('fetchProSeq', 'fetch corresponding sequences of condidated genes'),
         ('PlotEVs', 'plot histgram of effect sizes'),
+        ('PlotMAFs', 'density plot of MAF'),
         ('UniquePeaks', 'calculate the number of unique peaks identified in a GWAS run')
         #('PlotMAF', 'plot histgram of maf'),
             )
@@ -60,9 +61,8 @@ def UniquePeaks(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     gwasfile, outprefix = args
-    df = parse_gwasfile(gwasfile, opts.software)
-    cutoff = -np.log10(0.05/(opts.MeRatio * df.shape[0]))
-    df = df[df['-log10Pvalue'] >= cutoff]
+    gwas0 = ReadGWASfile(gwasfile, opts.software, needsort=False)
+    df = gwas0.SignificantSNPs(p_cutoff=0.05, MeRatio=opts.MeRatio)
     print('number of significant SNPs: %s'%df.shape[0])
 
     # find peaks in each chromosome
@@ -124,33 +124,22 @@ def parseMAF(i):
 
     return j[0], maf, count, minor_idx, major_idx, hetero_idx
     
-def allMAF(args):
+def AllMAFs(args):
     """
     %prog hmp 
 
-    calculate MAF for all SNPs in hmp
+    calculate MAF for each SNP in hmp
     """
-    p = OptionParser(allMAF.__doc__)
+    p = OptionParser(AllMAFs.__doc__)
     opts, args = p.parse_args(args)
 
     if len(args) == 0:
         sys.exit(not p.print_help())
     hmp, = args
-    f1 = open('%s.MAF'%hmp, 'w')
-    f1.write('SNPs\tMAF\n')
-    f = open(hmp)
-    f.readline()
-    for i in f:
-        j = i.split()
-        allele1, allele2 = j[1].split('/')
-        genos = ''.join(j[11:])
-        a1, a2 = genos.count(allele1), genos.count(allele2)
-        maf = a1/float(a1+a2) \
-            if a1 <= a2 \
-            else a2/float(a1+a2)
-        f1.write('%s\t%s\n'%(j[0], maf))
-    f.close()
-    f1.close()
+    myhmp = ParseHmp(hmp, type='double')
+    Series_MAFs = myhmp.MAFs()
+    Series_MAFs.to_csv('%s.MAF'%hmp, index=False, header=None)
+    print('Done! Check %s.MAF file.'%hmp)
 
 def fetchMAF(args):
     """
@@ -498,6 +487,52 @@ def PlotEVs(args):
     plt.tight_layout()
     plt.savefig('%s.pdf'%output_prefix)
     plt.savefig('%s.png'%output_prefix)
+
+def PlotMAFs(args):
+    """
+    %prog MAF_file1 MAF_file2 ...
+    density plot of MAFs. Filename will be used as the lengend label 
+    """
+    p = OptionParser(PlotMAFs.__doc__)
+    p.add_option('--header', default = 'no', choices=('yes', 'no'),
+        help = 'specify if there is a header in your MAF file')
+    opts, args = p.parse_args(args)
+
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    print(args)
+    
+    
+    import seaborn as sns 
+    import matplotlib.pyplot as plt
+    from matplotlib import rcParams
+    fig, ax = plt.subplots(figsize=(4, 3.8))
+    colors = ['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3']
+    for idx,fn in enumerate(args):
+        df = pd.read_csv(fn, header=None) if opts.header=='no' else pd.read_csv(fn)
+        label = fn.split('.')[0]
+        df.columns = [label]
+        ax = sns.kdeplot(df[label],
+            shade=True,
+            label=label,
+            color=colors[idx],
+            ax=ax,
+            markerfacecolor='black',
+            markersize=2)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.xaxis.set_ticks_position('bottom')
+    ax.spines['bottom'].set_position(('axes', -0.015))
+    ax.yaxis.set_ticks_position('left')
+    ax.spines['left'].set_position(('axes', -0.015))
+
+    ax.set_xlim(0, 0.5)
+    ax.set_ylim(bottom=0)
+    ax.set_xlabel('Minor Allele Frequency', fontsize=12)
+    ax.set_ylabel('Density', fontsize=12)
+    plt.tight_layout()
+    plt.savefig('MAF_density.png', dpi=300)
+
 
 if __name__ == '__main__':
     main()
