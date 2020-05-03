@@ -127,7 +127,7 @@ def train_model_regression(model, dataloaders, criterion, optimizer, model_name_
                 model.eval()   # Set model to evaluate mode
 
             running_loss = 0.0
-            for inputs, labels in dataloaders[phase]:
+            for inputs, labels, img_fn in dataloaders[phase]:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
                 
