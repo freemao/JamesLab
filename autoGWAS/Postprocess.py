@@ -120,20 +120,30 @@ def UniquePeaks(args):
     Identify peaks in the output of a GWAS run
     """
     p = OptionParser(UniquePeaks.__doc__)
-    p.add_option('--software', default='gemma', choices=('gemma', 'mvp', 'farmcpu', 'gapit'),
-        help = 'softare where the GWAS result came from')
+    p.add_option('--software', default='gemma', choices=('gemma', 'farmcpu', 'gapit', 'other'),
+        help = 'softare where the GWAS result came from. If other, specify --usecols option')
     p.add_option('--WindowSize', type='int', default=150_000,
         help = 'Maximum distance between two significant SNPs in same peak in base pairs')
     p.add_option('--MeRatio', type='float', default = 1.0,
         help = "specify the ratio of independent SNPs, maize is 0.32, sorghum is 0.53")
     p.add_option('--sort', default=False, action='store_true',
         help = "If GWAS file needs to be sorted based on chromosome and position")
+    p.add_option('--usecols', default=None,
+        help = "specify index (0-based) of snp,chr,pos,pvalue (comma separated without space) if softare is other")
     opts, args = p.parse_args(args)
     
     if len(args) == 0:
         sys.exit(not p.print_help())
     gwasfile, outprefix = args
-    gwas0 = ReadGWASfile(gwasfile, opts.software, needsort=opts.sort)
+
+    if opts.software == 'other':
+        if opts.usecols is None:
+            sys.exit('--usecols must be specified if software is other')
+        else:
+            opts.usecols = [int(i) for i in opts.usecols.split(',')]
+            print('indics of columns to be read: %s'%opts.usecols)
+
+    gwas0 = ReadGWASfile(gwasfile, opts.software, needsort=opts.sort, usecols=opts.usecols)
     df = gwas0.SignificantSNPs(p_cutoff=0.05, MeRatio=opts.MeRatio)
     print('number of significant SNPs: %s'%df.shape[0])
 

@@ -75,28 +75,36 @@ class ParseHmp():
 
 class ReadGWASfile():
     
-    def __init__(self, filename, software, needsort=False):
+    def __init__(self, filename, software, needsort=False, usecols=None):
         '''
         Args:
             filename: gwas result filename
             software: gwas software (gemma, farmcpu, mvp, gapit)
             needsort: if the gwas file need to be sorted
+            mvp_p_col: specify which pvlue column if multiple approaches used in MVP
         '''
         self.fn = filename
         self.software = software
         self.needsort = needsort
+        self.usecols = usecols
         
         if self.software == 'gemma':
             df = pd.read_csv(self.fn, delim_whitespace=True, usecols=['chr', 'rs', 'ps', 'p_lrt'])
             df = df[['rs', 'chr', 'ps', 'p_lrt']]
-        elif self.software == 'mvp':
-            df = pd.read_csv(self.fn) # column order: snp, chr, pos, pvalue
         elif self.software == 'farmcpu':
             df = pd.read_csv(self.fn, usecols=['SNP', 'Chromosome', 'Position', 'P.value'])
         elif self.software == 'gapit':
             df = pd.read_csv(self.fn, usecols=['SNP', 'Chromosome', 'Position ', 'P.value'])
+        elif self.software == 'other':
+            if self.usecols is None:
+                sys.exit('specify which columns for use if choosing other!')
+            if (not isinstance(self.usecols, list)):
+                sys.exit('usecols must be a list')
+            if len(self.usecols) != 4:
+                sys.exit('usecols must have the lenght of 4')
+            df = pd.read_csv(self.fn, usecols=self.usecols)
         else:
-            sys.exit('only mvp, gemma, farmcpu, gapit are supported!')
+            sys.exit('only gemma, farmcpu, gapit, and other are supported!')
         df.columns = ['snp', 'chr', 'pos', 'pvalue']
         df['chr'] = df['chr'].astype('str')
         df['pvalue'] = -np.log10(df['pvalue'])
