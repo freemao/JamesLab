@@ -184,9 +184,7 @@ def parseMAF(i):
     allele1, allele2 = j[1].split('/')
     genos = ''.join(j[11:])
     a1, a2 = genos.count(allele1), genos.count(allele2)
-    maf = a1/float(a1+a2) \
-        if a1 <= a2 \
-        else a2/float(a1+a2)
+    maf = min(a1, a2)/(a1+a2)
     count = len(genos)*maf
 
     minor_allele, major_allele, = (allele1, allele2) if a1 <= a2 else (allele2, allele1)
@@ -208,20 +206,21 @@ def parseMAF(i):
     
 def AllMAFs(args):
     """
-    %prog hmp 
+    %prog AllMAFs input_hmp 
 
     calculate MAF for each SNP in hmp
     """
     p = OptionParser(AllMAFs.__doc__)
-    opts, args = p.parse_args(args)
+    _, args = p.parse_args(args)
 
     if len(args) == 0:
         sys.exit(not p.print_help())
-    hmp, = args
-    myhmp = ParseHmp(hmp, type='double')
-    Series_MAFs = myhmp.MAFs()
-    Series_MAFs.to_csv('%s.MAF'%hmp, index=False, header=None)
-    print('Done! Check %s.MAF file.'%hmp)
+    inputhmpfile, = args
+    outputcsvfile = inputhmpfile.replace('.hmp', 'MAF.csv')
+    hmp = ParseHmp(inputhmpfile, type='double')
+    MAFs = pd.Series([maf for _,maf in hmp.MAFs()])
+    MAFs.to_csv(outputcsvfile, index=False, header=None)
+    print('Done! Check %s file'%hmp)
 
 def fetchMAF(args):
     """
@@ -316,7 +315,6 @@ def SharedSigSNPs(args):
     df.to_csv(output, index=False, sep='\t')
     print('Done! Check %s'%output)
         
-
 def SigSNPs(args):
     """
     %prog gwas_results output 
@@ -545,7 +543,6 @@ def fetchProSeq(args):
         call(cmd, shell=True)
     print('Done!')
     
-
 def PlotEVs(args):
     """
     %prog EVlist(FarmCPU result) output_prefix

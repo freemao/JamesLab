@@ -47,31 +47,23 @@ class ParseHmp():
     
     def MAFs(self):
         '''
-        calculate MAF for each SNP
-        return: MAFs in pandas series format
+        yield (line, maf) for each line
         '''
-        allmafs = []
         if self.type == 'double':
             with open(self.fn) as f:
-                f.readline()
+                next(f)
                 for i in f:
                     j = i.split()
-                    print(j[0])
                     alleles = j[1].split('/')
                     if len(alleles) == 2:
                         allele1, allele2 = alleles
                         genos = ''.join(j[11:])
                         a1, a2 = genos.count(allele1), genos.count(allele2)
-                        maf = a1/float(a1+a2) \
-                            if a1 <= a2 \
-                            else a2/float(a1+a2)
-                        allmafs.append(maf)
+                        yield i, min(a1, a2)/(a1+a2)
                     else:
-                        allmafs.append(0)
+                        yield i, 0
         else:
             sys.exit('not implement yet..')
-        allmafs = pd.Series(allmafs)
-        return allmafs
 
 class ReadGWASfile():
     
