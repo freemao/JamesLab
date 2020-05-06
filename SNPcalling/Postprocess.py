@@ -37,7 +37,6 @@ def main():
         ('only_ALT', 'filter number of ALT'),
         ('only_MAF', 'filter MAF'),
         ('only_Hetero', 'filter high heterozygous loci'),
-        ('subsampling', 'subsampling and reorder vcf files'),
         ('fixGTsep', 'fix the allele separator for beagle imputation'),
         ('SummarizeLD', 'summarize ld decay in log scale'),
         ('EstimateLD', 'estimate ld using tassel'),
@@ -133,36 +132,6 @@ def fixGTsep(args):
         header += cmd
         with open('%s.fixGT.slurm'%sm, 'w') as f:
             f.write(header)
-
-def subsampling(args):
-    """
-    %prog subsampling in_dir out_dir samples.csv
-
-    subsampling and reorder samples in vcf file using bcftools
-    """
-    p = OptionParser(subsampling.__doc__)
-    p.add_option('--pattern', default='*.vcf',
-                 help='file pattern for vcf files in dir_in')
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    in_dir, out_dir,sm_fn, = args
-    out_path = Path(out_dir)
-    if not out_path.exists():
-        sys.exit('%s does not exist...')
-    dir_path = Path(in_dir)
-    vcfs = dir_path.glob(opts.pattern)
-    for vcf in vcfs:
-        sm = '.'.join(vcf.name.split('.')[0:-1])
-        out_fn = sm+'.subsm.vcf'
-        out_fn_path = out_path/out_fn
-        cmd = 'bcftools view -S %s %s > %s'%(sm_fn, vcf, out_fn_path)
-        header = Slurm_header%(10, 20000, sm, sm, sm)
-        header += 'ml bcftools\n'
-        header += cmd
-        with open('%s.subsm.slurm'%sm, 'w') as f:
-            f.write(header)
-        print('%s.subsm.slurm has been generated!'%sm)
 
 def IndexVCF(args):
     """
@@ -572,27 +541,6 @@ def SummarizeLD(args):
         with open('%s.sumLD.slurm' % prefix, 'w') as f:
             f.write(header)
         print('slurm file %s.sumLD.slurm has been created, you can submit your job file.' % prefix)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 if __name__ == "__main__":
