@@ -107,7 +107,7 @@ class ParseVCF():
 
 def FilterMissing(args):
     """
-    %prog input_vcf
+    %prog FilterMissing input_vcf
     Remove SNPs with high missing rate
     """
     p = OptionParser(FilterMissing.__doc__)
@@ -129,7 +129,7 @@ def FilterMissing(args):
 
 def FilterHetero(args):
     """
-    %prog input_vcf
+    %prog FilterHetero input_vcf
     Remove bad and high heterizygous loci
     """
     p = OptionParser(FilterHetero.__doc__)
@@ -151,7 +151,7 @@ def FilterHetero(args):
 
 def FilterMAF(args):
     """
-    %prog MAF input_vcf
+    %prog FilterMAF input_vcf
     Remove rare MAF SNPs
     """
     p = OptionParser(FilterMAF.__doc__)
@@ -173,7 +173,7 @@ def FilterMAF(args):
     
 def SubsamplingSNPs(args):
     """
-    %prog input_vcf SNPs.csv 
+    %prog SubsamplingSNPs input_vcf SNPs.csv 
     grep a subset of SNPs defined in SNPs.csv (One ID per row without header) from the input_vcf
     """
     p = OptionParser(SubsamplingSNPs.__doc__)
@@ -198,7 +198,7 @@ def SubsamplingSNPs(args):
 
 def SubsamplingSMs(args):
     """
-    %prog input_vcf SMs.csv 
+    %prog SubsamplingSMs input_vcf SMs.csv 
     grep a subset of samples defined in SMs.csv (One sample name per row without header) from the input_vcf
     """
     p = OptionParser(SubsamplingSMs.__doc__)
