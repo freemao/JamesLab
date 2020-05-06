@@ -19,15 +19,215 @@ from schnablelab.apps.headers import Slurm_header
 
 def main():
     actions = (
-        ('Missing', 'filter missing rate using customized script'),
-        ('MAF', 'filter minor allele frequency using customized script'),
-        ('Heterozygous', 'filter SNPs with high heterozygous rates'),
-        ('Bad_Indels', 'remove wrong INDELs'),
-        ('GrepImputatedVcf', 'grep the SNPs with lower missing rate before imputation from whole imputed vcf'),
+        ('FilterMissing', 'filter missing rate using customized script'),
+        ('FilterMAF', 'filter minor allele frequency using customized script'),
+        ('FilterHetero', 'filter SNPs with high heterozygous rates'),
+        ('SubsamplingSNPs', 'grep a subset of SNPs from a vcf file'),
+        ('SubsamplingSMs', 'grep a subset of samples from a vcf file'),
         ('SummarizeLD', 'ld decay in log scale'),
 )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+class ParseVCF():
+    '''
+    parse vcf file
+    '''
+    def __init__(self, filename):
+        self.fn = filename
+        with open(filename) as f:
+            n = 0
+            hash_chunk = []
+            hash_chunk2 = []
+            for i in f:
+                if i.startswith('##'):
+                    n += 1
+                    hash_chunk.append(i)
+                    hash_chunk2.append(i)
+                    continue
+                if i.startswith('#'):
+                    SMs_header = i.split()[:9]
+                    SMs = i.split()[9:]
+                    numSMs = len(SMs)
+                    n += 1
+                    hash_chunk.append(i)
+                else:
+                    break
+        self.SMs_header = SMs_header
+        self.SMs = SMs
+        self.numSMs = numSMs
+        self.numHash = n
+        self.HashChunk = hash_chunk
+        self.HashChunk2 = hash_chunk2
+
+    def AsDataframe(self):
+        df = pd.read_csv(self.fn, skiprows=range(self.numHash-1), delim_whitespace=True)
+        return df
+
+    def Missing(self):
+        '''
+        yield missing rate for each line
+        '''
+        with open(self.fn) as f:
+            for _ in range(self.numHash):
+                next(f)
+            for i in f:
+                num_miss = i.count('./.')+i.count('.|.')
+                yield i, num_miss/self.numSMs
+
+    def Hetero(self, smallHet=True):
+        '''
+        yield heterozygous rate for each line
+        '''
+        with open(self.fn) as f:
+            for _ in range(self.numHash):
+                next(f)
+            for i in f:
+                num_a = i.count('0/0')+i.count('0|0')
+                num_b = i.count('1/1')+ i.count('1|1')
+                num_h = i.count('0/1')+ i.count('0|1')+i.count('1|0')
+                if num_h > max(num_a, num_b):
+                    yield i, 1
+                else:
+                    yield i, num_h/float(num_a + num_b + num_h)
+
+    def MAF(self):
+        '''
+        yield minor allele frequence for each line
+        '''
+        with open(self.fn) as f:
+            for _ in range(self.numHash):
+                next(f)
+            for i in f:
+                num_a = i.count('0/0')+i.count('0|0')
+                num_b = i.count('1/1')+ i.count('1|1')
+                num_h = i.count('0/1')+ i.count('0|1')+i.count('1|0')
+                a1, a2 = num_a*2+num_h, num_b*2+num_h
+                yield  i, min(a1,a2)/(a1+a2)
+
+def FilterMissing(args):
+    """
+    %prog input_vcf
+    Remove SNPs with high missing rate
+    """
+    p = OptionParser(FilterMissing.__doc__)
+    p.add_option('--missing_cutoff', default = 0.7, type='float', 
+        help = 'specify the missing rate cutoff. SNPs higher than this cutoff will be removed.')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputvcf, = args
+    outputvcf = inputvcf.split('.vcf')[0] + '_mis%s.vcf'%opts.missing_cutoff
+
+    vcf = ParseVCF(inputvcf)
+    with open(outputvcf, 'w') as f:
+        f.writelines(vcf.HashChunk)
+        for i, miss in vcf.Missing():
+            if miss <= opts.missing_cutoff:
+                f.write(i)
+    print('Done! check output %s...'%outputvcf)
+
+def FilterHetero(args):
+    """
+    %prog input_vcf
+    Remove bad and high heterizygous loci
+    """
+    p = OptionParser(FilterHetero.__doc__)
+    p.add_option('--het_cutoff', default = 0.1, type='float',
+        help = 'specify the heterozygous rate cutoff, SNPs higher than this cutoff will be removed.')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputvcf, = args
+    outputvcf = inputvcf.split('.vcf')[0] + '_het%s.vcf'%opts.het_cutoff
+
+    vcf = ParseVCF(inputvcf)
+    with open(outputvcf, 'w') as f:
+        f.writelines(vcf.HashChunk)
+        for i, het in vcf.Hetero():
+            if het <= opts.het_cutoff:
+                f.write(i)
+    print('Done! check output %s...'%outputvcf)
+
+def FilterMAF(args):
+    """
+    %prog MAF input_vcf
+    Remove rare MAF SNPs
+    """
+    p = OptionParser(FilterMAF.__doc__)
+    p.add_option('--MAF_cutoff', default = 0.01, type='float',
+        help = 'specify the MAF rate cutoff, SNPs lower than this cutoff will be removed.')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputvcf, = args
+    outputvcf = inputvcf.split('.vcf')[0] + '_maf%s.vcf'%opts.MAF_cutoff
+
+    vcf = ParseVCF(inputvcf)
+    with open(outputvcf, 'w') as f:
+        f.writelines(vcf.HashChunk)
+        for i, maf in vcf.MAF():
+            if maf >= opts.MAF_cutoff:
+                f.write(i)
+    print('Done! check output %s...'%outputvcf)
+    
+def SubsamplingSNPs(args):
+    """
+    %prog input_vcf SNPs.csv 
+    grep a subset of SNPs defined in SNPs.csv (One ID per row without header) from the input_vcf
+    """
+    p = OptionParser(SubsamplingSNPs.__doc__)
+    _, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputvcf, SNPcsv, = args
+    outputvcf = inputvcf.split('.vcf')[0] + '_subSNPs.vcf'
+
+    vcf = ParseVCF(inputvcf)
+    df_vcf = vcf.AsDataframe()
+
+    IDs = pd.read_csv(SNPcsv, header=None)[0].values
+    num_IDs = IDs.shape[0]
+    print('number of specified SNPs: %s'%num_IDs)
+    df_vcf = df_vcf[df_vcf['ID'].isin(IDs)]
+    print('%s out of %s found in VCF'%(df_vcf.shape[0], num_IDs))
+    with open(outputvcf, 'w') as f:
+        f.writelines(vcf.HashChunk2)
+    df_vcf.to_csv(outputvcf, sep='\t', index=False, mode='a')
+    print('Done! check output %s...'%outputvcf)
+
+def SubsamplingSMs(args):
+    """
+    %prog input_vcf SMs.csv 
+    grep a subset of samples defined in SMs.csv (One sample name per row without header) from the input_vcf
+    """
+    p = OptionParser(SubsamplingSMs.__doc__)
+    _, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputvcf, SMcsv, = args
+    outputvcf = inputvcf.split('.vcf')[0] + '_subSMs.vcf'
+
+    vcf = ParseVCF(inputvcf)
+    df_vcf = vcf.AsDataframe()
+
+    IDs = pd.read_csv(SMcsv, header=None)[0].values
+    num_IDs = IDs.shape[0]
+    print('number of specified Samples: %s'%num_IDs)
+
+    subsm = vcf.SMs_header
+    for id in IDs:
+        if id not in vcf.SMs:
+            print('%s not found in vcf...'%id)
+        else:
+            subsm.append(id)
+    print('%s out of %s found in VCF'%(len(subsm)-9, num_IDs))
+
+    df_vcf = df_vcf[subsm]
+    with open(outputvcf, 'w') as f:
+        f.writelines(vcf.HashChunk2)
+    df_vcf.to_csv(outputvcf, sep='\t', index=False, mode='a')
+    print('Done! check output %s...'%outputvcf)   
 
 def SummarizeLD(args):
     """
@@ -64,138 +264,6 @@ def SummarizeLD(args):
             elif len(ele) == 0:
                 averageR2, sd = '',''
             f.write('%s\t%s\t%s\t%s\n'%(10**(idx*0.1),(10**((idx+1)*0.1)), averageR2, sd))
-
-def Missing(args):
-    """
-    %prog vcf
-    Remove SNPs with high missing rate
-    """
-    p = OptionParser(Missing.__doc__)
-    p.add_option('--missing_rate', default = 0.7, type='float', 
-        help = 'specify the missing rate cutoff. SNPs with missing rate higher than this cutoff will be removed.')
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    vcffile, = args
-    prefix = vcffile.split('.vcf')[0]
-    new_f = prefix + '.mis%s.vcf'%opts.missing_rate
-    total_n = getSMsNum(vcffile)
-    print('Total %s Samples.'%total_n)
-    with open(new_f, 'w') as f_out:
-        with open(vcffile) as f_in:
-            for i in f_in:
-                if i.startswith('#'):
-                    f_out.write(i)
-                else:
-                    _,_,_,m = genotypes_count(i)
-                    missing_rate = m/total_n
-                    if missing_rate <= opts.missing_rate:
-                        f_out.write(i)
-
-def genotypes_count(snp):
-    """
-    calculate the numbers of ref, alt, hetero, missing genotypes.
-    """
-    a1 = snp.count('0/0')+snp.count('0|0')
-    a2 = snp.count('1/1')+ snp.count('1|1')
-    h = snp.count('0/1')+ snp.count('0|1')+snp.count('1|0')
-    m = snp.count('./.')+snp.count('.|.')
-    return a1, a2, h, m
-
-def Heterozygous(args):
-    """
-    %prog vcf_in
-    Remove bad and high heterizygous loci
-    """
-    p = OptionParser(Heterozygous.__doc__)
-    p.add_option('--h2_rate', default = 0.1, type='float',
-        help = 'specify the heterozygous rate cutoff, higher than this cutoff will be removed.')
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    vcffile, = args
-    prefix = vcffile.split('.vcf')[0]
-    new_f = prefix + '.hete%s.vcf'%opts.h2_rate
-    f0 = open(vcffile)
-    f1 = open(new_f, 'w')
-    for i in f0:
-        if i.startswith('#'):
-            f1.write(i)
-        else:
-            a1, a2, h, m = genotypes_count(i)
-            if h <= max(a1, a2) and h/float(a1+a2+h) <= float(opts.h2_rate):
-                f1.write(i)
-    f0.close()
-    f1.close()
-
-def getSMsNum(vcffile):
-    call('ml bcftools', shell=True)
-    child = subprocess.Popen('bcftools query -l %s|wc -l'%vcffile, shell=True, stdout=subprocess.PIPE)
-    SMs_num = int(child.communicate()[0])
-    return SMs_num
-
-def MAF(args):
-    """
-    %prog MAF vcf maf
-
-    filter rare MAF SNPs
-    """
-    p = OptionParser(MAF.__doc__)
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    vcffile, maf, = args
-    prefix = vcffile.split('.vcf')[0]
-    new_f = prefix + '.maf%s.vcf'%maf
-
-    total_n = getSMsNum(vcffile)
-    print('Total %s Samples.'%total_n)
-
-    with open(new_f, 'w') as f_out:
-        with open(vcffile) as f_in:
-            for i in f_in:
-                if i.startswith('#'):
-                    f_out.write(i)
-                else:
-                    ref, alt, het, mis = genotypes_count(i)
-                    an1, an2 = ref*2+het, alt*2+het
-                    maf = min(an1,an2)/(an1+an2)
-                    if maf >= float(maf):
-                        f_out.write(i)
-    
-def GrepImputatedVcf(args):
-    """
-    %prog LowerMissingVcf ImputedVcf out_vcf
-    grep SNPs with lower missing rate before imputation from whole imputed vcf
-    """
-    p = OptionParser(GrepImputatedVcf.__doc__)
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    low_vcf, ipt_vcf,out_vcf = args
-
-    seed_head_n = 0
-    with open(low_vcf) as f:
-        for i in f:
-            if i.startswith('##'): seed_head_n += 1
-            else: break
-    low_vcf_df = pd.read_csv(low_vcf, delim_whitespace=True, usecols=['#CHROM', 'POS'], skiprows=seed_head_n)
-    seed = low_vcf_df['#CHROM']+'\t'+low_vcf_df['POS'].astype('str')
-    print('seed generated.')
-
-    ipt_head_n = 0
-    with open(ipt_vcf) as f1:
-        for i in f1:
-            if i.startswith('##'): ipt_head_n += 1
-            else: break
-    ipt_vcf_df = pd.read_csv(ipt_vcf, delim_whitespace=True, skiprows=ipt_head_n)
-    target = ipt_vcf_df['#CHROM']+'\t'+ipt_vcf_df['POS'].astype('str')
-    print('whole imputed target generated.')
-
-    seed_bool = target.isin(seed)
-    out_vcf_df = ipt_vcf_df[seed_bool]
-    out_vcf_df.to_csv(out_vcf, index=False, sep='\t')
-    print('Done! check %s'%out_vcf)
 
 if __name__ == "__main__":
     main()
