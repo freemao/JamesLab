@@ -1,27 +1,18 @@
 # -*- coding: UTF-8 -*-
 
 """
-Filter SNPs using bcftools.
-Find more details at bcftools website:
-https://samtools.github.io/bcftools/bcftools.html
+base class and functions to handle with vcf file
 """
-
-import pandas as pd
-import numpy as np
-import os.path as op
 import sys
-from pathlib import Path
-from subprocess import call
-from schnablelab.apps.base import ActionDispatcher, OptionParser, glob,iglob
-from schnablelab.apps.natsort import natsorted
-import subprocess
-from schnablelab.apps.headers import Slurm_header
+import numpy as np
+import pandas as pd
+from schnablelab.apps.base import ActionDispatcher, OptionParser
 
 def main():
     actions = (
-        ('FilterMissing', 'filter missing rate using customized script'),
-        ('FilterMAF', 'filter minor allele frequency using customized script'),
-        ('FilterHetero', 'filter SNPs with high heterozygous rates'),
+        ('FilterMissing', 'filter out SNPs with high missing rate'),
+        ('FilterMAF', 'filter out SNP with extremely low minor allele frequency'),
+        ('FilterHetero', 'filter out SNPs with high heterozygous rates'),
         ('SubsamplingSNPs', 'grep a subset of SNPs from a vcf file'),
         ('SubsamplingSMs', 'grep a subset of samples from a vcf file'),
         ('SummarizeLD', 'ld decay in log scale'),
@@ -75,9 +66,9 @@ class ParseVCF():
                 num_miss = i.count('./.')+i.count('.|.')
                 yield i, num_miss/self.numSMs
 
-    def Hetero(self, smallHet=True):
+    def Hetero(self):
         '''
-        yield heterozygous rate for each line
+        yield (line, heterozygous rate) for each line
         '''
         with open(self.fn) as f:
             for _ in range(self.numHash):
@@ -120,12 +111,15 @@ def FilterMissing(args):
     outputvcf = inputvcf.split('.vcf')[0] + '_mis%s.vcf'%opts.missing_cutoff
 
     vcf = ParseVCF(inputvcf)
+    n = 0
     with open(outputvcf, 'w') as f:
         f.writelines(vcf.HashChunk)
         for i, miss in vcf.Missing():
             if miss <= opts.missing_cutoff:
                 f.write(i)
-    print('Done! check output %s...'%outputvcf)
+            else:
+                n += 1
+    print('Done! %s SNPs removed! check output %s...'%(n, outputvcf))
 
 def FilterHetero(args):
     """
@@ -142,12 +136,15 @@ def FilterHetero(args):
     outputvcf = inputvcf.split('.vcf')[0] + '_het%s.vcf'%opts.het_cutoff
 
     vcf = ParseVCF(inputvcf)
+    n = 0
     with open(outputvcf, 'w') as f:
         f.writelines(vcf.HashChunk)
         for i, het in vcf.Hetero():
             if het <= opts.het_cutoff:
                 f.write(i)
-    print('Done! check output %s...'%outputvcf)
+            else:
+                n += 1
+    print('Done! %s SNPs removed! check output %s...'%(n, outputvcf))
 
 def FilterMAF(args):
     """
@@ -164,12 +161,15 @@ def FilterMAF(args):
     outputvcf = inputvcf.split('.vcf')[0] + '_maf%s.vcf'%opts.MAF_cutoff
 
     vcf = ParseVCF(inputvcf)
+    n = 0
     with open(outputvcf, 'w') as f:
         f.writelines(vcf.HashChunk)
         for i, maf in vcf.MAF():
             if maf >= opts.MAF_cutoff:
                 f.write(i)
-    print('Done! check output %s...'%outputvcf)
+            else:
+                n += 1
+    print('Done! %s SNPs removed! check output %s...'%(n, outputvcf))
     
 def SubsamplingSNPs(args):
     """
