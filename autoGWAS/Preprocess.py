@@ -3,15 +3,13 @@
 """
 Convert GWAS dataset to particular formats for GEMMA, GAPIT, FarmCPU, and MVP.
 """
-
-import os.path as op
-from pathlib import Path
 import sys
-import pandas as pd
 import numpy as np
+import pandas as pd
+from pathlib import Path
+from subprocess import call
 from schnablelab.apps.base import ActionDispatcher, OptionParser
 from schnablelab.apps.headers import Slurm_header
-from subprocess import call
 
 # the location of gemma executable file
 gemma = op.abspath(op.dirname(__file__)) + '/../apps/gemma'
@@ -32,8 +30,6 @@ def main():
         ('ped2bed', 'convert plink ped format to binary bed format'),
         ('genKinship', 'using gemma to generate centered kinship matrix'),
         ('genPCA', 'using tassel to generate the first N PCs'),
-        ('subsampling', 'resort hmp file by extracting part of samples'),
-        ('downsampling', 'using part of SNPs when dataset is too large'),
         ('LegalHmp', 'convert illegal genotypes in hmp file to legal genotypes'),
         ('SortHmp', 'Sort hmp position in wired tassle way'),
         ('reorgnzTasselPCA', 'reorganize PCA results from TASSEL so it can be used in other software'),
@@ -546,88 +542,6 @@ def genGemmaPheno(args):
         output = ophe.name+'.gemma'
         df.iloc[:, 1].to_csv(out_path/output, index=False, header=False, na_rep='NA')
         print('Finished! %s has been generated.' % output)
-
-
-def MAFandparalogous(row):
-    """
-    function to filter MAF and paralogous SNPs
-    """
-    ref, alt = row[1].split('/')
-    genos = row[11:]
-    refnum, altnum, refaltnum = (genos == ref * 2).sum(), (genos == alt * 2).sum(), (genos == ref + alt).sum() + (genos == alt + ref).sum()
-    total_geno = float(refnum + altnum + refaltnum)
-    total_ale = total_geno * 2
-    af1, af2 = (refnum * 2 + refaltnum) / total_ale, (altnum * 2 + refaltnum) / total_ale
-    maf = True if min(af1, af2) >= 0.01 else False
-    paralogous = True if refaltnum < min(refnum, altnum) and refaltnum/total_geno<0.05 else False
-    TF = maf and paralogous
-    return TF
-
-def subsampling(args):
-    """
-    %prog subsampling hmp SMs_file out_prefix
-
-    In the SMs_file, please put sample name row by row, only the first column will be read. If file had multiple columns, use space or tab as the separator.
-    """
-    p = OptionParser(subsampling.__doc__)
-    p.add_option('--header', default='no', choices=('no', 'yes'),
-                 help='whether a header exist in your sample name file')
-    p.add_option('--filter', default='no', choices=('yes', 'no'),
-                 help='if yes, SNPs with maf <= 0.01 and paralogous SNPs (bad heterozygous) will be removed automatically')
-    opts, args = p.parse_args(args)
-
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-
-    hmp, SMs_file, out_prefix = args
-    print('read hmp file...')
-    hmp_df = pd.read_csv(hmp, delim_whitespace=True)
-    print('read SMs file...')
-    SMs_df = pd.read_csv(SMs_file, delim_whitespace=True) \
-        if opts.header == 'yes' \
-        else pd.read_csv(SMs_file, delim_whitespace=True, header=None)
-    #SMs_df = SMs_df.dropna(axis=0)
-    SMs = SMs_df.iloc[:, 0].astype('str')
-    hmp_header, hmp_SMs = hmp_df.columns[0:11].tolist(), hmp_df.columns[11:]
-    excepSMs = SMs[~SMs.isin(hmp_SMs)]
-    if len(excepSMs) > 0:
-        print('Warning: could not find %s in hmp file, please make \
-sure all samples in your phenoytpes also can be found in hmp file' % excepSMs)
-        sys.exit()
-    targetSMs = SMs[SMs.isin(hmp_SMs)].tolist()
-    print('%s subsamples.' % len(targetSMs))
-    hmp_header.extend(targetSMs)
-    new_hmp = hmp_df[hmp_header]
-    if opts.filter == 'yes':
-        print('start filtering...')
-        TFs = new_hmp.apply(MAFandparalogous, axis=1)
-        final_hmp = new_hmp.loc[TFs]
-    elif opts.filter == 'no':
-        final_hmp = new_hmp
-    else:
-        print('only yes or no!')
-    final_hmp.to_csv('%s.hmp' % out_prefix, index=False, sep='\t', na_rep='NA')
-
-
-def downsampling(args):
-    """
-    %prog downsampling file
-
-    Choose part of SNPs as mapping markers when the genotype dataset is huge
-    """
-    p = OptionParser(downsampling.__doc__)
-    p.add_option('--downsize', default=10,
-                 help='specify the downsize scale.')
-    opts, args = p.parse_args(args)
-
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-
-    myfile, = args
-    new_f = '.'.join(myfile.split('.')[0:-1]) + '.ds%s.hmp' % opts.downsize
-    cmd = "sed -n '1~%sp' %s > %s" % (opts.downsize, myfile, new_f)
-    call(cmd, shell=True)
-
 
 def combineHmp(args):
     """
