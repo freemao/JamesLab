@@ -1,30 +1,26 @@
 # -*- coding: UTF-8 -*-
 
 """
-Split a big file using sed.
-Find more details at cnblog:
-www.cnblogs.com/freemao/p/7076127.html
+functions to process vcf files
 """
-
-from pathlib import Path
-import os.path as op
 import sys
 import pandas as pd
-import numpy as np
-from schnablelab.apps.base import ActionDispatcher, OptionParser, glob, iglob
-from schnablelab.apps.natsort import natsorted
+import os.path as op
 import subprocess
+from pathlib import Path
 from subprocess import run
-from schnablelab.apps.headers import Slurm_header, multiCPU_header
+from schnablelab.apps.base import ActionDispatcher, OptionParser, glob, put2slurm
 
 # the location of linkimpute, beagle executable
 lkipt = op.abspath(op.dirname(__file__)) + '/../apps/LinkImpute.jar'
 begle = op.abspath(op.dirname(__file__)) + '/../apps/beagle.24Aug19.3e8.jar'
 tassel = op.abspath(op.dirname(__file__)) + '/../apps/tassel-5-standalone/run_pipeline.pl'
 
-
 def main():
     actions = (
+        ('BatchFilterMissing', 'apply FilterMissing on multiple vcf files'),
+        ('BatchFilterMAF', 'apply FilterMissing on multiple vcf files'),
+        ('BatchFilterHetero', 'apply FilterMissing on multiple vcf files'),
         ('IndexVCF', 'index vcf using bgzip and tabix'),
         ('splitVCF', 'split a vcf to several smaller files with equal size'),
         ('merge_files', 'combine split vcf or hmp files'),
@@ -33,10 +29,7 @@ def main():
         ('vcf2hmp', 'convert vcf to hmp format'),
         ('FixIndelHmp', 'fix the indels problems in hmp file converted from tassel'),
         ('FilterVCF', 'remove bad snps using bcftools'),
-        ('only_Missing', 'perform filtering only on missing data'),
         ('only_ALT', 'filter number of ALT'),
-        ('only_MAF', 'filter MAF'),
-        ('only_Hetero', 'filter high heterozygous loci'),
         ('fixGTsep', 'fix the allele separator for beagle imputation'),
         ('SummarizeLD', 'summarize ld decay in log scale'),
         ('EstimateLD', 'estimate ld using tassel'),
@@ -44,37 +37,39 @@ def main():
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
-def only_MAF(args):
+def BatchFilterMAF(args):
     """
-    %prog in_dir out_dir
+    %prog in_dir
 
-    filter MAF
+    apply FilterMAF on multiple vcf files
     """
-    p = OptionParser(only_MAF.__doc__)
-    p.set_slurm_opts(jn=True)
+    p = OptionParser(BatchFilterMAF.__doc__)
     p.add_option('--pattern', default='*.vcf',
-                 help='file pattern for vcf files in dir_in')
-    p.add_option('--maf', default='0.01',
-                 help='maf cutoff')
+                 help="file pattern of vcf files in the 'dir_in'")
+    p.add_option('--maf_cutoff', default='0.01',
+                 help='maf cutoff, SNPs lower than this cutoff will be removed')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='do not convert commands to slurm jobs')
+    p.add_option('--ncmds_per_slurm', type='int', default=1,
+                 help='number of jobs in each slurm')
+    p.add_slurm_opts(jp=BatchFilterMAF.__name__)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    in_dir, out_dir, = args
-    out_path = Path(out_dir)
-    if not out_path.exists():
-        sys.exit('%s does not exist...')
-    dir_path = Path(in_dir)
-    vcfs = dir_path.glob(opts.pattern)
-    for vcffile in vcfs:
-        prefix = '.'.join(vcffile.name.split('.')[0:-1])
-        cmd = "python -m schnablelab.SNPcalling.base MAF %s %s\n"%(vcffile, opts.maf)
-        with open('%s.maf.slurm'%prefix, 'w') as f:
-            header = Slurm_header%(opts.time, opts.memory, prefix, prefix, prefix)
-            header += 'ml bcftools\n'
-            header += cmd
-            f.write(header)
-            print('slurm file %s.maf.slurm has been created, you can sbatch your job file.'%prefix)
-
+    in_dir, = args
+    in_dir_path= Path(in_dir)
+    vcfs = in_dir_path.glob(opts.pattern)
+    cmds = []
+    for vcf in vcfs:
+        cmd = "python -m schnablelab.SNPcalling.base FilterMAF %s --MAF_cutoff %s"%(vcf, opts.maf_cutoff)
+        cmds.append(cmd)
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print('check %s for all the commands!'%cmd_sh)
+    if not opts.disable_slurm:
+        put2slurm(cmds, opts.ncmds_per_slurm, opts.partition, opts.time, opts.memory, opts.job_prefix, opts.ncpus_per_node, 
+                    cmd_header=None, pu_type=opts.pu_type, gpu_model=opts.gpu_model)
+        
 def only_ALT(args):
     """
     %prog in_dir out_dir
