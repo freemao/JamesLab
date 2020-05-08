@@ -84,6 +84,32 @@ class ParseHmp():
             df = df.sort_values(['chrom', 'pos']).reset_index(drop=True)
         return df
     
+    def AsMapPed(self, missing=False):
+        df_hmp = self.AsDataframe()
+        df_map = df_hmp[['rs#', 'chrom', 'pos']]
+        df_map['centi'] = 0
+        map_cols = ['chrom', 'rs#', 'centi', 'pos']
+        df_map = df_map[map_cols]
+
+        part1_cols = ['fam_id', 'indi_id', 'indi_id_father', 'indi_id_mother', 'sex', 'pheno']
+        zeros = np.zeros(self.numSMs, dtype=int)
+        df_ped_part1 = pd.DataFrame(dict(zip(part1_cols, [zeros, self.SMs, zeros, zeros, zeros, zeros])) )
+        
+        df_hmp = df_hmp.iloc[:, 11:]
+        if missing:
+            df_hmp = df_hmp.replace('NN', '00')
+        tmp_ss = []
+        for col in df_hmp:
+            col_a1, col_a2 = df_hmp[col].str.get(0), df_hmp[col].str.get(1)
+            col1.index = np.arange(0, df_hmp.shape[0]*2, 2)
+            col2.index = np.arange(1, df_hmp.shape[0]*2, 2)
+            tmp_s= pd.concat([col_a1, col_a2]).sort_index()
+            tmp_ss.append(tmp_s)
+        df_ped_part2 = pd.DataFrame(tmp_ss).reset_index(drop=True)
+
+        df_ped = pd.concat([df_ped_part1, df_ped_part2])
+        return df_map, df_ped
+    
     def Missing(self):
         '''
         yield (line, missing rate) for each line
