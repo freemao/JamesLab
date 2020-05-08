@@ -1,51 +1,7 @@
 # -*- coding: UTF-8 -*-
 """
-Collect all the headers for slurm, gapit, FarmCPU.
+headers for gapit, FarmCPU, MVP, mstmap
 """
-
-Slurm_header = '''#!/bin/sh
-#SBATCH --time=%s:00:00          # Run time in hh:mm:ss
-#SBATCH --mem-per-cpu=%s       # Maximum memory required per CPU (in megabytes)
-#SBATCH --job-name=%s
-#SBATCH --error=./%s.err
-#SBATCH --output=./%s.out
-
-'''
-
-multiCPU_header = '''#!/bin/sh
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=%s
-#SBATCH --time=%s:00:00          # Run time in hh:mm:ss
-#SBATCH --mem=%s       # Maximum memory (in megabytes)
-#SBATCH --job-name=%s
-#SBATCH --error=./%s.err
-#SBATCH --output=./%s.out
-
-'''
-
-Slurm_gpu_constraint_header = '''#!/bin/sh
-#SBATCH --time=%s:00:00          # Run time in hh:mm:ss
-#SBATCH --mem-per-cpu=%s      # Maximum memory required per CPU (in megabytes)
-#SBATCH --job-name=%s
-#SBATCH --error=./%s.err
-#SBATCH --output=./%s.out
-#SBATCH --partition=schnablelab
-#SBATCH --nodes=1
-#SBATCH --gres=gpu:1
-#SBATCH --constraint=gpu_%s
-
-'''
-
-Slurm_gpu_header = '''#!/bin/sh
-#SBATCH --time=%s:00:00          # Run time in hh:mm:ss
-#SBATCH --mem-per-cpu=%s      # Maximum memory required per CPU (in megabytes)
-#SBATCH --job-name=%s
-#SBATCH --error=./%s.err
-#SBATCH --output=./%s.out
-#SBATCH --nodes=1
-#SBATCH --gres=gpu:1
-
-'''
 
 Gapit_header = '''library(multtest)
 library(gplots)
