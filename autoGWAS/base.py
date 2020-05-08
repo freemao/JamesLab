@@ -354,7 +354,7 @@ def SubsamplingSNPs(args):
     print('number of specified SNPs: %s'%num_IDs)
     df_hmp = df_hmp[df_hmp['rs#'].isin(IDs)]
     print('%s out of %s found in Hmp'%(df_hmp.shape[0], num_IDs))
-    df_hmp.to_csv(outputhmp, sep='\t', index=False)
+    df_hmp.to_csv(outputhmp, sep='\t', index=False, na_rep='NA')
     print('Done! check output %s...'%outputhmp)
 
 def SubsamplingSMs(args):
@@ -385,7 +385,7 @@ def SubsamplingSMs(args):
     print('%s out of %s found in Hmp'%(len(subsm)-11, num_IDs))
 
     df_hmp = df_hmp[subsm]
-    df_hmp.to_csv(outputhmp, sep='\t', index=False)
+    df_hmp.to_csv(outputhmp, sep='\t', index=False, na_rep='NA')
     print('Done! check output %s...'%outputhmp)
 
 def downsamplingSNPs(args):
