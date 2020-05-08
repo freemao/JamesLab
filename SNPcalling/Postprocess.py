@@ -37,6 +37,39 @@ def main():
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
+def BatchFilterMissing(args):
+    """
+    %prog in_dir
+
+    apply FilterMissing on multiple vcf files
+    """
+    p = OptionParser(BatchFilterMissing.__doc__)
+    p.add_option('--pattern', default='*.vcf',
+                 help="file pattern of vcf files in the 'dir_in'")
+    p.add_option('--missing_cutoff', default='0.7',
+                 help='missing rate cutoff, SNPs higher than this cutoff will be removed')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='do not convert commands to slurm jobs')
+    p.add_option('--ncmds_per_slurm', type='int', default=1,
+                 help='number of jobs in each slurm')
+    p.add_slurm_opts(jp=BatchFilterMissing.__name__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    in_dir, = args
+    in_dir_path= Path(in_dir)
+    vcfs = in_dir_path.glob(opts.pattern)
+    cmds = []
+    for vcf in vcfs:
+        cmd = "python -m schnablelab.SNPcalling.base FilterMissing %s --missing_cutoff %s"%(vcf, opts.missing_cutoff)
+        cmds.append(cmd)
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print('check %s for all the commands!'%cmd_sh)
+    if not opts.disable_slurm:
+        put2slurm(cmds, opts.ncmds_per_slurm, opts.partition, opts.time, opts.memory, opts.job_prefix, opts.ncpus_per_node, 
+                    cmd_header=None, pu_type=opts.pu_type, gpu_model=opts.gpu_model)
+
 def BatchFilterMAF(args):
     """
     %prog in_dir
@@ -61,7 +94,7 @@ def BatchFilterMAF(args):
     vcfs = in_dir_path.glob(opts.pattern)
     cmds = []
     for vcf in vcfs:
-        cmd = "python -m schnablelab.SNPcalling.base FilterMAF %s --MAF_cutoff %s"%(vcf, opts.maf_cutoff)
+        cmd = "python -m schnablelab.SNPcalling.base FilterMAF %s --maf_cutoff %s"%(vcf, opts.maf_cutoff)
         cmds.append(cmd)
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
     pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
@@ -69,7 +102,40 @@ def BatchFilterMAF(args):
     if not opts.disable_slurm:
         put2slurm(cmds, opts.ncmds_per_slurm, opts.partition, opts.time, opts.memory, opts.job_prefix, opts.ncpus_per_node, 
                     cmd_header=None, pu_type=opts.pu_type, gpu_model=opts.gpu_model)
-        
+
+def BatchFilterHetero(args):
+    """
+    %prog in_dir
+
+    apply FilterMAF on multiple vcf files
+    """
+    p = OptionParser(BatchFilterHetero.__doc__)
+    p.add_option('--pattern', default='*.vcf',
+                 help="file pattern of vcf files in the 'dir_in'")
+    p.add_option('--het_cutoff', default='0.1',
+                 help='heterozygous rate cutoff, SNPs higher than this cutoff will be removed')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='do not convert commands to slurm jobs')
+    p.add_option('--ncmds_per_slurm', type='int', default=1,
+                 help='number of jobs in each slurm')
+    p.add_slurm_opts(jp=BatchFilterHetero.__name__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    in_dir, = args
+    in_dir_path= Path(in_dir)
+    vcfs = in_dir_path.glob(opts.pattern)
+    cmds = []
+    for vcf in vcfs:
+        cmd = "python -m schnablelab.SNPcalling.base FilterHetero %s --het_cutoff %s"%(vcf, opts.het_cutoff)
+        cmds.append(cmd)
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print('check %s for all the commands!'%cmd_sh)
+    if not opts.disable_slurm:
+        put2slurm(cmds, opts.ncmds_per_slurm, opts.partition, opts.time, opts.memory, opts.job_prefix, opts.ncpus_per_node, 
+                    cmd_header=None, pu_type=opts.pu_type, gpu_model=opts.gpu_model)
+
 def only_ALT(args):
     """
     %prog in_dir out_dir
