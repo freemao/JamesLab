@@ -241,11 +241,13 @@ def cutlist(lst, n):
     series = pd.Series(lst)
     ctg = pd.qcut(series.index, n)
     grps = series.groupby(ctg)
-    for _, group in grps:
-        idx = group.index.tolist()
-        st = idx[0]
-        ed = idx[-1]
-        yield '%s-%s' % (st, ed), group
+    for _, grp in grps:
+        idx = grp.index.tolist()
+        if grp.shape[0] ==1:
+            yield str(idx[0]), grp
+        else:
+            st, ed = idx[0], idx[-1]
+            yield '%s-%s' % (st, ed), grp
 
 Slurm_header = '''#!/bin/sh
 #SBATCH --partition={partition}
