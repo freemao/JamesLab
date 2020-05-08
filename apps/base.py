@@ -3,15 +3,16 @@ basic support for running library as script
 """
 
 import os
-import time
-import os.path as op
-import glob
 import sys
+import glob
+import time
+import math
 import pandas as pd
+import os.path as op
 from schnablelab.apps.Tools import eprint
-from optparse import OptionParser as OptionP, OptionGroup, SUPPRESS_HELP
-from schnablelab import __copyright__, __version__
 from schnablelab.apps.natsort import natsorted
+from schnablelab import __copyright__, __version__
+from optparse import OptionParser as OptionP, OptionGroup, SUPPRESS_HELP
 
 JSHELP = "schnablelab utility libraries v%s [%s]\n" % (__version__, __copyright__)
 
@@ -19,7 +20,6 @@ try:
     basestring
 except NameError:
     basestring = str
-
 
 class ActionDispatcher(object):
     """
@@ -127,18 +127,22 @@ class OptionParser(OptionP):
                     and o.action != "store_false":
                 o.help += " [default: %s]" % default_tag
 
-    def set_slurm_opts(self, jn=None, gpu=None):
-        group = OptionGroup(self, 'Slurm job parameters')
-        group.add_option('-t', dest='time', default=160,
-                         help='specify time(hour) for slurm header')
-        group.add_option('-m', dest='memory', default=10000,
-                         help='memory(Mb) for slurm header. schnablelab gpu is k40(12000)')
-        if jn:
-            group.add_option('-p', dest='prefix', default='myjob',
-                             help='prefix of job name and log file')
-        if gpu:
-            group.add_option('-g', dest='gpu',
-                             help='specify the gpu model(k20,k40,p100). Leave empty for unconstraint.')
+    def add_slurm_opts(self, jp='myjob'):
+        group = OptionGroup(self, 'Slurm job options')
+        group.add_option('--time', type='int', default=120,
+                            help='the maximum running time(hour)')
+        group.add_option('--memory', type='int', default=10000,
+                            help='the maximum running memory(Mb). crane12(35g), crane20(384g), crane36(4*256g), crane36(4*512g). k20(5000), k40(12000), p100(16000)')
+        group.add_option('--job_prefix', default=jp,
+                            help='prefix of job name and log file')
+        group.add_option('--pu_type', default='cpu', choices=('cpu', 'gpu'),
+                            help='PU type')
+        group.add_option('--partition', default='jclarke', choices=('jclarke', 'schnablelab'),
+                            help = 'partition name')
+        group.add_option('--ncpus_per_node', type='int', default=1,
+                            help = 'number of cpus per node')
+        group.add_option('--gpu_model',
+                            help = "gpu model (requires '--pu_type' is 'gpu')")
         self.add_option_group(group)
     
     def set_cpus(self, cpus=0):
@@ -237,8 +241,54 @@ def cutlist(lst, n):
     series = pd.Series(lst)
     ctg = pd.qcut(series.index, n)
     grps = series.groupby(ctg)
-    for name, group in grps:
+    for _, group in grps:
         idx = group.index.tolist()
         st = idx[0]
         ed = idx[-1]
         yield '%s-%s' % (st, ed), group
+
+Slurm_header = '''#!/bin/sh
+#SBATCH --partition={partition}
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node={ncpus_per_node}
+#SBATCH --time={runtime}:00:00          # Run time in hh:mm:ss
+#SBATCH --mem-per-cpu={runmem}       # Maximum memory required per CPU (in megabytes)
+#SBATCH --job-name={jobname}
+#SBATCH --error=./{jobname}.err
+#SBATCH --output=./{jobname}.out
+'''
+
+def put2slurm(cmds, ncmds_per_slrum, partition, runtime, runmem, job_prefix, ncpus_per_node, cmd_header=None, pu_type='cpu', gpu_model=False):
+    '''
+    args:
+        cmds (list): list containing all the commands
+        ncmds_per_slrum (int): number of commands for each slurm
+        partition: jclarke or schnablelab
+        runtime: time in hour
+        runmem: memory in hour
+        jobname: job name
+        ncpus_per_node: numebr of CPUs requested in a node
+        cmd_header: header command, ex: 'ml bcftools'
+        gpu: if request a gpu
+        gpu_model: request a specified gpu model
+    '''
+    if len(cmds) < ncmds_per_slrum:
+        sys.exit('# of commands per slurm > # of cmds !!!')
+    
+    n_grps = math.ceil(len(cmds)/ncmds_per_slrum)
+
+    for range_label, grp in cutlist(cmds, n_grps):
+        jobname = '%s_%s'%(job_prefix, range_label)
+        slurm_header = Slurm_header.format(partition=partition, ncpus_per_node=ncpus_per_node, runtime=runtime, runmem=runmem, jobname=jobname)
+        if pu_type=='gpu':
+            slurm_header += '#SBATCH --gres=gpu:1\n'
+            if gpu_model:
+                slurm_header += '#SBATCH --constraint=gpu_{gpu_model}\n'.format(gpu_model=gpu_model)
+        slurm_header += '\n'
+        if cmd_header:
+            slurm_header += '%s\n'%cmd_header
+        for cmd in grp:
+            slurm_header += '%s\n'%cmd
+        with open('%s.slurm'%jobname, 'w') as f:
+            f.write(slurm_header)
+        print('%s.slurm is ready to submit!'%jobname)
