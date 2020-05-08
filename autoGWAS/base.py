@@ -58,7 +58,7 @@ class ParseHmp():
         self.fn = filename
         with open(filename) as f:
             headerline = f.readline()
-            SMs_header = i.split()[:11]
+            SMs_header = headerline.split()[:11]
             SMs = headerline.split()[11:]
             numSMs = len(SMs)
             firstgeno = f.readline().split()[11]
@@ -132,10 +132,10 @@ class ParseHmp():
                     else:
                         genos = j[11:]
                         genos = list(map(geno_codification.get, genos, genos))
-                        genos = ''.join(genos)
                         if None in genos:
                             print(i)
                             sys.exit('unkown character in hmp file')
+                        genos = ''.join(genos)
                         a1, a2 = genos.count(allele1), genos.count(allele2)
                         yield i, min(a1, a2)/(a1+a2)
 
@@ -245,7 +245,7 @@ def FilterMissing(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputhmp, = args
-    outputhmp = inputhmp.replace('.hmp', '_mis%s.vcf'%opts.missing_cutoff)
+    outputhmp = inputhmp.replace('.hmp', '_mis%s.hmp'%opts.missing_cutoff)
 
     hmp = ParseHmp(inputhmp)
     n = 0
@@ -261,7 +261,7 @@ def FilterMissing(args):
 def FilterHetero(args):
     """
     %prog FilterHetero input_hmp
-    Remove bad and high heterizygous loci
+    Remove bad and high heterizygous loci (coducting Missing and MAF first)
     """
     p = OptionParser(FilterHetero.__doc__)
     p.add_option('--het_cutoff', default = 0.1, type='float',
@@ -270,7 +270,7 @@ def FilterHetero(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputhmp, = args
-    outputhmp = inputhmp.replace('.vcf', '_het%s.vcf'%opts.het_cutoff)
+    outputhmp = inputhmp.replace('.hmp', '_het%s.hmp'%opts.het_cutoff)
 
     hmp = ParseHmp(inputhmp)
     n = 0
@@ -286,7 +286,7 @@ def FilterHetero(args):
 def FilterMAF(args):
     """
     %prog FilterMAF input_hmp
-    Remove rare MAF SNPs
+    Remove rare MAF SNPs (conducting Missing filter first)
     """
     p = OptionParser(FilterMAF.__doc__)
     p.add_option('--MAF_cutoff', default = 0.01, type='float',
@@ -295,7 +295,7 @@ def FilterMAF(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputhmp, = args
-    outputhmp = inputhmp.replace('.vcf', '_maf%s.hmp'%opts.MAF_cutoff)
+    outputhmp = inputhmp.replace('.hmp', '_maf%s.hmp'%opts.MAF_cutoff)
 
     hmp = ParseHmp(inputhmp)
     n = 0
@@ -318,7 +318,7 @@ def SubsamplingSNPs(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputhmp, SNPcsv, = args
-    outputhmp = inputhmp.replace('.vcf', '_subSNPs.vcf')
+    outputhmp = inputhmp.replace('.hmp', '_subSNPs.hmp')
 
     hmp = ParseHmp(inputhmp)
     df_hmp = hmp.AsDataframe()
@@ -356,7 +356,7 @@ def SubsamplingSMs(args):
             print('%s not found in hmp...'%id)
         else:
             subsm.append(id)
-    print('%s out of %s found in VCF'%(len(subsm)-11, num_IDs))
+    print('%s out of %s found in Hmp'%(len(subsm)-11, num_IDs))
 
     df_hmp = df_hmp[subsm]
     df_hmp.to_csv(outputhmp, sep='\t', index=False)

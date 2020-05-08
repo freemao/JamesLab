@@ -6,6 +6,7 @@ Convert GWAS dataset to particular formats for GEMMA, GAPIT, FarmCPU, and MVP.
 import sys
 import numpy as np
 import pandas as pd
+import os.path as op
 from pathlib import Path
 from subprocess import call
 from schnablelab.apps.base import ActionDispatcher, OptionParser
