@@ -6,6 +6,7 @@ base class and functions to handle with vcf file
 import sys
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from schnablelab.apps.base import ActionDispatcher, OptionParser
 
 def main():
@@ -108,7 +109,8 @@ def FilterMissing(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputvcf, = args
-    outputvcf = inputvcf.split('.vcf')[0] + '_mis%s.vcf'%opts.missing_cutoff
+    inputvcf_fn = Path(inputvcf).name
+    outputvcf = inputvcf_fn.replace('.vcf', '_mis%s.vcf'%opts.missing_cutoff)
 
     vcf = ParseVCF(inputvcf)
     n = 0
@@ -116,6 +118,32 @@ def FilterMissing(args):
         f.writelines(vcf.HashChunk)
         for i, miss in vcf.Missing():
             if miss <= opts.missing_cutoff:
+                f.write(i)
+            else:
+                n += 1
+    print('Done! %s SNPs removed! check output %s...'%(n, outputvcf))
+
+def FilterMAF(args):
+    """
+    %prog FilterMAF input_vcf
+    Remove rare MAF SNPs
+    """
+    p = OptionParser(FilterMAF.__doc__)
+    p.add_option('--maf_cutoff', default = 0.01, type='float',
+        help = 'specify the MAF rate cutoff, SNPs lower than this cutoff will be removed.')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputvcf, = args
+    inputvcf_fn = Path(inputvcf).name
+    outputvcf = inputvcf_fn.replace('.vcf', '_maf%s.vcf'%opts.maf_cutoff)
+
+    vcf = ParseVCF(inputvcf)
+    n = 0
+    with open(outputvcf, 'w') as f:
+        f.writelines(vcf.HashChunk)
+        for i, maf in vcf.MAF():
+            if maf >= opts.maf_cutoff:
                 f.write(i)
             else:
                 n += 1
@@ -133,7 +161,8 @@ def FilterHetero(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputvcf, = args
-    outputvcf = inputvcf.split('.vcf')[0] + '_het%s.vcf'%opts.het_cutoff
+    inputvcf_fn = Path(inputvcf).name
+    outputvcf = inputvcf_fn.replace('.vcf', '_het%s.vcf'%opts.het_cutoff)
 
     vcf = ParseVCF(inputvcf)
     n = 0
@@ -141,31 +170,6 @@ def FilterHetero(args):
         f.writelines(vcf.HashChunk)
         for i, het in vcf.Hetero():
             if het <= opts.het_cutoff:
-                f.write(i)
-            else:
-                n += 1
-    print('Done! %s SNPs removed! check output %s...'%(n, outputvcf))
-
-def FilterMAF(args):
-    """
-    %prog FilterMAF input_vcf
-    Remove rare MAF SNPs
-    """
-    p = OptionParser(FilterMAF.__doc__)
-    p.add_option('--MAF_cutoff', default = 0.01, type='float',
-        help = 'specify the MAF rate cutoff, SNPs lower than this cutoff will be removed.')
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    inputvcf, = args
-    outputvcf = inputvcf.split('.vcf')[0] + '_maf%s.vcf'%opts.MAF_cutoff
-
-    vcf = ParseVCF(inputvcf)
-    n = 0
-    with open(outputvcf, 'w') as f:
-        f.writelines(vcf.HashChunk)
-        for i, maf in vcf.MAF():
-            if maf >= opts.MAF_cutoff:
                 f.write(i)
             else:
                 n += 1
@@ -181,7 +185,8 @@ def SubsamplingSNPs(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputvcf, SNPcsv, = args
-    outputvcf = inputvcf.split('.vcf')[0] + '_subSNPs.vcf'
+    inputvcf_fn = Path(inputvcf).name
+    outputvcf = inputvcf_fn.replace('.vcf', '_subSNPs.vcf')
 
     vcf = ParseVCF(inputvcf)
     df_vcf = vcf.AsDataframe()
@@ -206,7 +211,8 @@ def SubsamplingSMs(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputvcf, SMcsv, = args
-    outputvcf = inputvcf.split('.vcf')[0] + '_subSMs.vcf'
+    inputvcf_fn = Path(inputvcf).name
+    outputvcf = inputvcf_fn.replace('.vcf', '_subSMs.vcf')
 
     vcf = ParseVCF(inputvcf)
     df_vcf = vcf.AsDataframe()
