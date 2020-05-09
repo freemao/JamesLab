@@ -20,7 +20,8 @@ def main():
         ('SubsamplingSNPs', 'grep a subset of specified SNPs from a hmp file'),
         ('downsamplingSNPs', 'grep a subset of SNPs from a hmp file'),
         ('SubsamplingSMs', 'grep a subset of samples from a hmp file'),
-        ('hmp2ped', 'convert hmp file to plink map and ped file')
+        ('hmp2ped', 'convert hmp file to plink map and ped file'),
+        ('HmpSingle2Double', 'convert single hmp to double type hmp')
 )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
@@ -435,6 +436,23 @@ def hmp2ped(args):
     df_map, df_ped = hmp.AsMapPed(missing=False)
     df_map.to_csv('%s.map'%output_prefix, sep='\t', index=False, header=None)
     df_ped.to_csv('%s.ped'%output_prefix, sep='\t', index=False, header=None)
+
+def HmpSingle2Double(args):
+    """
+    %prog HmpSingle2Double input_single_hmp 
+    convert single type hmp file to double type hmp file
+    """
+    p = OptionParser(HmpSingle2Double.__doc__)
+    _, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputhmp, = args
+    outputhmp = Path(inputhmp).name.replace('.hmp', '_db.hmp')
+
+    hmp = ParseHmp(inputhmp)
+    df_hmp = hmp.AsDataframe()
+    df_hmp.to_csv(outputhmp, sep='\t', index=False, na_rep='NA')
+    print('Done! check output %s...'%outputhmp)
 
 if __name__ == "__main__":
     main()
