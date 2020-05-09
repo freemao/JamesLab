@@ -7,6 +7,8 @@ import re
 import sys
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
+from pathlib import Path
 from subprocess import call
 from schnablelab.apps.base import ActionDispatcher, OptionParser
 
@@ -18,6 +20,7 @@ def main():
         ('SubsamplingSNPs', 'grep a subset of specified SNPs from a hmp file'),
         ('downsamplingSNPs', 'grep a subset of SNPs from a hmp file'),
         ('SubsamplingSMs', 'grep a subset of samples from a hmp file'),
+        ('hmp2ped', 'convert hmp file to plink map and ped file')
 )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
@@ -82,6 +85,12 @@ class ParseHmp():
             chrs_ordered = sorted(chrs, key=sortchr)
             df['chrom'] = pd.Categorical(df['chrom'], chrs_ordered, ordered=True)
             df = df.sort_values(['chrom', 'pos']).reset_index(drop=True)
+        if self.type=='single':
+            print('converting the single type to double type...')
+            df_part1 = df.iloc[:, :11]
+            df_part2 = df.iloc[:, 11:].applymap(geno_codification.get).fillna('NN')
+            df = pd.concat([df_part1, df_part2], axis=1)
+            self.type = 'double'
         return df
     
     def AsMapPed(self, missing=False):
@@ -99,15 +108,17 @@ class ParseHmp():
         if missing:
             df_hmp = df_hmp.replace('NN', '00')
         tmp_ss = []
-        for col in df_hmp:
+        pbar = tqdm(self.SMs)
+        for col in pbar:
             col_a1, col_a2 = df_hmp[col].str.get(0), df_hmp[col].str.get(1)
-            col1.index = np.arange(0, df_hmp.shape[0]*2, 2)
-            col2.index = np.arange(1, df_hmp.shape[0]*2, 2)
+            col_a1.index = np.arange(0, df_hmp.shape[0]*2, 2)
+            col_a2.index = np.arange(1, df_hmp.shape[0]*2, 2)
             tmp_s= pd.concat([col_a1, col_a2]).sort_index()
             tmp_ss.append(tmp_s)
+            pbar.set_description('converting %s'%col)
         df_ped_part2 = pd.DataFrame(tmp_ss).reset_index(drop=True)
 
-        df_ped = pd.concat([df_ped_part1, df_ped_part2])
+        df_ped = pd.concat([df_ped_part1, df_ped_part2], axis=1)
         return df_map, df_ped
     
     def Missing(self):
@@ -271,7 +282,7 @@ def FilterMissing(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputhmp, = args
-    outputhmp = inputhmp.replace('.hmp', '_mis%s.hmp'%opts.missing_cutoff)
+    outputhmp = Path(inputhmp).name.replace('.hmp', '_mis%s.hmp'%opts.missing_cutoff)
 
     hmp = ParseHmp(inputhmp)
     n = 0
@@ -296,7 +307,7 @@ def FilterHetero(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputhmp, = args
-    outputhmp = inputhmp.replace('.hmp', '_het%s.hmp'%opts.het_cutoff)
+    outputhmp = Path(inputhmp).name.replace('.hmp', '_het%s.hmp'%opts.het_cutoff)
 
     hmp = ParseHmp(inputhmp)
     n = 0
@@ -321,7 +332,7 @@ def FilterMAF(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputhmp, = args
-    outputhmp = inputhmp.replace('.hmp', '_maf%s.hmp'%opts.MAF_cutoff)
+    outputhmp = Path(inputhmp).name.replace('.hmp', '_maf%s.hmp'%opts.MAF_cutoff)
 
     hmp = ParseHmp(inputhmp)
     n = 0
@@ -344,7 +355,7 @@ def SubsamplingSNPs(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputhmp, SNPcsv, = args
-    outputhmp = inputhmp.replace('.hmp', '_subSNPs.hmp')
+    outputhmp = Path(inputhmp).name.replace('.hmp', '_subSNPs.hmp')
 
     hmp = ParseHmp(inputhmp)
     df_hmp = hmp.AsDataframe()
@@ -367,7 +378,7 @@ def SubsamplingSMs(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputhmp, SMcsv, = args
-    outputhmp = inputhmp.replace('.hmp', '_subSMs.hmp')
+    outputhmp = Path(inputhmp).name.replace('.hmp', '_subSMs.hmp')
 
     hmp = ParseHmp(inputhmp)
     df_hmp = hmp.AsDataframe()
@@ -403,9 +414,27 @@ def downsamplingSNPs(args):
         sys.exit(not p.print_help())
 
     inputhmp, = args
-    outputhmp = inputhmp.replace('.hmp', '.ds%s.hmp'% opts.downsize)
+    outputhmp = Path(inputhmp).name.replace('.hmp', '.ds%s.hmp'% opts.downsize)
     cmd = "sed -n '1~%sp' %s > %s" % (opts.downsize, inputhmp, outputhmp)
     call(cmd, shell=True)
+
+def hmp2ped(args):
+    """
+    %prog input_hmp
+
+    Convert hmp file to Plink map and ped files
+    """
+    p = OptionParser(hmp2ped.__doc__)
+    _, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputhmp, = args
+    output_prefix = Path(inputhmp).name.rstrip('.hmp')
+
+    hmp = ParseHmp(inputhmp)
+    df_map, df_ped = hmp.AsMapPed(missing=False)
+    df_map.to_csv('%s.map'%output_prefix, sep='\t', index=False, header=None)
+    df_ped.to_csv('%s.ped'%output_prefix, sep='\t', index=False, header=None)
 
 if __name__ == "__main__":
     main()
