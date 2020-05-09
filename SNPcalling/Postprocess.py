@@ -26,7 +26,6 @@ def main():
         ('merge_files', 'combine split vcf or hmp files'),
         ('combineFQ', 'combine split fqs'),
         ('impute_beagle', 'impute vcf using beagle or linkimpute'),
-        ('vcf2hmp', 'convert vcf to hmp format'),
         ('FixIndelHmp', 'fix the indels problems in hmp file converted from tassel'),
         ('FilterVCF', 'remove bad snps using bcftools'),
         ('only_ALT', 'filter number of ALT'),
@@ -225,127 +224,11 @@ def IndexVCF(args):
         with open('%s.idxvcf.slurm'%sm, 'w') as f:
             f.write(header)
 
-def only_Hetero(args):
-    """
-    %prog only_Hetero in_dir out_dir
-
-    filter SNPs with high heterozygous rate
-    """
-
-    p = OptionParser(only_Hetero.__doc__)
-    p.add_option('--pattern', default='*.vcf',
-                 help='file pattern for vcf files in dir_in')
-    p.add_option('--rate', default='0.05',
-                 help='heterozygous rate cutoff')
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    in_dir, out_dir, = args
-    out_path = Path(out_dir)
-    if not out_path.exists():
-        sys.exit('%s does not exist...')
-    dir_path = Path(in_dir)
-    vcfs = dir_path.glob(opts.pattern)
-    for vcf in vcfs:
-        sm = '.'.join(vcf.name.split('.')[0:-1])
-        out_fn = sm+'.rmHete.vcf'
-        cmd = 'python -m schnablelab.SNPcalling.base Heterozygous %s %s --h2_rate %s'%(vcf, out_path/out_fn, opts.rate)
-        header = Slurm_header%(10, 20000, sm, sm, sm)
-        header += cmd
-        with open('%s.rmHete.slurm'%sm, 'w') as f:
-            f.write(header)
-
-def FilterVCF(args):
-    """
-    %prog FilterVCF dir_in dir_out
-
-    filter SNPs using bcftools
-    """
-
-    p = OptionParser(FilterVCF.__doc__)
-    p.add_option('--pattern', default='*.vcf',
-                 help='file pattern for vcf files in dir_in')
-    p.add_option('--n_alt', default='1',
-                 help='number of alt')
-    p.add_option('--qual',
-                 help='minimum snp quality, 10: 10% is wrong, 20: 1% is wrong')
-    p.add_option('--maf',
-                 help='cutoff of minor allele frequency')
-    p.add_option('--missing',
-                 help='cutoff of missing rate')
-    p.add_option('--stype', default='snps,indels',
-                 help='snp types, comma separated if multiple types specified')
-    p.add_option('--normalization', default=False, action='store_true',
-                 help='perform normalization')
-    p.add_option('--ref', default='/work/schnablelab/cmiao/TimeSeriesGWAS/Genotype_GBS/Reference_Genome_4th/Sbicolor_454_v3.0.1.fa',
-                 help='required if --normalization specified')
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    in_dir, out_dir, = args
-    
-    out_path = Path(out_dir)
-    if not out_path.exists():
-        sys.exit('%s does not exist...')
-    dir_path = Path(in_dir)
-    vcfs = dir_path.glob(opts.pattern)
-
-    cond1 = 'N_ALT==%s'%opts.n_alt
-    if opts.qual:
-        cond1 += ' && QUAL>=%s'%opts.qual
-    if opts.maf:
-        cond1 += ' && MAF>=%s'%opts.maf
-    if opts.missing:
-        missing_rate = 1 - float(opts.missing)
-        cond1 += ' && NS/N_SAMPLES > %.2f'%missing_rate
-    cmd = "bcftools view -i '{cond1}' -v '{stype}' %s".format(cond1=cond1, stype=opts.stype)
-    if opts.normalization:
-        cmd += ' | bcftools norm -f %s -m -both'%(opts.ref)
-    cmd += ' > %s'
-    
-    for vcf in vcfs:
-        sm = '.'.join(vcf.name.split('.')[0:-1])
-        out_fn = sm+'.bcflt.vcf'
-        out_fn_path = out_path/out_fn
-        header = Slurm_header%(10, 8000, sm, sm, sm)
-        header += 'ml bcftools\n'
-        header += cmd%(vcf, out_fn_path)
-        with open('%s.bcflt.slurm'%sm, 'w') as f:
-            f.write(header)
-
 def getSMsNum(vcffile):
     subprocess.call('module load bcftools', shell=True)
     child = subprocess.Popen('bcftools query -l %s|wc -l'%vcffile, shell=True, stdout=subprocess.PIPE)
     SMs_num = int(child.communicate()[0])
     return SMs_num
-
-
-def only_Missing(args):
-    """
-    %prog dir_in
-    Remove SNPs with high missing rate (>0.7 by default)
-    """
-    p = OptionParser(only_Missing.__doc__)
-    p.add_option('--pattern', default = '*.vcf',
-        help = 'remove loci with high missing data rate')
-    p.add_option('--missing_rate', default = 0.7,
-        help = 'specify the missing rate cutoff. SNPs with missing rate higher than this cutoff will be removed.')
-
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    in_dir, = args
-    dir_path = Path(in_dir)
-    vcfs = dir_path.glob(opts.pattern)
-    for vcf in vcfs:
-        prefix = '.'.join(vcf.name.split('.')[0:-1])
-        cmd = "python -m schnablelab.SNPcalling.base Missing %s --missing_rate %s\n"%(vcf, float(opts.missing_rate))
-        header = Slurm_header%(10, 5000, prefix, prefix, prefix)
-        header += 'ml bcftools\n'
-        header += cmd
-        with open('%s.mis%s.slurm'%(prefix, opts.missing_rate), 'w') as f:
-            f.write(header)
-        print('%s.mis%s.slurm has been generated!'%(prefix, opts.missing_rate))
 
 def splitVCF(args):
     """
@@ -386,7 +269,6 @@ def combineFQ(args):
     """
     %prog combineFQ pattern(with quotation) fn_out
     """
-
     p = OptionParser(combineFQ.__doc__)
     opts, args = p.parse_args(args)
     if len(args) == 0:
@@ -397,8 +279,6 @@ def combineFQ(args):
     print(cmd)
     run(cmd, shell=True)
     
-    
-
 def merge_files(args):
     """
     %prog merge_files pattern out_fn
@@ -472,33 +352,6 @@ def impute_beagle(args):
         header += cmd
         with open('%s.beagle.slurm' % sm, 'w') as f:
             f.write(header)
-
-def vcf2hmp(args):
-    """
-    %prog vcf2hmp vcf
-    convert vcf generated from beagle to hmp format using tassel
-    """
-    p = OptionParser(vcf2hmp.__doc__)
-    p.set_slurm_opts(jn=True)
-    p.add_option('--version', default='2', choices=('1', '2'),
-                 help='specify the hmp type. 1: hyploid. 2: diploid')
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    vcffile, = args
-    prefix = '.'.join(vcffile.split('.')[0:-1])
-    cmd = 'run_pipeline.pl -Xms512m -Xmx10G -fork1 -vcf %s -export -exportType HapmapDiploid\n'%vcffile \
-        if opts.version == '2' \
-        else 'run_pipeline.pl -Xms512m -Xmx10G -fork1 -vcf %s -export -exportType Hapmap\n'%vcffile
-    header = Slurm_header % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += 'module load java/1.8\n'
-    header += 'module load tassel/5.2\n'
-    header += cmd
-    f = open('%s.vcf2hmp.slurm' % prefix, 'w')
-    f.write(header)
-    f.close()
-    print('slurm file %s.vcf2hmp.slurm has been created, you can submit your job file.' % prefix)
-
 
 def FixIndelHmp(args):
     """

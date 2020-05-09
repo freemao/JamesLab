@@ -6,6 +6,7 @@ base class and functions to handle with vcf file
 import sys
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from pathlib import Path
 from schnablelab.apps.base import ActionDispatcher, OptionParser
 
@@ -17,6 +18,7 @@ def main():
         ('SubsamplingSNPs', 'grep a subset of SNPs from a vcf file'),
         ('SubsamplingSMs', 'grep a subset of samples from a vcf file'),
         ('SummarizeLD', 'ld decay in log scale'),
+        ('vcf2hmp', 'convert vcf to hmp foramt')
 )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
@@ -51,10 +53,55 @@ class ParseVCF():
         self.numHash = n
         self.HashChunk = hash_chunk
         self.HashChunk2 = hash_chunk2
+        self.hmpfield11 = 'rs#\talleles\tchrom\tpos\tstrand\tassembly#\tcenter\tprotLSID\tassayLSID\tpanelLSID\tQCcode'
+        self.hmpheader = self.hmpfield11 + '\t' + '\t'.join(self.SMs) + '\n'
 
     def AsDataframe(self):
         df = pd.read_csv(self.fn, skiprows=range(self.numHash-1), delim_whitespace=True)
         return df
+    
+    def ToHmp(self):
+        '''
+        yield line in hmp format
+        '''
+        cen_NA = '+\tNA\tNA\tNA\tNA\tNA\tNA'
+        with open(self.fn) as f:
+            for _ in range(self.numHash):
+                next(f)
+            for i in f:
+                j = i.split()
+                
+                a1, a2 = j[3], j[4]
+                if len(a1) == len(a2) ==1:
+                    a1a2 = ''.join([a1, a2])
+                    a2a1 = a1a2[::-1]
+                    a1a1, a2a2 = a1*2, a2*2
+                elif len(a1)==1 and len(a2)>1:
+                    a1a2 = ''.join(['-', a2[-1]])
+                    a2a1 = a1a2[::-1]
+                    a1a1, a2a2 = '--', a2[-1]*2
+                elif len(a1) >1 and len(a2)==1:
+                    a1a2 = ''.join([a1[-1], '-'])
+                    a2a1 = a1a2[::-1]
+                    a1a1, a2a2 = a1[-1]*2, '--'
+                else:
+                    print('bad line\n%s'%i)
+                    continue
+                geno_dict = {
+                            '0/0':a1a1, '0|0':a1a1, 
+                            '0/1':a1a2, '0|1':a1a2, 
+                            '1/0':a2a1, '1|0':a2a1,
+                            '1/1':a2a2, '1|1':a2a2,
+                            './.':'NN', '.|.':'NN'
+                            }
+                genos = list(map(geno_dict.get, j[9:]))
+                if None in genos:
+                    print(i)
+                    sys.exit('unknow genotype in vcf file')
+                genos = '\t'.join(genos)
+                rs, chr, pos = j[2], j[0], j[1]
+                new_line = '\t'.join([rs, a1a2, chr, pos, cen_NA, genos])+'\n'
+                yield new_line
 
     def Missing(self):
         '''
@@ -96,6 +143,29 @@ class ParseVCF():
                 num_h = i.count('0/1')+ i.count('0|1')+i.count('1|0')
                 a1, a2 = num_a*2+num_h, num_b*2+num_h
                 yield  i, min(a1,a2)/(a1+a2)
+
+def vcf2hmp(args):
+    '''
+    %prog vcf2hmp input_vcf
+    convert file in vcf format to hmp format
+    can also try: 'run_pipeline.pl -Xms512m -Xmx10G -fork1 -vcf vcf_fn -export -exportType Hapmap'
+    '''
+    p = OptionParser(vcf2hmp.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputvcf, = args
+    inputvcf_fn = Path(inputvcf).name
+    outputhmp = inputvcf_fn.replace('.vcf', '.hmp')
+
+    vcf = ParseVCF(inputvcf)
+    with open(outputhmp, 'w') as f:
+        f.write(vcf.hmpheader)
+        pbar = tqdm(vcf.ToHmp())
+        for i in pbar:
+            f.write(i)
+            pbar.set_description('converting %s'%i.split()[0])
+    print('Done! check output %s...'%outputhmp)    
 
 def FilterMissing(args):
     """
