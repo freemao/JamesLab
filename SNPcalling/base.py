@@ -156,8 +156,7 @@ def vcf2hmp(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputvcf, = args
-    inputvcf_fn = Path(inputvcf).name
-    outputhmp = inputvcf_fn.replace('.vcf', '.hmp')
+    outputhmp = Path(inputvcf).name.replace('.vcf', '.hmp')
 
     vcf = ParseVCF(inputvcf)
     with open(outputhmp, 'w') as f:
@@ -165,7 +164,7 @@ def vcf2hmp(args):
         pbar = tqdm(vcf.ToHmp())
         for i in pbar:
             f.write(i)
-            pbar.set_description('converting %s'%i.split()[0])
+            pbar.set_description('converting %s'%i.split()[2])
     print('Done! check output %s...'%outputhmp)    
 
 def FilterMissing(args):
@@ -180,8 +179,7 @@ def FilterMissing(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputvcf, = args
-    inputvcf_fn = Path(inputvcf).name
-    outputvcf = inputvcf_fn.replace('.vcf', '_mis%s.vcf'%opts.missing_cutoff)
+    outputvcf = Path(inputvcf).name.replace('.vcf', '_mis%s.vcf'%opts.missing_cutoff)
 
     vcf = ParseVCF(inputvcf)
     n = 0
@@ -206,8 +204,7 @@ def FilterMAF(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputvcf, = args
-    inputvcf_fn = Path(inputvcf).name
-    outputvcf = inputvcf_fn.replace('.vcf', '_maf%s.vcf'%opts.maf_cutoff)
+    outputvcf = Path(inputvcf).name.replace('.vcf', '_maf%s.vcf'%opts.maf_cutoff)
 
     vcf = ParseVCF(inputvcf)
     n = 0
@@ -232,8 +229,7 @@ def FilterHetero(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputvcf, = args
-    inputvcf_fn = Path(inputvcf).name
-    outputvcf = inputvcf_fn.replace('.vcf', '_het%s.vcf'%opts.het_cutoff)
+    outputvcf = Path(inputvcf).name.replace('.vcf', '_het%s.vcf'%opts.het_cutoff)
 
     vcf = ParseVCF(inputvcf)
     n = 0
@@ -256,8 +252,7 @@ def SubsamplingSNPs(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputvcf, SNPcsv, = args
-    inputvcf_fn = Path(inputvcf).name
-    outputvcf = inputvcf_fn.replace('.vcf', '_subSNPs.vcf')
+    outputvcf = Path(inputvcf).name.replace('.vcf', '_subSNPs.vcf')
 
     vcf = ParseVCF(inputvcf)
     df_vcf = vcf.AsDataframe()
@@ -282,8 +277,7 @@ def SubsamplingSMs(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputvcf, SMcsv, = args
-    inputvcf_fn = Path(inputvcf).name
-    outputvcf = inputvcf_fn.replace('.vcf', '_subSMs.vcf')
+    outputvcf = Path(inputvcf).name.replace('.vcf', '_subSMs.vcf')
 
     vcf = ParseVCF(inputvcf)
     df_vcf = vcf.AsDataframe()
