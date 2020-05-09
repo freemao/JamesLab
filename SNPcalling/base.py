@@ -19,7 +19,7 @@ def main():
         ('SubsamplingSMs', 'grep a subset of samples from a vcf file'),
         ('SummarizeLD', 'ld decay in log scale'),
         ('vcf2hmp', 'convert vcf to hmp foramt')
-)
+            )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
@@ -33,6 +33,7 @@ class ParseVCF():
             n = 0
             hash_chunk = []
             hash_chunk2 = []
+            num_SNPs = 0
             for i in f:
                 if i.startswith('##'):
                     n += 1
@@ -46,7 +47,8 @@ class ParseVCF():
                     n += 1
                     hash_chunk.append(i)
                 else:
-                    break
+                    num_SNPs += 1
+        self.num_SNPs = num_SNPs
         self.SMs_header = SMs_header
         self.SMs = SMs
         self.numSMs = numSMs
@@ -85,19 +87,17 @@ class ParseVCF():
                     a2a1 = a1a2[::-1]
                     a1a1, a2a2 = a1[-1]*2, '--'
                 else:
-                    print('bad line\n%s'%i)
+                    print('bad format line:\n  %s'%j[2])
                     continue
-                geno_dict = {
-                            '0/0':a1a1, '0|0':a1a1, 
+                geno_dict = {'0/0':a1a1, '0|0':a1a1, 
                             '0/1':a1a2, '0|1':a1a2, 
                             '1/0':a2a1, '1|0':a2a1,
                             '1/1':a2a2, '1|1':a2a2,
-                            './.':'NN', '.|.':'NN'
-                            }
+                            './.':'NN', '.|.':'NN'}
                 genos = list(map(geno_dict.get, j[9:]))
                 if None in genos:
                     print(i)
-                    sys.exit('unknow genotype in vcf file')
+                    sys.exit('unknow genotype detected!')
                 genos = '\t'.join(genos)
                 rs, chr, pos = j[2], j[0], j[1]
                 alleles = '/'.join([a1a2[0], a1a2[1]])
@@ -161,10 +161,11 @@ def vcf2hmp(args):
     vcf = ParseVCF(inputvcf)
     with open(outputhmp, 'w') as f:
         f.write(vcf.hmpheader)
-        pbar = tqdm(vcf.ToHmp())
+        pbar = tqdm(vcf.ToHmp(), total=vcf.num_SNPs, desc='vcf 2 hmp', position=0)
         for i in pbar:
             f.write(i)
             pbar.set_description('converting %s'%i.split()[2])
+            #pbar.update(1)
     print('Done! check output %s...'%outputhmp)    
 
 def FilterMissing(args):
@@ -185,11 +186,13 @@ def FilterMissing(args):
     n = 0
     with open(outputvcf, 'w') as f:
         f.writelines(vcf.HashChunk)
-        for i, miss in vcf.Missing():
+        pbar = tqdm(vcf.Missing(), total=vcf.num_SNPs, desc='Filter Missing', position=0)
+        for i, miss in pbar:
             if miss <= opts.missing_cutoff:
                 f.write(i)
             else:
                 n += 1
+            pbar.set_description('processing %s'%i.split()[0])
     print('Done! %s SNPs removed! check output %s...'%(n, outputvcf))
 
 def FilterMAF(args):
@@ -210,11 +213,13 @@ def FilterMAF(args):
     n = 0
     with open(outputvcf, 'w') as f:
         f.writelines(vcf.HashChunk)
-        for i, maf in vcf.MAF():
+        pbar = tqdm(vcf.MAF(), total=vcf.num_SNPs, desc='Filter MAF', position=0)
+        for i, maf in pbar:
             if maf >= opts.maf_cutoff:
                 f.write(i)
             else:
                 n += 1
+            pbar.set_description('processing %s'%i.split()[0])
     print('Done! %s SNPs removed! check output %s...'%(n, outputvcf))
 
 def FilterHetero(args):
@@ -235,11 +240,13 @@ def FilterHetero(args):
     n = 0
     with open(outputvcf, 'w') as f:
         f.writelines(vcf.HashChunk)
-        for i, het in vcf.Hetero():
+        pbar = tqdm(vcf.Hetero(), total=vcf.num_SNPs, desc='Filter Heterozygous', position=0)
+        for i, het in pbar:
             if het <= opts.het_cutoff:
                 f.write(i)
             else:
                 n += 1
+            pbar.set_description('processing %s'%i.split()[0])
     print('Done! %s SNPs removed! check output %s...'%(n, outputvcf))
     
 def SubsamplingSNPs(args):
