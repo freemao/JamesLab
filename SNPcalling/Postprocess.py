@@ -49,9 +49,7 @@ def BatchFilterMissing(args):
                  help='missing rate cutoff, SNPs higher than this cutoff will be removed')
     p.add_option('--disable_slurm', default=False, action="store_true",
                  help='do not convert commands to slurm jobs')
-    p.add_option('--ncmds_per_slurm', type='int', default=1,
-                 help='number of jobs in each slurm')
-    p.add_slurm_opts(jp=BatchFilterMissing.__name__)
+    p.add_slurm_opts(job_prefix=BatchFilterMissing.__name__)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
@@ -66,8 +64,8 @@ def BatchFilterMissing(args):
     pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
     print('check %s for all the commands!'%cmd_sh)
     if not opts.disable_slurm:
-        put2slurm(cmds, opts.ncmds_per_slurm, opts.partition, opts.time, opts.memory, opts.job_prefix, opts.ncpus_per_node, 
-                    cmd_header=None, pu_type=opts.pu_type, gpu_model=opts.gpu_model)
+        put2slurm_dict = vars(opts)
+        put2slurm(cmds, put2slurm_dict)
 
 def BatchFilterMAF(args):
     """
@@ -82,9 +80,7 @@ def BatchFilterMAF(args):
                  help='maf cutoff, SNPs lower than this cutoff will be removed')
     p.add_option('--disable_slurm', default=False, action="store_true",
                  help='do not convert commands to slurm jobs')
-    p.add_option('--ncmds_per_slurm', type='int', default=1,
-                 help='number of jobs in each slurm')
-    p.add_slurm_opts(jp=BatchFilterMAF.__name__)
+    p.add_slurm_opts(job_prefix=BatchFilterMAF.__name__)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
@@ -99,8 +95,8 @@ def BatchFilterMAF(args):
     pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
     print('check %s for all the commands!'%cmd_sh)
     if not opts.disable_slurm:
-        put2slurm(cmds, opts.ncmds_per_slurm, opts.partition, opts.time, opts.memory, opts.job_prefix, opts.ncpus_per_node, 
-                    cmd_header=None, pu_type=opts.pu_type, gpu_model=opts.gpu_model)
+        put2slurm_dict = vars(opts)
+        put2slurm(cmds, put2slurm_dict)
 
 def BatchFilterHetero(args):
     """
@@ -115,9 +111,7 @@ def BatchFilterHetero(args):
                  help='heterozygous rate cutoff, SNPs higher than this cutoff will be removed')
     p.add_option('--disable_slurm', default=False, action="store_true",
                  help='do not convert commands to slurm jobs')
-    p.add_option('--ncmds_per_slurm', type='int', default=1,
-                 help='number of jobs in each slurm')
-    p.add_slurm_opts(jp=BatchFilterHetero.__name__)
+    p.add_slurm_opts(job_prefix=BatchFilterHetero.__name__)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
@@ -132,8 +126,8 @@ def BatchFilterHetero(args):
     pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
     print('check %s for all the commands!'%cmd_sh)
     if not opts.disable_slurm:
-        put2slurm(cmds, opts.ncmds_per_slurm, opts.partition, opts.time, opts.memory, opts.job_prefix, opts.ncpus_per_node, 
-                    cmd_header=None, pu_type=opts.pu_type, gpu_model=opts.gpu_model)
+        put2slurm_dict = vars(opts)
+        put2slurm(cmds, put2slurm_dict)
 
 def only_ALT(args):
     """
@@ -223,12 +217,6 @@ def IndexVCF(args):
         header += cmd2
         with open('%s.idxvcf.slurm'%sm, 'w') as f:
             f.write(header)
-
-def getSMsNum(vcffile):
-    subprocess.call('module load bcftools', shell=True)
-    child = subprocess.Popen('bcftools query -l %s|wc -l'%vcffile, shell=True, stdout=subprocess.PIPE)
-    SMs_num = int(child.communicate()[0])
-    return SMs_num
 
 def splitVCF(args):
     """
@@ -455,7 +443,6 @@ def SummarizeLD(args):
         with open('%s.sumLD.slurm' % prefix, 'w') as f:
             f.write(header)
         print('slurm file %s.sumLD.slurm has been created, you can submit your job file.' % prefix)
-
 
 if __name__ == "__main__":
     main()

@@ -18,7 +18,8 @@ def main():
         ('SubsamplingSNPs', 'grep a subset of SNPs from a vcf file'),
         ('SubsamplingSMs', 'grep a subset of samples from a vcf file'),
         ('SummarizeLD', 'ld decay in log scale'),
-        ('vcf2hmp', 'convert vcf to hmp foramt')
+        ('vcf2hmp', 'convert vcf to hmp foramt'),
+        ('Info', 'get basic information of a vcf file')
             )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
@@ -55,6 +56,7 @@ class ParseVCF():
         self.numHash = n
         self.HashChunk = hash_chunk
         self.HashChunk2 = hash_chunk2
+        self.numHeaderLines = len(self.HashChunk)
         self.hmpfield11 = 'rs#\talleles\tchrom\tpos\tstrand\tassembly#\tcenter\tprotLSID\tassayLSID\tpanelLSID\tQCcode'
         self.hmpheader = self.hmpfield11 + '\t' + '\t'.join(self.SMs) + '\n'
 
@@ -306,6 +308,23 @@ def SubsamplingSMs(args):
         f.writelines(vcf.HashChunk2)
     df_vcf.to_csv(outputvcf, sep='\t', index=False, mode='a')
     print('Done! check output %s...'%outputvcf)   
+
+def Info(args):
+    """
+    %prog Info input_vcf
+
+    get basic info including SMs, number of SMs, number of SNPs, 
+    """
+    p = OptionParser(Info.__doc__)
+    _, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputvcf, = args
+    vcf = ParseVCF(inputvcf)
+    print('number of samples: {val:,}'.format(val=vcf.numSMs))
+    print('number of header lines: {val:,}'.format(val=vcf.numHeaderLines))
+    print('number of SNPs: {val:,}'.format(val=vcf.num_SNPs))
+    print('Sample names: %s\n'%vcf.SMs)
 
 def SummarizeLD(args):
     """
