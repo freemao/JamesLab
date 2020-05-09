@@ -21,23 +21,17 @@ def main():
         ('downsamplingSNPs', 'grep a subset of SNPs from a hmp file'),
         ('SubsamplingSMs', 'grep a subset of samples from a hmp file'),
         ('hmp2ped', 'convert hmp file to plink map and ped file'),
-        ('HmpSingle2Double', 'convert single hmp to double type hmp')
+        ('HmpSingle2Double', 'convert single hmp to double type hmp'),
+        ('Info', 'get basic info for a hmp file'),
+        ('MAFs', 'calculate the MAF for all SNPs in hmp'),
 )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
-geno_codification = {
-    'A':'AA',
-    'C':'CC',
-    'G':'GG',
-    'T':'TT',
-    'R':'AG',
-    'Y':'CT',
-    'S':'GC',
-    'W':'AT',
-    'K':'GT',
-    'M':'AC',
-    'N':'NN'}
+# N:missing, -:gap
+geno_codification = {'A':'AA', 'C':'CC', 'G':'GG', 'T':'TT',
+    'R':'AG', 'Y':'CT', 'S':'GC', 'W':'AT', 'K':'GT', 'M':'AC',
+    'N':'NN', '-':'--'} 
 
 def sortchr(x):
     '''
@@ -68,10 +62,12 @@ class ParseHmp():
             firstgeno = f.readline().split()[11]
             type = 'single' if len(firstgeno)==1 else 'double'
             print('guess hmp type: %s'%type)
+            numSNPs = sum(1 for _ in f)
         self.headerline = headerline
         self.SMs_header = SMs_header
         self.SMs = SMs
         self.numSMs = numSMs
+        self.numSNPs = numSNPs+1
         self.type = type
         
     def AsDataframe(self, needsort=False):
@@ -169,7 +165,7 @@ class ParseHmp():
                         yield i, 0
                     else:
                         genos = j[11:]
-                        genos = list(map(geno_codification.get, genos, genos))
+                        genos = list(map(geno_codification.get, genos))
                         if None in genos:
                             print(i)
                             sys.exit('unkown character in hmp file')
@@ -453,6 +449,44 @@ def HmpSingle2Double(args):
     df_hmp = hmp.AsDataframe()
     df_hmp.to_csv(outputhmp, sep='\t', index=False, na_rep='NA')
     print('Done! check output %s...'%outputhmp)
+
+def Info(args):
+    """
+    %prog Info input_hmp
+    get basic info for a hmp file
+    """
+    p = OptionParser(Info.__doc__)
+    _, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputhmp, = args
+    hmp = ParseHmp(inputhmp)
+
+    print('Genotype type: %s'%hmp.type)
+    print('Number of samples: {val:,}'.format(val=hmp.numSMs))
+    print('Number of SNPs: {val:,}'.format(val=hmp.numSNPs))
+    print('Sample names: %s\n'%hmp.SMs)
+
+def MAFs(args):
+    """
+    %prog MAFs input_hmp 
+
+    calculate MAF for all SNPs in hmp
+    """
+    p = OptionParser(MAFs.__doc__)
+    _, args = p.parse_args(args)
+
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputhmp, = args
+    outputcsv = Path(inputhmp).name.replace('.hmp', '.maf.csv')
+    hmp = ParseHmp(inputhmp)
+    with open(outputcsv, 'w') as f:
+        pbar = tqdm(hmp.MAF(), total=hmp.numSNPs, desc='get MAF', position=0)
+        for i, maf in pbar:
+            f.write('%s\n'%maf)
+            pbar.set_description('calculating %s'%i.split()[2])
+    print('Done! check output %s...'%(outputcsv))
 
 if __name__ == "__main__":
     main()

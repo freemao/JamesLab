@@ -8,10 +8,11 @@ import os.path as op
 import sys
 import pandas as pd
 import numpy as np
-from schnablelab.apps.base import ActionDispatcher, OptionParser
-from schnablelab.apps.headers import Slurm_header
+from schnablelab.apps.base import ActionDispatcher, OptionParser, Slurm_header
 from schnablelab.autoGWAS.base import ReadGWASfile, ParseHmp
 from subprocess import call
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,7 +24,6 @@ faOneRecord = op.abspath(op.dirname(__file__))+'/../apps/faOneRecord'
 def main():
     actions = (
         ('fetchMAF', 'calculate the MAFs of selected SNPs'),
-        ('AllMAFs', 'calculate the MAFs for all SNPs in hmp'),
         ('SigSNPs', 'fetch the first n significant SNPs'),
         ('SharedSigSNPs', 'find shared significant SNPs between gemma and farmcpu'),
         ('fetchEVs', 'fetch effect sizes of selected SNPs'),
@@ -203,24 +203,6 @@ def parseMAF(i):
             hetero_idx.append(m+11)
 
     return j[0], maf, count, minor_idx, major_idx, hetero_idx
-    
-def AllMAFs(args):
-    """
-    %prog AllMAFs input_hmp 
-
-    calculate MAF for each SNP in hmp
-    """
-    p = OptionParser(AllMAFs.__doc__)
-    _, args = p.parse_args(args)
-
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    inputhmpfile, = args
-    outputcsvfile = inputhmpfile.replace('.hmp', 'MAF.csv')
-    hmp = ParseHmp(inputhmpfile, type='double')
-    MAFs = pd.Series([maf for _,maf in hmp.MAFs()])
-    MAFs.to_csv(outputcsvfile, index=False, header=None)
-    print('Done! Check %s file'%hmp)
 
 def fetchMAF(args):
     """
@@ -576,12 +558,9 @@ def PlotMAFs(args):
     p.add_option('--header', default = 'no', choices=('yes', 'no'),
         help = 'specify if there is a header in your MAF file')
     opts, args = p.parse_args(args)
-
     if len(args) == 0:
         sys.exit(not p.print_help())
-    print(args)
-    
-    
+        
     import seaborn as sns 
     import matplotlib.pyplot as plt
     from matplotlib import rcParams
