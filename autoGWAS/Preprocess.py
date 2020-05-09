@@ -9,8 +9,7 @@ import pandas as pd
 import os.path as op
 from pathlib import Path
 from subprocess import call
-from schnablelab.apps.base import ActionDispatcher, OptionParser
-from schnablelab.apps.headers import Slurm_header
+from schnablelab.apps.base import ActionDispatcher, OptionParser, Slurm_header
 
 # the location of gemma executable file
 gemma = op.abspath(op.dirname(__file__)) + '/../apps/gemma'
@@ -26,7 +25,6 @@ def main():
         ('hmp2numRow', 'transform hapmap format to numeric format in rows(gapit and farmcpu), more memory'),
         ('hmp2numCol', 'transform hapmap format to numeric format in columns(gapit and farmcpu), less memory'),
         ('hmp2MVP', 'transform hapmap format to MVP genotypic format'),
-        ('hmp2ped', 'transform hapmap format to plink ped format'),
         ('FixPlinkPed', 'fix the chr names issue and Convert -9 to 0 in the plink map file'),
         ('ped2bed', 'convert plink ped format to binary bed format'),
         ('genKinship', 'using gemma to generate centered kinship matrix'),
@@ -43,7 +41,6 @@ def main():
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
-
 
 def CheckHeader(args):
     """
@@ -304,31 +301,6 @@ def genKinship(args):
     f.write(header)
     f.close()
     print('slurm file %s.kinship.slurm has been created, you can sbatch your job file.' % mean_prefix)
-
-
-def hmp2ped(args):
-    """
-    %prog hmp
-
-    Convert hmp to plink ped format using Tassel
-    """
-    p = OptionParser(hmp2ped.__doc__)
-    p.set_slurm_opts(jn=True)
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    hmp, = args
-    prefix = '.'.join(hmp.split('.')[0:-1])
-    cmd = 'run_pipeline.pl -Xms512m -Xmx38G -fork1 -h %s -export -exportType Plink\n' %hmp
-    header = Slurm_header % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += 'ml java/1.8\n'
-    header += 'ml tassel/5.2\n'
-    header += cmd
-    f = open('%s.hmp2ped.slurm' % prefix, 'w')
-    f.write(header)
-    f.close()
-    print('Job file has been created. You can submit: sbatch -p jclarke %s.hmp2ped.slurm' % prefix)
-
 
 def FixPlinkPed(args):
     """
