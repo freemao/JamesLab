@@ -100,6 +100,7 @@ class ParseVCF():
                     sys.exit('unknow genotype in vcf file')
                 genos = '\t'.join(genos)
                 rs, chr, pos = j[2], j[0], j[1]
+                alleles = '/'.join(a1a2[0], a1a2[1])
                 new_line = '\t'.join([rs, a1a2, chr, pos, cen_NA, genos])+'\n'
                 yield new_line
 
