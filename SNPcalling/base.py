@@ -322,9 +322,9 @@ def Info(args):
     inputvcf, = args
     vcf = ParseVCF(inputvcf)
     print('number of samples: {val:,}'.format(val=vcf.numSMs))
-    print('number of header lines: {val:,}'.format(val=vcf.numHeaderLines))
+    print("number of hash ('#') lines: {val:,}".format(val=vcf.numHeaderLines))
     print('number of SNPs: {val:,}'.format(val=vcf.num_SNPs))
-    print('Sample names: %s\n'%vcf.SMs)
+    print('Sample names: \n  %s'%'\n  '.join(vcf.SMs))
 
 def SummarizeLD(args):
     """

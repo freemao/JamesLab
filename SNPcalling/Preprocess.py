@@ -10,8 +10,7 @@ import os.path as op
 from pathlib import Path
 from subprocess import run
 from schnablelab.apps.natsort import natsorted
-from schnablelab.apps.headers import Slurm_header
-from schnablelab.apps.base import ActionDispatcher, OptionParser, glob, iglob
+from schnablelab.apps.base import ActionDispatcher, OptionParser, glob, Slurm_header
 
 
 def main():
