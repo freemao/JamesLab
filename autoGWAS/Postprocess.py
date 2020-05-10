@@ -4,39 +4,37 @@
 Post process the significant SNPs from GWAS results.
 """
 
-import os.path as op
 import sys
-import pandas as pd
-import numpy as np
-from schnablelab.apps.base import ActionDispatcher, OptionParser, Slurm_header
-from schnablelab.autoGWAS.base import ReadGWASfile, ParseHmp
-from subprocess import call
-from pathlib import Path
-
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 import math
+import numpy as np
+import pandas as pd
+import os.path as op
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+from pathlib import Path
+from subprocess import call
+from schnablelab.autoGWAS.base import ReadGWASfile, ParseHmp
+from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 # the location of plink executale file
 plink = op.abspath(op.dirname(__file__))+'/../apps/plink'
 faOneRecord = op.abspath(op.dirname(__file__))+'/../apps/faOneRecord' 
+
 def main():
     actions = (
         ('fetchMAF', 'calculate the MAFs of selected SNPs'),
         ('SigSNPs', 'fetch the first n significant SNPs'),
         ('SharedSigSNPs', 'find shared significant SNPs between gemma and farmcpu'),
         ('fetchEVs', 'fetch effect sizes of selected SNPs'),
-        ('fetchLinkedSNPs', 'fetch highly linked SNPs'),
+        ('LinkedSNPs', 'extract highly linked SNPs using plink'),
         ('fetchGenoVCF', 'fetch genotypes for SNPs from vcf file'),
         ('fetchGene', 'fetch genes of selected SNPs from significant SNP list'),
         ('fetchFunc', 'fetch functions of candidate genes'),
         ('fetchProSeq', 'fetch corresponding sequences of condidated genes'),
         ('PlotEVs', 'plot histgram of effect sizes'),
-        ('PlotMAFs', 'density plot of MAF'),
+        ('PlotMAFs', 'make density plot of MAF'),
         ('UniquePeaks', 'calculate the number of unique peaks identified in a GWAS run'),
-        ('Manhattan', 'make manhattan plot')
-        #('PlotMAF', 'plot histgram of maf'),
+        ('Manhattan', 'make manhattan plot'),
             )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
@@ -48,7 +46,7 @@ def Manhattan(args):
     Mamhattan plot
     """
     p = OptionParser(Manhattan.__doc__)
-    p.add_option('--software', default='gemma', choices=('gemma', 'mvp', 'farmcpu', 'gapit'),
+    p.add_option('--software', default='gemma', choices=('gemma', 'other', 'farmcpu', 'gapit'),
         help = 'softare where the GWAS result came from')
     p.add_option('--pvalue', default=0.05, choices=(0.05, 0.01),
         help = 'choose the pvalue cutoff')
@@ -56,6 +54,8 @@ def Manhattan(args):
         help = "specify the ratio of independent SNPs, maize is 0.32, sorghum is 0.53")
     p.add_option('--sort', default=False, action='store_true',
         help = "If GWAS file needs to be sorted based on chromosome and position")
+    p.add_option('--usecols', default=None,
+        help = "specify index (0-based) of snp,chr,pos,pvalue (comma separated without space) if softare is other")
     opts, args = p.parse_args(args)
 
     if len(args) == 0:
@@ -299,88 +299,70 @@ def SharedSigSNPs(args):
         
 def SigSNPs(args):
     """
-    %prog gwas_results output 
-    extract the first N significant SNPs from GWAS result. The results will be saved to software.causalSNPs.csv
+    %prog gwas_results output_fn 
+
+    extract the first N significant SNPs from GWAS result
     """
     p = OptionParser(SigSNPs.__doc__)
-    p.add_option('--MeRatio', default = '1',
+    p.add_option('--MeRatio', type='float', default = 1.0,
         help = "specify the ratio of independent SNPs, maize is 0.32, sorghum is 0.53")
-    p.add_option('--chromosome', default = 'all',
+    p.add_option('--chrom', default = 'all',
         help = "specify chromosome, such 1, 2, 'all' means genome level")
-    p.add_option('--software', default = 'mvp', choices=('gemma', 'gapit', 'farmcpu', 'mvp'),
+    p.add_option('--software', default = 'gemma', choices=('gemma', 'gapit', 'farmcpu', 'other'),
         help = 'specify which software generates the GWAS result')
+    p.add_option('--usecols', default=None,
+        help = "specify index (0-based) of snp,chr,pos,pvalue (comma separated without space) if softare is other")
     opts, args = p.parse_args(args)
 
     if len(args) == 0:
         sys.exit(not p.print_help())
-    gwas,output, = args
-    if opts.software == 'gemma':
-        df = pd.read_csv(gwas, delim_whitespace=True, usecols=['chr', 'rs', 'ps', 'p_lrt'])
-        cutoff = 0.05/(float(opts.MeRatio) * df.shape[0])
-        print('significant cutoff: %s'%cutoff)
-        df['chr'] = df['chr'].astype('str')
-        df = df if opts.chromosome=='all' else df[df['chr']==opts.chromosome]
-        df = df[['rs', 'chr', 'ps', 'p_lrt']]
-        df[df['p_lrt'] < cutoff].to_csv(output, index=False, sep='\t')
+    gwasfile, output_fn, = args
 
-    elif opts.software == 'mvp':
-        df = pd.read_csv(gwas)
-        cutoff = 0.05/(float(opts.MeRatio) * df.shape[0])
-        print('significant cutoff: %s'%cutoff)
-        df['Chrom'] = df['Chrom'].astype('str')
-        df = df if opts.chromosome=='all' else df[df['Chrom']==opts.chromosome]
-        df[df.iloc[:,4] < cutoff].to_csv(output, index=False, sep='\t')
-
-    elif opts.software == 'farmcpu':
-        df = pd.read_csv(gwas, usecols=['SNP', 'Chromosome', 'Position', 'P.value'])
-        cutoff = 0.05/(float(opts.MeRatio) * df.shape[0])
-        print('significant cutoff: %s'%cutoff)
-        df['Chromosome'] = df['Chromosome'].astype('str')
-        df = df if opts.chromosome=='all' else df[df['chr']==opts.chromosome]
-        df[df['P.value'] < cutoff].to_csv(output, index=False, sep='\t')
-
-    elif opts.software == 'gapit':
-        df = pd.read_csv(gwas, usecols=['SNP', 'Chromosome', 'Position ', 'P.value'])
-        cutoff = 0.05/(float(opts.MeRatio) * df.shape[0])
-        print('significant cutoff: %s'%cutoff)
-        df['Chromosome'] = df['Chromosome'].astype('str')
-        df = df if opts.chromosome=='all' else df[df['chr']==opts.chromosome]
-        df[df['P.value'] < cutoff].to_csv(output, index=False, sep='\t')
-    else:
-        sys.exit('specify which software you use: mvp, gemma, farmcpu, gapit.')
-    print('Done! Check %s'%output)
+    gwas = ReadGWASfile(gwasfile, opts.software)
+    df_significant = gwas.SignificantSNPs(p_cutoff=0.05, MeRatio=opts.MeRatio)
+    if opts.chrom != 'all':
+        df_significant = df_significant[df_significant['chr']==opts.chrom]
+    df_significant.to_csv(output_fn, index=False, sep='\t')
+    print('Done! Check %s'%output_fn)
         
-def fetchLinkedSNPs(args):
+def LinkedSNPs(args):
     """
-    %prog SNPlist(only read 1st col) bed_prefix r2_cutoff output_prefix
+    %prog input_SNPlist_file bed_prefix r2_cutoff output_prefix
 
-    extract linked SNPs using plink
+    extract linked SNPs using plink.
     """
-    p = OptionParser(fetchLinkedSNPs.__doc__)
-    p.set_slurm_opts(jn=True)
-    p.add_option('--header', default = 'yes', choices=('yes', 'no'),
-        help = 'specify if there is a header in your SNP list file')
+    p = OptionParser(LinkedSNPs.__doc__)
+    p.add_option('--col_idx', type='int', default=0,
+                 help='specify which column contains SNP ID (0-based)')
+    p.add_option('--header', default='yes', choices=('yes', 'no'),
+                 help='add this option if there is no header in the input SNPlist file')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='add this option to disable converting commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=LinkedSNPs.__name__)
     opts, args = p.parse_args(args)
 
     if len(args) == 0:
         sys.exit(not p.print_help())
 
-    SNPlist, bedprefix, cutoff, output_prefix, = args
-    df = pd.read_csv(SNPlist, delim_whitespace=True, header=None) \
-        if opts.header == 'no' \
-        else pd.read_csv(SNPlist, delim_whitespace=True)
-    SNPs = df.iloc[:, 0]
-    pre = SNPlist.split('.')[0]
-    SNPsfile = SNPs.to_csv('%s.SNPs_list.csv'%pre, index=False)
-    cmd = '%s --bfile %s --r2 --ld-snp-list %s.SNPs_list.csv --ld-window-kb 5000 --ld-window 99999 --ld-window-r2 %s --noweb --out %s\n'%(plink, bedprefix, pre, cutoff, output_prefix)
-    print('command run on local:\n%s'%cmd)
-    f = open('%s.slurm'%output_prefix, 'w')
-    h = Slurm_header
-    header = h%(opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += cmd
-    f.write(header)
-    f.close()
-    print('Job file has been generated. You can submit: sbatch -p jclarke %s.slurm'%output_prefix)
+    SNPlist_fn, bedprefix, cutoff, output_prefix, = args
+    if opts.header == 'yes':
+        df = pd.read_csv(SNPlist_fn, delim_whitespace=True, usecols=[opts.col_idx])  
+    else:
+        df = pd.read_csv(SNPlist_fn, delim_whitespace=True, usecols=[opts.col_idx], header=None)
+    pre = Path(SNPlist_fn).name.split('.')[0]
+    df.to_csv('%s.SNPs_list.csv'%pre, index=False, header=None)
+    
+    cmd_local = '%s --bfile %s --r2 --ld-snp-list %s.SNPs_list.csv --ld-window-kb 5000 --ld-window 99999 --ld-window-r2 %s --noweb --out %s\n'%(plink, bedprefix, pre, cutoff, output_prefix)
+    print('cmd on local:\n%s' % cmd_local)
+    
+    cmd_header = 'ml plink'
+    cmd_hcc = 'plink --bfile %s --r2 --ld-snp-list %s.SNPs_list.csv --ld-window-kb 5000 --ld-window 99999 --ld-window-r2 %s --noweb --out %s\n'%(bedprefix, pre, cutoff, output_prefix)
+    print('cmd on HCC:\n%s\n%s'%(cmd_header, cmd_hcc))
+
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm([cmd_hcc], put2slurm_dict)
 
 def fetchGenoVCF(args):
     """
@@ -456,7 +438,7 @@ def fetchGene(args):
     df0 = df0.reset_index(drop=True)
 
     df1 = pd.read_csv(gff, sep='\t', header=None)
-# customize the rule right below
+    # customize the rule right below
     df1['gene'] = df1.iloc[:,8].apply(lambda x: x.split(';')[1].split('=')[1])
     df1 = df1[[0,3,4, 'gene']]
     df1.columns = ['chr', 'start', 'end', 'gene']
@@ -470,7 +452,7 @@ def fetchGene(args):
         Genes = []
         for pos in g[1]['pos']:
             print('SNP position: %s'%pos)
-# customize the chr name in gff3
+            # customize the chr name in gff3
             chrom_gff = 'Chr%02d'%chrom
             df2 = df1[df1['chr'] == chrom_gff]
             df2['gene_length'] = np.abs(df2['end'] - df2['start'])
@@ -551,8 +533,8 @@ def PlotEVs(args):
 
 def PlotMAFs(args):
     """
-    %prog MAF_file1 MAF_file2 ...
-    density plot of MAFs. Filename will be used as the lengend label 
+    %prog MAF_file1 MAF_file2 ... Label_of_MAF_file1 Label_of_MAF_file2 ...
+    make density plot of MAFs (maximum of four MAF files) with the file name 'MAF_density.png'
     """
     p = OptionParser(PlotMAFs.__doc__)
     p.add_option('--header', default = 'no', choices=('yes', 'no'),
@@ -566,17 +548,26 @@ def PlotMAFs(args):
     from matplotlib import rcParams
     fig, ax = plt.subplots(figsize=(4, 3.8))
     colors = ['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3']
-    for idx,fn in enumerate(args):
-        df = pd.read_csv(fn, header=None) if opts.header=='no' else pd.read_csv(fn)
-        label = fn.split('.')[0]
-        df.columns = [label]
-        ax = sns.kdeplot(df[label],
-            shade=True,
-            label=label,
-            color=colors[idx],
-            ax=ax,
-            markerfacecolor='black',
-            markersize=2)
+
+    n = int(len(args)/2)
+    fns, labels = args[:n], args[n:]
+    print('MAF files: %s'%' '.join(fns))
+    print('Labels: %s'%' '.join(labels))
+
+    with tqdm(total=n) as pbar:
+        for idx,(fn,label) in enumerate(zip(fns, labels)):
+            df = pd.read_csv(fn, header=None) if opts.header=='no' else pd.read_csv(fn)
+            df.columns = [label]
+            ax = sns.kdeplot(df[label],
+                shade=True,
+                label=label,
+                color=colors[idx],
+                ax=ax,
+                markerfacecolor='black',
+                markersize=2)
+            pbar.set_description('ploting %s...'%(label))
+            pbar.update(1)
+
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     ax.xaxis.set_ticks_position('bottom')

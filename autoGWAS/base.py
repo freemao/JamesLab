@@ -7,10 +7,14 @@ import re
 import sys
 import numpy as np
 import pandas as pd
+import os.path as op
 from tqdm import tqdm
 from pathlib import Path
 from subprocess import call
 from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
+
+plink = op.abspath(op.dirname(__file__)) + '/../apps/plink'
+GEC = op.abspath(op.dirname(__file__)) + '/../apps/gec.jar'
 
 def main():
     actions = (
@@ -21,9 +25,12 @@ def main():
         ('DownsamplingSNPs', 'pick up some SNPs from a huge hmp file using Linux sed command'),
         ('SubsamplingSMs', 'grep a subset of samples from a hmp file'),
         ('hmp2ped', 'convert hmp file to plink map and ped file'),
+        ('ped2bed', 'convert plink ped format to binary bed format'),
+        ('IndePvalue', 'estimate the number of independent SNPs using GEC'),
         ('HmpSingle2Double', 'convert single hmp to double type hmp'),
         ('Info', 'get basic info for a hmp file'),
         ('MAFs', 'calculate the MAF for all SNPs in hmp'),
+        ('SortHmp', 'Sort hmp file based on chromosome order and position')
 )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
@@ -117,6 +124,9 @@ class ParseHmp():
 
         df_ped = pd.concat([df_ped_part1, df_ped_part2], axis=1)
         return df_map, df_ped
+    
+    def BIMBAM(self):
+        pass
     
     def Missing(self):
         '''
@@ -452,6 +462,51 @@ def hmp2ped(args):
     df_map.to_csv('%s.map'%output_prefix, sep='\t', index=False, header=None)
     df_ped.to_csv('%s.ped'%output_prefix, sep='\t', index=False, header=None)
 
+def ped2bed(args):
+    """
+    %prog ped_prefix
+
+    Convert plink ped/map to binary bed/bim/fam format using Plink
+    """
+    p = OptionParser(ped2bed.__doc__)
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='add this option to disable converting commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=ped2bed.__name__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    ped_prefix, = args
+    cmd_header = 'ml plink'
+    cmd = 'plink --noweb --file %s --make-bed --out %s' % (ped_prefix, ped_prefix)
+    print('cmd:\n%s\n%s' % (cmd_header, cmd))
+    
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm([cmd], put2slurm_dict)
+
+def IndePvalue(args):
+    """
+    %prog IndePvalue bed_prefix output_fn
+
+    Estimate number of idenpendent SNPs using GEC
+    """
+    p = OptionParser(IndePvalue.__doc__)
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='add this option to disable converting commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=IndePvalue.__name__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    bed_prefix, output_fn = args
+    cmd = 'java -Xmx18g -jar %s --noweb --effect-number --plink-binary %s --genome --out %s' % (GEC, bed_prefix, output_fn)
+    print('cmd:\n%s\n' % cmd)
+
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['memory'] = 20000
+        put2slurm([cmd], put2slurm_dict)
+
 def HmpSingle2Double(args):
     """
     %prog HmpSingle2Double input_single_hmp 
@@ -484,7 +539,7 @@ def Info(args):
     print('Genotype type: %s'%hmp.type)
     print('Number of samples: {val:,}'.format(val=hmp.numSMs))
     print('Number of SNPs: {val:,}'.format(val=hmp.numSNPs))
-    print('Sample names: %s\n'%hmp.SMs)
+    print('Sample names: \n  %s'%'\n  '.join(hmp.SMs))
 
 def MAFs(args):
     """
@@ -506,6 +561,24 @@ def MAFs(args):
             f.write('%s\n'%maf)
             pbar.set_description('calculating %s'%i.split()[2])
     print('Done! check output %s...'%(outputcsv))
+
+def SortHmp(args):
+    """
+    %prog SortHmp input_hmp 
+    Sort hmp based on chromosome order and position. Can also try tassel:
+     'run_pipeline.pl -Xms16g -Xmx18g -SortGenotypeFilePlugin -inputFile in_fn -outputFile out_fn -fileType Hapmap'
+    """
+    p = OptionParser(SortHmp.__doc__)
+    _, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputhmp, = args
+    outputhmp = Path(inputhmp).name.replace('.hmp', '_sorted.hmp')
+
+    hmp = ParseHmp(inputhmp)
+    df_sorted_hmp = hmp.AsDataframe(needsort=True)
+    df_sorted_hmp.to_csv(outputhmp, sep='\t', index=False, na_rep='NA')
+    print('Done! check output %s...'%outputhmp)
 
 if __name__ == "__main__":
     main()

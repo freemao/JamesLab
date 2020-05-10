@@ -9,13 +9,12 @@ import pandas as pd
 import os.path as op
 from pathlib import Path
 from subprocess import call
-from schnablelab.apps.base import ActionDispatcher, OptionParser, Slurm_header, put2slurm
+from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 # the location of gemma executable file
 gemma = op.abspath(op.dirname(__file__)) + '/../apps/gemma'
-plink = op.abspath(op.dirname(__file__)) + '/../apps/plink'
 tassel = op.abspath(op.dirname(__file__)) + '/../apps/tassel-5-standalone/run_pipeline.pl'
-GEC = op.abspath(op.dirname(__file__)) + '/../apps/gec.jar'
+
 
 def main():
     actions = (
@@ -24,7 +23,6 @@ def main():
         ('hmp2numRow', 'transform hapmap format to numeric format in rows(gapit and farmcpu), more memory'),
         ('hmp2numCol', 'transform hapmap format to numeric format in columns(gapit and farmcpu), less memory'),
         ('hmp2MVP', 'transform hapmap format to MVP genotypic format'),
-        ('ped2bed', 'convert plink ped format to binary bed format'),
         ('genKinship', 'using gemma to generate centered kinship matrix'),
         ('genPCA', 'using tassel to generate the first N PCs'),
         ('reorgnzTasselPCA', 'reorganize PCA results from TASSEL so it can be used in other software'),
@@ -32,33 +30,9 @@ def main():
         ('genGemmaPheno', 'reorganize normal phenotype format to GEMMA'),
         ('ResidualPheno', 'generate residual phenotype from two associated phenotypes'),
         ('combineHmp', 'combine split chromosome Hmps to a single large one'),
-        ('IndePvalue', 'calculate the number of independent SNPs and estiamte the bonferroni p value'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
-
-def ped2bed(args):
-    """
-    %prog ped_prefix
-
-    Convert plink ped/map to binary bed/bim/fam format using Plink
-    """
-    p = OptionParser(ped2bed.__doc__)
-    p.add_option('--disable_slurm', default=False, action="store_true",
-                 help='add this option to disable converting commands to slurm jobs')
-    p.add_slurm_opts(job_prefix=ped2bed.__name__)
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    ped_prefix, = args
-    cmd_header = 'ml plink'
-    cmd = 'plink --noweb --file %s --make-bed --out %s' % (ped_prefix, ped_prefix)
-    print('cmd:\n%s\n%s' % (cmd_header, cmd))
-    
-    if not opts.disable_slurm:
-        put2slurm_dict = vars(opts)
-        put2slurm_dict['cmd_header'] = cmd_header
-        put2slurm([cmd], put2slurm_dict)
 
 def hmp2vcf(args):
     """
