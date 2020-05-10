@@ -127,13 +127,13 @@ class OptionParser(OptionP):
                     and o.action != "store_false":
                 o.help += " [default: %s]" % default_tag
 
-    def add_slurm_opts(self, jp='myjob'):
+    def add_slurm_opts(self, job_prefix='myjob'):
         group = OptionGroup(self, 'Slurm job options')
         group.add_option('--time', type='int', default=120,
                             help='the maximum running time(hour)')
         group.add_option('--memory', type='int', default=10000,
                             help='the maximum running memory(Mb). crane12(35g), crane20(384g), crane36(4*256g), crane36(4*512g). k20(5000), k40(12000), p100(16000)')
-        group.add_option('--job_prefix', default=jp,
+        group.add_option('--job_prefix', default=job_prefix,
                             help='prefix of job name and log file')
         group.add_option('--pu_type', default='cpu', choices=('cpu', 'gpu'),
                             help='PU type')
@@ -143,6 +143,8 @@ class OptionParser(OptionP):
                             help = 'number of cpus per node')
         group.add_option('--gpu_model',
                             help = "gpu model (requires '--pu_type' is 'gpu')")
+        group.add_option('--ncmds_per_slurm', type='int', default=1,
+                            help ='number of commands added to slurm')
         self.add_option_group(group)
     
     def set_cpus(self, cpus=0):
@@ -253,42 +255,43 @@ Slurm_header = '''#!/bin/sh
 #SBATCH --partition={partition}
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node={ncpus_per_node}
-#SBATCH --time={runtime}:00:00          # Run time in hh:mm:ss
-#SBATCH --mem-per-cpu={runmem}       # Maximum memory required per CPU (in megabytes)
+#SBATCH --time={time}:00:00          # Run time in hh:mm:ss
+#SBATCH --mem-per-cpu={memory}       # Maximum memory required per CPU (in megabytes)
 #SBATCH --job-name={jobname}
 #SBATCH --error=./{jobname}.err
 #SBATCH --output=./{jobname}.out
 '''
 
-def put2slurm(cmds, ncmds_per_slrum, partition, runtime, runmem, job_prefix, ncpus_per_node, cmd_header=None, pu_type='cpu', gpu_model=False):
+def put2slurm(cmds, slurm_dict):
     '''
     args:
-        cmds (list): list containing all the commands
-        ncmds_per_slrum (int): number of commands for each slurm
-        partition: jclarke or schnablelab
-        runtime: time in hour
-        runmem: memory in hour
-        jobname: job name
-        ncpus_per_node: numebr of CPUs requested in a node
-        cmd_header: header command, ex: 'ml bcftools'
-        gpu: if request a gpu
-        gpu_model: request a specified gpu model
+        cmds (list): list of all the commands
+    kwargs:
+        ncmds_per_slurm (int): number of commands for each slurm, default 1
+        partition: jclarke or schnablelab, default jclarke
+        time: time in hour, default 120
+        mem: memory in hour, default 10_000
+        job_prefix: job name, default 'job'
+        ncpus_per_node: numebr of CPUs requested in a node, default 1
+        cmd_header: header command, ex: 'ml bcftools', default None
+        gpu: if request a gpu, default False
+        gpu_model: request a specified gpu model, default None
     '''
-    if len(cmds) < ncmds_per_slrum:
+    if len(cmds) < slurm_dict['ncmds_per_slurm']:
         sys.exit('# of commands per slurm > # of cmds !!!')
-    
-    n_grps = math.ceil(len(cmds)/ncmds_per_slrum)
+    n_slurms = math.ceil(len(cmds)/slurm_dict['ncmds_per_slurm'])
 
-    for range_label, grp in cutlist(cmds, n_grps):
-        jobname = '%s_%s'%(job_prefix, range_label)
-        slurm_header = Slurm_header.format(partition=partition, ncpus_per_node=ncpus_per_node, runtime=runtime, runmem=runmem, jobname=jobname)
-        if pu_type=='gpu':
+    for range_label, grp in cutlist(cmds, n_slurms):
+        jobname = '%s_%s'%(slurm_dict['job_prefix'], range_label) if len(cmds)>1 else slurm_dict['job_prefix']
+        slurm_dict['jobname'] = jobname
+        slurm_header = Slurm_header.format(**slurm_dict)
+        if slurm_dict['pu_type']=='gpu':
             slurm_header += '#SBATCH --gres=gpu:1\n'
-            if gpu_model:
-                slurm_header += '#SBATCH --constraint=gpu_{gpu_model}\n'.format(gpu_model=gpu_model)
+            if slurm_dict['gpu_model']:
+                slurm_header += '#SBATCH --constraint=gpu_{gpu_model}\n'.format(gpu_model=slurm_dict['gpu_model'])
         slurm_header += '\n'
-        if cmd_header:
-            slurm_header += '%s\n'%cmd_header
+        if 'cmd_header' in slurm_dict:
+            slurm_header += '%s\n'%slurm_dict['cmd_header']
         for cmd in grp:
             slurm_header += '%s\n'%cmd
         with open('%s.slurm'%jobname, 'w') as f:
