@@ -478,7 +478,10 @@ def ped2bed(args):
     ped_prefix, = args
     cmd_header = 'ml plink'
     cmd = 'plink --noweb --file %s --make-bed --out %s' % (ped_prefix, ped_prefix)
-    print('cmd:\n%s\n%s' % (cmd_header, cmd))
+    print('cmd on HCC:\n%s\n%s' % (cmd_header, cmd))
+
+    cmd_local = '%s --noweb --file %s --make-bed --out %s' % (plink, ped_prefix, ped_prefix)
+    print('cmd on local desktop:\n%s\n'%cmd_local)
     
     if not opts.disable_slurm:
         put2slurm_dict = vars(opts)
