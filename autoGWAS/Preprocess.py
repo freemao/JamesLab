@@ -9,7 +9,7 @@ import pandas as pd
 import os.path as op
 from pathlib import Path
 from subprocess import call
-from schnablelab.apps.base import ActionDispatcher, OptionParser, Slurm_header
+from schnablelab.apps.base import ActionDispatcher, OptionParser, Slurm_header, put2slurm
 
 # the location of gemma executable file
 gemma = op.abspath(op.dirname(__file__)) + '/../apps/gemma'
@@ -17,102 +17,89 @@ plink = op.abspath(op.dirname(__file__)) + '/../apps/plink'
 tassel = op.abspath(op.dirname(__file__)) + '/../apps/tassel-5-standalone/run_pipeline.pl'
 GEC = op.abspath(op.dirname(__file__)) + '/../apps/gec.jar'
 
-
 def main():
     actions = (
         ('hmp2vcf', 'transform hapmap format to vcf format'),
-        ('hmp2BIMBAM', 'transform hapmap format to BIMBAM format (GEMMA)'),
+        ('hmp2bimbam', 'transform hapmap format to BIMBAM format (GEMMA)'),
         ('hmp2numRow', 'transform hapmap format to numeric format in rows(gapit and farmcpu), more memory'),
         ('hmp2numCol', 'transform hapmap format to numeric format in columns(gapit and farmcpu), less memory'),
         ('hmp2MVP', 'transform hapmap format to MVP genotypic format'),
-        ('FixPlinkPed', 'fix the chr names issue and Convert -9 to 0 in the plink map file'),
         ('ped2bed', 'convert plink ped format to binary bed format'),
         ('genKinship', 'using gemma to generate centered kinship matrix'),
         ('genPCA', 'using tassel to generate the first N PCs'),
-        ('LegalHmp', 'convert illegal genotypes in hmp file to legal genotypes'),
-        ('SortHmp', 'Sort hmp position in wired tassle way'),
         ('reorgnzTasselPCA', 'reorganize PCA results from TASSEL so it can be used in other software'),
         ('reorgnzGemmaKinship', 'reorganize kinship results from GEMMA so it can be used in other software'),
         ('genGemmaPheno', 'reorganize normal phenotype format to GEMMA'),
         ('ResidualPheno', 'generate residual phenotype from two associated phenotypes'),
         ('combineHmp', 'combine split chromosome Hmps to a single large one'),
         ('IndePvalue', 'calculate the number of independent SNPs and estiamte the bonferroni p value'),
-        ('CheckHeader', 'check file header'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
-def CheckHeader(args):
+def ped2bed(args):
     """
-    %prog CheckHeader file_name
-    check sample information in the header
-    """
-    p = OptionParser(CheckHeader.__doc__)
-    opts, args = p.parse_args(args)
-    if len(args) != 1:
-        sys.exit(not p.print_help())
-    fn, = args
+    %prog ped_prefix
 
-    if fn.endswith('.hmp'):
-        with open(fn) as f:
-            sms = f.readline().split()[11:]
-            print(len(sms))
-            print(sms)
-    elif fn.endswith('.vcf'):
-        pass
-    else:
-        print('only support hmp or vcf file')
+    Convert plink ped/map to binary bed/bim/fam format using Plink
+    """
+    p = OptionParser(ped2bed.__doc__)
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='add this option to disable converting commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=ped2bed.__name__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    ped_prefix, = args
+    cmd_header = 'ml plink'
+    cmd = 'plink --noweb --file %s --make-bed --out %s' % (ped_prefix, ped_prefix)
+    print('cmd:\n%s\n%s' % (cmd_header, cmd))
+    
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm([cmd], put2slurm_dict)
 
 def hmp2vcf(args):
     """
-    %prog hmp2vcf hmp
+    %prog hmp2vcf input_hmp
     convert hmp to vcf format using tassel
     """
     p = OptionParser(hmp2vcf.__doc__)
-    p.set_slurm_opts(jn=True)
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='add this option to disable converting commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=hmp2vcf.__name__)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
     hmpfile, = args
-    prefix = '.'.join(hmpfile.split('.')[0:-1])
+    cmd_header = 'ml tassel/5.2'
     cmd = 'run_pipeline.pl -Xms512m -Xmx10G -fork1 -h %s -export -exportType VCF\n' % (hmpfile)
-    print(cmd)
-    header = Slurm_header % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += 'ml tassel/5.2\n'
-    header += cmd
-    f = open('%s.hmp2vcf.slurm' % prefix, 'w')
-    f.write(header)
-    f.close()
-    print('slurm file %s.hmp2vcf.slurm has been created, you can sbatch your job file.' % prefix)
+    print('cmd:\n%s\n%s' % (cmd_header, cmd))
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm([cmd], put2slurm_dict)
 
-
-def judge(ref, alt, genosList, mode):
-    if mode == '2':
-        geno_dict = {'AA': '0', 'BB': '2', 'AB': '1'}
-        newlist = [geno_dict[i] for i in genosList]
-    else:
-        newlist = []
-        for k in genosList:
-            if len(set(k)) == 1 and k[0] == ref:
-                newlist.append('0')
-            elif len(set(k)) == 1 and k[0] == alt:
-                newlist.append('2')
-            elif len(set(k)) == 2:
-                newlist.append('1')
-            else:
-                sys.exit('genotype error !')
+def judge(ref, alt, genosList):
+    newlist = []
+    for k in genosList:
+        if len(set(k)) == 1 and k[0] == ref:
+            newlist.append('0')
+        elif len(set(k)) == 1 and k[0] == alt:
+            newlist.append('2')
+        elif len(set(k)) == 2:
+            newlist.append('1')
+        else:
+            sys.exit('genotype error !')
     return newlist
 
-
-def hmp2BIMBAM(args):
+def hmp2bimbam(args):
     """
-    %prog hmp2BIMBAM hmp bimbam_prefix
-
-    Convert hmp genotypic data to bimnbam datasets (*.mean and *.annotation).
+    %prog hmp2bimbam hmp bimbam_prefix
+    Convert hmp genotypic data to GEMMA bimbam files (*.mean and *.annotation).
     """
-    p = OptionParser(hmp2BIMBAM.__doc__)
-    p.add_option('--mode', default='1', choices=('1', '2'),
-                 help='specify the genotype mode 1: read genotypes, 2: only AA, AB, BB.')
+    p = OptionParser(hmp2bimbam.__doc__)
     opts, args = p.parse_args(args)
 
     if len(args) == 0:
@@ -131,7 +118,7 @@ def hmp2BIMBAM(args):
         except:
             print('omit rs...')
             continue
-        newNUMs = judge(ref, alt, j[11:], opts.mode)
+        newNUMs = judge(ref, alt, j[11:])
         newline = '%s,%s,%s,%s\n' % (rs, ref, alt, ','.join(newNUMs))
         f2.write(newline)
         pos = j[3]
@@ -140,7 +127,6 @@ def hmp2BIMBAM(args):
     f1.close()
     f2.close()
     f3.close()
-
 
 def hmp2numCol(args):
     """
@@ -183,7 +169,6 @@ def hmp2numCol(args):
     f2.close()
     f3.close()
 
-
 def hmp2MVP(args):
     """
     %prog hmp2MVP hmp MVP_prefix
@@ -214,7 +199,6 @@ def hmp2MVP(args):
     f1.close()
     f2.close()
     f3.close()
-
 
 def hmp2numRow(args):
     """
@@ -260,183 +244,65 @@ def hmp2numRow(args):
     f1.close()
     f2.close()
 
-
 def genKinship(args):
     """
     %prog genKinship genotype.mean
 
-    Calculate kinship matrix file
+    Calculate kinship matrix file using gemma
     """
     p = OptionParser(genKinship.__doc__)
     p.add_option('--type', default='1', choices=('1', '2'),
                  help='specify the way to calculate the relateness, 1: centered; 2: standardized')
     p.add_option('--out_dir', default='.',
                  help='specify the output dir')
-    p.set_slurm_opts(jn=True)
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='add this option to disable converting commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=genKinship.__name__)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
     geno_mean, = args
     # generate a fake bimbam phenotype based on genotype
-    f = open(geno_mean)
-    num_SMs = len(f.readline().split(',')[3:])
+    with open(geno_mean) as f:
+        num_SMs = len(f.readline().split(',')[3:])
     mean_prefix = geno_mean.replace('.mean', '')
     tmp_pheno = '%s.tmp.pheno' % mean_prefix
-    f1 = open(tmp_pheno, 'w')
-    for i in range(num_SMs):
-        f1.write('sm%s\t%s\n' % (i, 20))
-    f.close()
-    f1.close()
+    with open(tmp_pheno, 'w') as f1:
+        for i in range(num_SMs):
+            f1.write('sm%s\t%s\n' % (i, 20))
 
     # the location of gemma executable file
-    gemma = op.abspath(op.dirname(__file__)) + '/../apps/gemma'
     cmd = '%s -g %s -p %s -gk %s -outdir %s -o gemma.centered.%s' \
         % (gemma, geno_mean, tmp_pheno, opts.type, opts.out_dir, Path(mean_prefix).name)
-    print('The kinship command running on the local node:\n%s' % cmd)
-
-    h = Slurm_header
-    header = h % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += cmd
-    f = open('%s.kinship.slurm' % Path(mean_prefix).name, 'w')
-    f.write(header)
-    f.close()
-    print('slurm file %s.kinship.slurm has been created, you can sbatch your job file.' % mean_prefix)
-
-def FixPlinkPed(args):
-    """
-    %prog map_ped_prefix new_prefix
-
-    fix the chr names issue in map and convert -9 to 0 in ped
-    """
-    p = OptionParser(FixPlinkPed.__doc__)
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    old_prefix, new_prefix, = args
-    f1 = open(new_prefix + '.map', 'w')
-    with open(old_prefix + '.map') as f:
-        for i in f:
-            j = i.split()
-            Chr = int(j[1].split('_')[0].lstrip('S'))
-            new_l = '%s\t%s\t0\t%s\n' % (Chr, j[1], j[3])
-            f1.write(new_l)
-    f2 = open(new_prefix + '.ped', 'w')
-    with open(old_prefix + '.ped') as f:
-        for i in f:
-            j = i.replace('-9\t', '0\t')
-            f2.write(j)
-    print('Done!')
-
-
-def ped2bed(args):
-    """
-    %prog ped_prefix
-
-    Convert plink ped to binary bed format using Plink
-    """
-    p = OptionParser(ped2bed.__doc__)
-    p.set_slurm_opts(jn=True)
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    ped_prefix, = args
-    cmd = 'plink --noweb --file %s --make-bed --out %s\n' % (ped_prefix, ped_prefix)
-    print('run cmd on local:\n%s' % cmd)
-    header = Slurm_header % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += 'ml plink\n'
-    header += cmd
-    f = open('%s.ped2bed.slurm' % ped_prefix, 'w')
-    f.write(header)
-    f.close()
-    print('Job file has been created. You can submit: sbatch -p jclarke %s.ped2bed.slurm' % ped_prefix)
-
-
-def LegalGeno(row):
-    """
-    function to recover illegal genotypes
-    """
-    ref, alt = row[1].split('/')
-    ref = ref if len(ref) == 1 else ref.replace(alt, '')[0]
-    alt = alt if len(alt) == 1 else alt.replace(ref, '')[0]
-    genos = row[11:]
-    newgenos = row.replace('AA', ref + ref).replace('BB', alt + alt).replace('AB', ref + alt)
-    return newgenos
-
-
-def LegalHmp(args):
-    """
-    %prog LegalHmp hmp
-
-    Recover illegal genotypes in hmp file to legal genotypes
-    """
-    p = OptionParser(LegalHmp.__doc__)
-    p.set_slurm_opts(jn=True)
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    hmp, = args
-
-    df = pd.read_csv(hmp, delim_whitespace=True)
-    df1 = df.apply(LegalGeno, axis=1)
-    legal_fn = hmp.replace('.hmp', '.legal.hmp')
-    df1.to_csv(legal_fn, index=False, sep='\t')
-    print('Finish! check %s' % legal_fn)
-
-
-def SortHmp(args):
-    """
-    %prog SortHmp hmp
-
-    Sort hmp in wired TASSEL way...
-    """
-    p = OptionParser(SortHmp.__doc__)
-    p.set_slurm_opts(jn=True)
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    hmp, = args
-    prefix = hmp.replace('.hmp', '')
-    out_prefix = hmp.replace('.hmp', '') + '.sorted'
-    cmd = 'run_pipeline.pl -Xms16g -Xmx18g -SortGenotypeFilePlugin -inputFile %s -outputFile %s -fileType Hapmap\n' % (hmp, out_prefix)
-    cmd1 = 'mv %s %s' % (out_prefix + '.hmp.txt', out_prefix + '.hmp')
-
-    h = Slurm_header
-    h += 'module load java/1.8\n'
-    h += 'module load  tassel/5.2\n'
-    header = h % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += cmd
-    header += cmd1
-    f = open('%s.Sort.slurm' % prefix, 'w')
-    f.write(header)
-    f.close()
-    print('slurm file %s.Sort.slurm has been created, you can sbatch your job file.' % prefix)
-
+    print('The kinship command:\n%s' % cmd)
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm([cmd], put2slurm_dict)
 
 def genPCA(args):
     """
-    %prog genPCA hmp N
+    %prog genPCA input_hmp N
 
     Generate first N PCs using tassel
     """
     p = OptionParser(genPCA.__doc__)
-    p.set_slurm_opts(jn=True)
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='add this option to disable converting commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=genPCA.__name__)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    hmp, N, = args
-    out_prefix = hmp.replace('.hmp', '')
-    cmd = 'run_pipeline.pl -Xms28g -Xmx29g -fork1 -h %s -PrincipalComponentsPlugin -ncomponents %s -covariance true -endPlugin -export %s_%sPCA -runfork1\n' % (hmp, N, out_prefix, N)
-
-    h = Slurm_header
-    h += 'ml java/1.8\n'
-    h += 'ml tassel/5.2\n'
-    header = h % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += cmd
-    f = open('%s.PCA%s.slurm' %(out_prefix,N), 'w')
-    f.write(header)
-    f.close()
-    print('slurm file %s.PCA%s.slurm has been created, you can sbatch your job file.' % (out_prefix,N))
-
+    hmpfile, N, = args
+    out_prefix = Path(hmpfile).name.replace('.hmp', '')
+    cmd_header = 'ml java/1.8\nml tassel/5.2'
+    cmd = 'run_pipeline.pl -Xms28g -Xmx29g -fork1 -h %s -PrincipalComponentsPlugin -ncomponents %s -covariance true -endPlugin -export %s_%sPCA -runfork1\n' % (hmpfile, N, out_prefix, N)
+    print('cmd:\n%s\n%s' % (cmd_header, cmd))
+  
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['memory'] = 30000
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm([cmd], put2slurm_dict)
 
 def reorgnzTasselPCA(args):
     """
@@ -458,7 +324,6 @@ def reorgnzTasselPCA(args):
     df1.to_csv(farm_pca, sep='\t', index=False)
     df1.to_csv(gemma_pca, sep='\t', index=False, header=False)
     print('finished! %s, %s, %s have been generated.' % (gapit_pca, farm_pca, gemma_pca))
-
 
 def reorgnzGemmaKinship(args):
     """
@@ -484,7 +349,6 @@ def reorgnzGemmaKinship(args):
     f1.close()
     f2.close()
     print("Finished! Kinship matrix file for GEMMA 'GAPIT.%s' has been generated." % gemmaKin)
-
 
 def genGemmaPheno(args):
     """
@@ -552,7 +416,6 @@ def combineHmp(args):
         fn.close()
     f.close()
 
-
 def ResidualPheno(args):
     from scipy.stats import linregress
     import matplotlib.pyplot as plt
@@ -590,34 +453,6 @@ def ResidualPheno(args):
     df['residuals'] = df[df.columns[2]] - df['y_1']
     residual_pheno = df[[df.columns[0], df.columns[-1]]]
     residual_pheno.to_csv('residual.csv', sep='\t', na_rep='NaN', index=False)
-
-
-def IndePvalue(args):
-    """
-    %prog IndePvalue plink_bed_prefix output
-
-    calculate the number of independent SNPs (Me) and the bonferroni pvalue
-    """
-    p = OptionParser(IndePvalue.__doc__)
-    p.set_slurm_opts(jn=True)
-    p.add_option('--cutoff', default='0.05', choices=('0.01', '0.05'),
-                 help='choose the pvalue cutoff for the calculation of bonferroni pvalue')
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-
-    bed, output = args
-    mem = int(opts.memory / 1000) - 2
-    cmd = 'java -Xmx%sg -jar %s --noweb --effect-number --plink-binary %s --genome --out %s' % (mem, GEC, bed, output)
-    h = Slurm_header
-    h += 'module load java/1.8\n'
-    header = h % (opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
-    header += cmd
-    f = open('%s.Me_SNP.slurm' % output, 'w')
-    f.write(header)
-    f.close()
-    print('slurm file %s.Me_SNP.slurm has been created, you can sbatch your job file.' % output)
-
 
 if __name__ == '__main__':
     main()
