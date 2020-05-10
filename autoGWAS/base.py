@@ -10,7 +10,7 @@ import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 from subprocess import call
-from schnablelab.apps.base import ActionDispatcher, OptionParser
+from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 def main():
     actions = (
@@ -18,7 +18,7 @@ def main():
         ('FilterMAF', 'filter out SNP with extremely low minor allele frequency'),
         ('FilterHetero', 'filter out SNPs with high heterozygous rates'),
         ('SubsamplingSNPs', 'grep a subset of specified SNPs from a hmp file'),
-        ('downsamplingSNPs', 'grep a subset of SNPs from a hmp file'),
+        ('DownsamplingSNPs', 'pick up some SNPs from a huge hmp file using Linux sed command'),
         ('SubsamplingSMs', 'grep a subset of samples from a hmp file'),
         ('hmp2ped', 'convert hmp file to plink map and ped file'),
         ('HmpSingle2Double', 'convert single hmp to double type hmp'),
@@ -61,7 +61,7 @@ class ParseHmp():
             numSMs = len(SMs)
             firstgeno = f.readline().split()[11]
             type = 'single' if len(firstgeno)==1 else 'double'
-            print('guess hmp type: %s'%type)
+            #print('guess hmp type: %s'%type)
             numSNPs = sum(1 for _ in f)
         self.headerline = headerline
         self.SMs_header = SMs_header
@@ -152,10 +152,16 @@ class ParseHmp():
                     else:
                         genos = ''.join(j[11:])
                         a1, a2 = genos.count(allele1), genos.count(allele2)
-                        yield i, min(a1, a2)/(a1+a2)
+                        try:
+                            maf = min(a1, a2)/(a1+a2)
+                        except ZeroDivisionError:
+                            yield i, 0
+                        else:
+                            yield i, maf 
         else:
             with open(self.fn) as f:
                 next(f)
+                NN_ls = ['NN' for i in range(self.numSMs)]
                 for i in f:
                     j = i.split()
                     alleles = j[1].split('/')
@@ -164,14 +170,16 @@ class ParseHmp():
                     except ValueError:
                         yield i, 0
                     else:
-                        genos = j[11:]
-                        genos = list(map(geno_codification.get, genos))
-                        if None in genos:
-                            print(i)
-                            sys.exit('unkown character in hmp file')
-                        genos = ''.join(genos)
+                        genos_single = j[11:]
+                        genos_double = list(map(geno_codification.get, genos_single, NN_ls))
+                        genos = ''.join(genos_double)
                         a1, a2 = genos.count(allele1), genos.count(allele2)
-                        yield i, min(a1, a2)/(a1+a2)
+                        try:
+                            maf = min(a1, a2)/(a1+a2)
+                        except ZeroDivisionError:
+                            yield i, 0
+                        else:
+                            yield i, maf 
 
     def Hetero(self):
         '''
@@ -255,7 +263,6 @@ class ReadGWASfile():
             chrs_ordered = sorted(chrs, key=sortchr)
             df['chr'] = pd.Categorical(df['chr'], chrs_ordered, ordered=True)
             df = df.sort_values(['chr', 'pos']).reset_index(drop=True)
-        
         self.df = df
         self.numberofSNPs = df.shape[0]
 
@@ -285,11 +292,13 @@ def FilterMissing(args):
     n = 0
     with open(outputhmp, 'w') as f:
         f.write(hmp.headerline)
-        for i, miss in hmp.Missing():
+        pbar = tqdm(hmp.Missing(), total=hmp.numSNPs)
+        for i, miss in pbar:
             if miss <= opts.missing_cutoff:
                 f.write(i)
             else: 
                 n +=1
+            pbar.set_description('processing %s'%i.split()[2])
     print('Done! %s SNPs removed! check output %s...'%(n, outputhmp))
 
 def FilterHetero(args):
@@ -309,12 +318,14 @@ def FilterHetero(args):
     hmp = ParseHmp(inputhmp)
     n = 0
     with open(outputhmp, 'w') as f:
-        f.writelines(hmp.headerline)
-        for i, het in hmp.Hetero():
+        f.write(hmp.headerline)
+        pbar = tqdm(hmp.Hetero(), total=hmp.numSNPs)
+        for i, het in pbar:
             if het <= opts.het_cutoff:
                 f.write(i)
             else:
                 n += 1
+            pbar.set_description('processing %s'%i.split()[2])
     print('Done! %s SNPs removed! check output %s...'%(n, outputhmp))
 
 def FilterMAF(args):
@@ -334,12 +345,14 @@ def FilterMAF(args):
     hmp = ParseHmp(inputhmp)
     n = 0
     with open(outputhmp, 'w') as f:
-        f.writelines(hmp.headerline)
-        for i, maf in hmp.MAF():
+        f.write(hmp.headerline)
+        pbar = tqdm(hmp.MAF(), total=hmp.numSNPs)
+        for i, maf in pbar:
             if maf >= opts.MAF_cutoff:
                 f.write(i)
             else:
                 n += 1
+            pbar.set_description('processing %s'%i.split()[2])
     print('Done! %s SNPs removed! check output %s...'%(n, outputhmp))
     
 def SubsamplingSNPs(args):
@@ -396,24 +409,30 @@ def SubsamplingSMs(args):
     df_hmp.to_csv(outputhmp, sep='\t', index=False, na_rep='NA')
     print('Done! check output %s...'%outputhmp)
 
-def downsamplingSNPs(args):
+def DownsamplingSNPs(args):
     """
     %prog downsampling input_hmp
 
-    Choose part of SNPs as mapping markers when the genotype dataset is huge
+    Pick up some SNPs from a huge hmp file using Linux sed command
     """
-    p = OptionParser(downsamplingSNPs.__doc__)
+    p = OptionParser(DownsamplingSNPs.__doc__)
     p.add_option('--downscale', default=10,
                  help='specify the downscale level')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='do not convert commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=DownsamplingSNPs.__name__)
     opts, args = p.parse_args(args)
 
     if len(args) == 0:
         sys.exit(not p.print_help())
 
     inputhmp, = args
-    outputhmp = Path(inputhmp).name.replace('.hmp', '.ds%s.hmp'% opts.downsize)
+    outputhmp = Path(inputhmp).name.replace('.hmp', '_ds%s.hmp'% opts.downsize)
     cmd = "sed -n '1~%sp' %s > %s" % (opts.downsize, inputhmp, outputhmp)
-    call(cmd, shell=True)
+    print('cmd:\n%s\n' % cmd)
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm([cmd], put2slurm_dict)
 
 def hmp2ped(args):
     """
