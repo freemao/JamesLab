@@ -14,8 +14,6 @@ def main():
     actions = (
         ('three2two', 'convert 3d npy to 2d'),
         ('three2two_slurms', 'gen slurm jobs for three2two'),
-        ('crop_png', 'crop png images'),
-        ('crop_png_slurms', 'gen slurm jobs for crop_png'),
         ('resize_png', 'resize png images'),
         ('resize_png_slurms', 'gen slurm jobs for resize_png'),
         ('hyp2arr', 'convert hyperspectral images to a numpy array'),
@@ -100,17 +98,6 @@ def three2two(args):
         np.save(out_fn, npy_2d.astype(np.float64))
     print('Done!')
 
-def crop_png(args):
-    '''
-    %prog crop_png fn_in fn_out coordinates(left,upper,right,lower)
-    '''
-    p = OptionParser(crop_png.__doc__)
-    opts, args = p.parse_args(args)
-    fn_in, fn_out, crds, = args
-    crp_tuple = ([int(i) for i in crds.split(',')])
-    img = Image.open(fn_in).crop(crp_tuple)
-    img.save(fn_out, 'PNG')
-
 def resize_png(args):
     '''
     %prog resize_png fn_in fn_out dimension(withd,height)
@@ -163,48 +150,6 @@ def resize_png_slurms(args):
         header += 'conda activate MCY\n'
         header += cmd
         with open('%s_resize_%s.crop.slurm'%(in_dir.split('/')[-1], i), 'w') as f:
-            f.write(header)
-
-def crop_png_slurms(args):
-    '''
-    %prog crop_png_slurms in_dir out_dir
-    
-    generate slurm file for crop_png
-    '''
-    p = OptionParser(crop_png_slurms.__doc__)
-    p.add_option('--pattern', default='*.png',
-        help='image file patterns in_dir')
-    p.add_option("--crop_crds", default='1000,2800,3500,5455',
-        help="left,upper,right,lower pixel coordinate, separated by comma")
-    p.add_option("--n", default=10,type='int',
-        help="number of commands in each slurm file")
-
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    in_dir, out_dir, = args
-    out_path = Path(out_dir)
-    if not out_path.exists():
-        print('%s does not exist, create...')
-        out_path.mkdir()
-    dir_path = Path(in_dir)
-    pngs = list(dir_path.glob(opts.pattern))
-    pngs_n = len(pngs)
-    print('%s images found...'%pngs_n)
-    
-    for i in range(math.ceil(pngs_n/opts.n)):
-        batch_pngs = pngs[i*opts.n: (i+1)*opts.n]
-        print('batch%s'%i, len(batch_pngs))
-        cmd = ''
-        for png in batch_pngs:
-            out_png = png.name.replace('.png', '.crp.png')
-            out_png_path = out_path/out_png
-            cmd += 'python -m schnablelab.CNN.Preprocess crop_png %s %s %s\n'%(png, out_png_path, opts.crop_crds)
-        prefix = 'crp_batch%s'%i
-        header = Slurm_header%(10, 1000, prefix, prefix, prefix)
-        header += 'conda activate MCY\n'
-        header += cmd
-        with open('%s_crop_%s.crop.slurm'%(in_dir.split('/')[-1], i), 'w') as f:
             f.write(header)
 
 def hyp2arr_slurms(args):
