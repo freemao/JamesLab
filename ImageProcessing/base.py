@@ -127,6 +127,7 @@ def BatchCropObject(args):
     pngs = in_dir_path.glob(opts.pattern)
     cmds = []
     for img_fn in pngs:
+        img_fn = str(img_fn).replace(' ', '\ ')
         cmd = 'python -m schnablelab.ImageProcessing.base CropObject %s --out_dir %s --pad %s'%(img_fn, out_dir, opts.pad)
         cmds.append(cmd)
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
