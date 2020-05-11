@@ -12,6 +12,39 @@ import torch.nn as nn
 from torch.utils.data import Dataset
 from torchvision import transforms, models
 
+def split_df_to2(df, n):
+    '''
+    args:
+        df: pandas dataframe
+        n (int): the number of rows for part one
+    return:
+        df1: dataframe of part1
+        df2: dataframe of part2
+        
+    '''
+    df1 = df.sample(n)
+    df2 = df.loc[df.index[~df.index.isin(df1.index)], :]
+    return df1, df2
+
+def split_val_train(df, n_val, n_fold):
+    '''
+    args:
+        df: the dataframe for training and validataion for one category
+        n_val (int): number of validation data in each fold
+    yield fold, index of training data, index of validation data
+    '''
+    all_idx = df.index
+    if n_val*n_fold > all_idx.shape[0]:
+        print('not enough data for %s fold cross-validation!'%n_fold)
+        return
+    val_idx_st, val_idx_ed = 0, n_val
+    for fold in range(1, n_fold+1):
+        val_idx = all_idx[val_idx_st: val_idx_ed]  
+        train_idx = all_idx[~all_idx.isin(val_idx)]
+        val_idx_st += n_val
+        val_idx_ed += n_val
+        yield fold, train_idx, val_idx
+
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
     def __init__(self, mn_prefix, patience=20, verbose=True, delta=0):
