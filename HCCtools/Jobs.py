@@ -11,7 +11,6 @@ from pathlib import Path
 import sys
 from schnablelab.apps.base import ActionDispatcher, OptionParser, glob,iglob
 from schnablelab.apps.natsort import natsorted
-from schnablelab.apps.headers import Slurm_header
 from subprocess import call
 from subprocess import Popen
 import subprocess
@@ -43,7 +42,6 @@ def submit(args):
         sys.exit(not p.print_help())
 
     folder, = args
-    #partition = '' if opts.partition=='batch' else '-p %s'%opts.partition
     partition = '-p %s'%opts.partition
     alljobs = ['sbatch %s %s'%(partition, i) for i in Path(folder).glob(opts.pattern)]
     print("Total %s jobs under '%s'"%(len(alljobs), folder))
