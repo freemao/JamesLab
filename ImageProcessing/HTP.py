@@ -6,6 +6,7 @@ class and functions to deal with high throughput phenotyping data
 import sys
 import pandas as pd
 from pathlib import Path
+from shutil import copyfile
 from schnablelab.apps.Tools import GenDataFrameFromPath
 from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
@@ -59,17 +60,42 @@ class ParseProject():
             df = self.df[self.Subsamples(samples) & self.Subdates(dates)]
         else:
             df = self.df.copy()
-        
-        for fnpath in df['fnpath']:
-            results = fnpath.glob('Vis_SV_%s'%angle) if angle else fnpath.glob('Vis_*')
-            yield results
+        pbar = tqdm(df.itterows(), total=df.shape[0])
+        for _,row in pbar:
+            sm, d, hms = row['sm'], row['date'], row['time']
+            results = row['fnpath'].glob('Vis_SV_%s'%angle) if angle else row['fnpath'].glob('Vis_*')
+            pbar.set_description('extracting %s %s %s'%(sm, d, hms))
+            yield sm, d, hms, results
             
 def main():
     actions = (
         ('ExtractRGBs', 'extract images from project folder'),
+        ('Info', 'data information under the project folder'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def Info(args):
+    '''
+    %prog Info project_folder
+
+    Show summary of images under project_folder
+    '''
+    p = OptionParser(Info.__doc__)
+    opts, args = p.parse_args(args)
+    
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    project_folder, = args
+
+    prj = ParseProject(project_folder)
+    print('Summary of samples:')
+    print(prj.sm_counts)
+    print('Summary of dates:')
+    print(prj.date_counts)
+    print('Angles for RGB images:')
+    for angle in prj.df.loc[0,'fnpath'].glob('Vis_*'):
+        print(angle.name)
 
 def ExtractRGBs(args):
     '''
@@ -95,9 +121,10 @@ def ExtractRGBs(args):
     opts.dates = opts.dates.split(',') if opts.dates else opts.dates
 
     prj = ParseProject(project_folder)
-    RGBs = prj.RGB(samples=opts.samples, dates=opts.dates, angle=opts.angle)
+    sm, d, hms, RGBs = prj.RGB(samples=opts.samples, dates=opts.dates, angle=opts.angle)
     for rgb in RGBs:
-        print(list(rgb))
-
+        out_fn = '%s_%s_%s_%s.png'%(sm, d, hms, rgb.name)
+        copyfile(rgb, Path(opts.out_dir)/out_fn)
+        
 if __name__ == '__main__':
     main()
