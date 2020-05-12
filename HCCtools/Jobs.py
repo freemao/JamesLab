@@ -96,22 +96,26 @@ def cancel(args):
 
 def quickjob(args):
     """
-    %prog cmd(':' separated command)
-    generate a qucik slurm job
+    %prog job_name cmd
+    generate a qucik slurm job for the cmd
     """
-    p = OptionParser(quickjob.__doc__)
-    p.set_slurm_opts(jn=True)
-    opts, args = p.parse_args(args)
     if len(args) == 0:
-        sys.exit(not p.print_help())
-    cmd, = args
-    cmd = ' '.join(cmd.split(':'))+'\n'
-    header = Slurm_header%(opts.time, opts.memory, opts.prefix, opts.prefix, opts.prefix)
+        sys.exit('specify job_name and command')
+    jobname, *cmd = args
+    cmd = ' '.join(cmd)
+    header = '''#!/bin/bash
+#SBATCH --time=120:00:00 
+#SBATCH --mem-per-cpu=10000
+#SBATCH --job-name=%s
+#SBATCH --error=%s.err
+#SBATCH --output=%s.out
+
+'''
+    header = header%(jobname, jobname, jobname)
     header += cmd
-    jobfile = '%s.slurm'%opts.prefix
-    f = open(jobfile, 'w')
-    f.write(header)
-    print('slurm file %s.slurm has been created, you can sbatch your job file now.'%opts.prefix)
+    with open('%s.slurm'%jobname, 'w') as f:
+        f.write(header)
+    print('slurm file %s.slurm has been created...'%jobname)
 
 if __name__ == "__main__":
     main()
