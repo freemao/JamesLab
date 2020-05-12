@@ -21,6 +21,7 @@ class ParseProject():
             df['sm'] = df['fn'].apply(lambda x: x.split('_')[1])
             df['date'] = df['fn'].apply(lambda x: x.split('_')[2])
             df['time'] = df['fn'].apply(lambda x: x.split('_')[3])
+            df = df.sort_values(['sm', 'date', 'time']).reset_index(drop=True)
             df.to_csv('%s.idx.csv'%prj_dir_name, index=False)
         finally:
             self.df = df
