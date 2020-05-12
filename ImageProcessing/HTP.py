@@ -65,7 +65,7 @@ class ParseProject():
         for _,row in pbar:
             sm, d, hms = row['sm'], row['date'], row['time']
             results = row['fnpath'].glob('Vis_SV_%s'%angle) if angle else row['fnpath'].glob('Vis_*')
-            pbar.set_description('extracting %s %s %s'%(sm, d, hms))
+            pbar.set_description('extracting %s %s %s...'%(sm, d, hms))
             yield sm, d, hms, results
             
 def main():
@@ -120,7 +120,7 @@ def ExtractRGBs(args):
     project_folder, = args
 
     out_dir = Path(opts.out_dir)
-    if not out_dir.exists:
+    if not out_dir.exists():
         print('%s does not exist, creating..'%out_dir)
         out_dir.mkdir()
 
@@ -128,10 +128,10 @@ def ExtractRGBs(args):
     opts.dates = opts.dates.split(',') if opts.dates else opts.dates
 
     prj = ParseProject(project_folder)
-    sm, d, hms, RGBs = prj.RGB(samples=opts.samples, dates=opts.dates, angle=opts.angle)
-    for rgb in RGBs:
-        out_fn = '%s_%s_%s_%s.png'%(sm, d, hms, rgb.name)
-        copyfile(rgb, out_dir/out_fn)
+    for sm, d, hms, RGBs in prj.RGB(samples=opts.samples, dates=opts.dates, angle=opts.angle):
+        for rgb in RGBs:
+            out_fn = '%s_%s_%s_%s.png'%(sm, d, hms, rgb.name)
+            copyfile(rgb/'0_0_0.png', out_dir/out_fn)
         
 if __name__ == '__main__':
     main()
