@@ -17,6 +17,8 @@ from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 def main():
     actions = (
+        ('Resize', 'resize images'),
+        ('BatchResize', 'apply Resize on large number of images on HPC'),
         ('CropFrame', 'crop borders'),
         ('BatchCropFrame', 'apply CropBorder on large number of images on HPC'),
         ('CropObject', 'crop based on object box'),
@@ -41,7 +43,16 @@ class ProsImage():
         self.h_w_c = self.array.shape
 
     def crop(self, crp_dim):
+        '''
+        crop_dim: (left,upper,right,lower)
+        '''
         return self.PIL_img.crop(crp_dim)
+
+    def resize(self, resize_dim):
+        '''
+        resize_dim: (width,height)
+        '''
+        return self.PIL_img.resize(resize_dim)
     
     def binary_thresh(self, method='green_channel'):
         if method == 'green_channel':
@@ -70,6 +81,60 @@ class ProsImage():
         # view the hull image
         #plant part: 2, non-hull part: 0 (False) (black), hull-part excluding plant: 1 (True) gray
         chull_diff = np.where(thresh_ivt == 255, 2, chull)
+
+def Resize(args):
+    '''
+    %prog Resize img1 img2 img3 ...
+
+    resize image using PIL. 
+    If multiple images are provided, same resizing dimension will be applied on all of them
+    '''
+    p = OptionParser(Resize.__doc__)
+    p.add_option('--output_dim', default = '1227,1028',
+        help = 'the dimension (width,height) after resizing')
+    p.add_option('--out_dir', default='.',
+        help = 'specify the output image directory')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    
+    dim = ([int(i) for i in opts.output_dim.split(',')])
+    for img_fn in args:
+        img_out_fn = Path(img_fn).name.replace('.png', '.Rsz.png')
+        img = ProsImage(img_fn)
+        img.resize(dim).save(Path(opts.out_dir)/img_out_fn, 'PNG')
+
+def BatchResize(args):
+    '''
+    %prog in_dir out_dir
+
+    apply BatchResize on a large number of images
+    '''
+    p = OptionParser(BatchResize.__doc__)
+    p.add_option('--pattern', default='*.png',
+                 help="file pattern of png files under the 'dir_in'")
+    p.add_option('--output_dim', default = '1227,1028',
+        help = 'the dimension (width,height) after resizing')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='do not convert commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=BatchResize.__name__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir, = args
+    in_dir_path = Path(in_dir)
+    pngs = in_dir_path.glob(opts.pattern)
+    cmds = []
+    for img_fn in pngs:
+        img_fn = str(img_fn).replace(' ', '\ ')
+        cmd = 'python -m schnablelab.ImageProcessing.base Resize %s --output_dim %s --out_dir %s'%(img_fn, opts.output_dim, out_dir)
+        cmds.append(cmd)
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print('check %s for all the commands!'%cmd_sh)
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm(cmds, put2slurm_dict)
 
 def CropObject(args):
     '''
@@ -136,7 +201,6 @@ def BatchCropObject(args):
     if not opts.disable_slurm:
         put2slurm_dict = vars(opts)
         put2slurm(cmds, put2slurm_dict)
-
 
 def CropFrame(args):
     '''
