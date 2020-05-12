@@ -13,19 +13,19 @@ from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 class ParseProject():
     def __init__(self, prj_dir_name):
-        self.prj_dir_name = prj_dir_name
+        self.prj_dir_path = Path(prj_dir_name)
         try:
-            df = pd.read_csv('%s.idx.csv'%prj_dir_name)
+            df = pd.read_csv('%s.idx.csv'%self.prj_dir_path)
             df['fnpath'] = df['fnpath'].apply(lambda x: Path(x))
         except FileNotFoundError:
             print('project index file does not exist, creating one...')
-            df = GenDataFrameFromPath(Path(prj_dir_name), pattern='*')
+            df = GenDataFrameFromPath(self.prj_dir_path, pattern='*')
             df = df[df['fnpath'].apply(lambda x: x.is_dir())]
             df['sm'] = df['fn'].apply(lambda x: x.split('_')[1])
             df['date'] = df['fn'].apply(lambda x: x.split('_')[2])
             df['time'] = df['fn'].apply(lambda x: x.split('_')[3])
             df = df.sort_values(['sm', 'date', 'time']).reset_index(drop=True)
-            df.to_csv('%s.idx.csv'%prj_dir_name, index=False)
+            df.to_csv('%s.idx.csv'%self.prj_dir_path, index=False)
         finally:
             self.df = df
         self.sm_counts = self.df['sm'].value_counts().sort_index()
