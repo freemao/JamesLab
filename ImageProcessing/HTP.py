@@ -40,7 +40,7 @@ class ParseProject():
         for sm in samples:
             if not sm in self.SMs:
                 sys.exit('%s not in the sample list'%sm)
-        print(samples)
+        #print(samples)
         cond = self.df['sm'].isin(samples)
         return cond
     
@@ -51,7 +51,7 @@ class ParseProject():
         for date in dates:
             if not date in self.Dates:
                 sys.exit('%s not in the date list'%date)
-        print(dates)
+        #print(dates)
         cond = self.df['date'].isin(dates)
         return cond
 
@@ -64,7 +64,7 @@ class ParseProject():
             df = self.df[self.Subsamples(samples) & self.Subdates(dates)]
         else:
             df = self.df.copy()
-        print(df[['sm', 'date']])
+        #print(df[['sm', 'date', 'time']])
         pbar = tqdm(df.iterrows(), total=df.shape[0])
         for _,row in pbar:
             sm, d, hms = row['sm'], row['date'], row['time']
