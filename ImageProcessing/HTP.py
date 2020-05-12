@@ -96,7 +96,7 @@ def ExtractRGBs(args):
     prj = ParseProject(project_folder)
     RGBs = prj.RGB(samples=opts.samples, dates=opts.dates, angle=opts.angle)
     for rgb in RGBs:
-        print(rgb)
+        print(list(rgb))
 
 if __name__ == '__main__':
     main()
