@@ -25,8 +25,8 @@ class ParseProject():
             self.df = df
         self.sm_counts = self.df['sm'].value_counts().sort_index()
         self.date_counts = self.df['date'].value_counts().sort_index()
-        self.SMs = self.df['sm'].unique().values
-        self.Dates = self.df['date'].unique().values
+        self.SMs = self.df['sm'].unique()
+        self.Dates = self.df['date'].unique()
     
     def Subsamples(self, samples):
         '''
