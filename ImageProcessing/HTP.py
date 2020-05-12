@@ -50,7 +50,7 @@ class ParseProject():
 
     def RGB(self, samples=None, dates=None, angle=None):
         if samples and not dates:
-            df = self.df[self.Subsampels]
+            df = self.df[self.Subsamples]
         elif not samples and dates:
             df = self.df[self.Subdates]
         elif samples and dates:
@@ -58,7 +58,8 @@ class ParseProject():
         else:
             df = self.df.copy()
         for fnpath in df['fnpath']:
-            yield fnpath.glob('Vis_SV_%s'%angle) if angle else fnpath.glob('Vis_*')
+            results = fnpath.glob('Vis_SV_%s'%angle) if angle else fnpath.glob('Vis_*')
+            yield results
             
 def main():
     actions = (
