@@ -71,10 +71,41 @@ class ParseProject():
 def main():
     actions = (
         ('ExtractRGBs', 'extract images from project folder'),
-        ('Info', 'data information under the project folder'),
+        ('Info', 'summary of image data under the project folder'),
+        ('List', 'list specified image folders'),
+
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def List(args):
+    '''
+    %prog List project_folder
+    
+    list specified image folders
+    '''
+    p = OptionParser(List.__doc__)
+    p.add_option('--samples',
+        help = 'specify samples (comma separated without space)')
+    p.add_option('--dates',
+        help = 'specify dates (comma separated without space)')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    project_folder, = args
+
+    prj = ParseProject(project_folder)
+    if opts.samples and not opts.dates:
+        samples = opts.samples.split(',')
+        cond = prj.Subsamples(samples)
+    elif not opts.samples and opts.dates:
+        dates = opts.dates.split(',')
+        cond = prj.Subdates(dates)
+    elif not opts.samples and not opts.dates:
+        print('Specify either samples or dates for showing!')
+    else:
+        print('provide either samples or dates for showing')
+    print(prj.df[cond])
 
 def Info(args):
     '''
