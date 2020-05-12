@@ -73,7 +73,7 @@ def ExtractRGBs(args):
 
     extract RGB images from project folder
     '''
-    p = OptionParser(ExtractRGB.__doc__)
+    p = OptionParser(ExtractRGBs.__doc__)
     p.add_option('--out_dir', default='.',
         help = 'specify the output image directory')
     p.add_option('--samples',
