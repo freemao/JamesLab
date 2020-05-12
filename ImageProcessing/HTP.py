@@ -61,7 +61,7 @@ class ParseProject():
             df = self.df[self.Subsamples(samples) & self.Subdates(dates)]
         else:
             df = self.df.copy()
-        pbar = tqdm(df.itterows(), total=df.shape[0])
+        pbar = tqdm(df.iterrows(), total=df.shape[0])
         for _,row in pbar:
             sm, d, hms = row['sm'], row['date'], row['time']
             results = row['fnpath'].glob('Vis_SV_%s'%angle) if angle else row['fnpath'].glob('Vis_*')
