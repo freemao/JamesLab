@@ -14,6 +14,7 @@ class ParseProject():
         self.prj_dir_name = prj_dir_name
         try:
             df = pd.read_csv('%s.idx.csv'%prj_dir_name)
+            df['fnpath'] = df['fnpath'].apply(lambda x: Path(x))
         except FileNotFoundError:
             print('project index file does not exist, creating one...')
             df = GenDataFrameFromPath(Path(prj_dir_name), pattern='*')
@@ -50,13 +51,14 @@ class ParseProject():
 
     def RGB(self, samples=None, dates=None, angle=None):
         if samples and not dates:
-            df = self.df[self.Subsamples]
+            df = self.df[self.Subsamples(samples)]
         elif not samples and dates:
-            df = self.df[self.Subdates]
+            df = self.df[self.Subdates(dates)]
         elif samples and dates:
-            df = self.df[self.Subsamples & self.Subdates]
+            df = self.df[self.Subsamples(samples) & self.Subdates(dates)]
         else:
             df = self.df.copy()
+        
         for fnpath in df['fnpath']:
             results = fnpath.glob('Vis_SV_%s'%angle) if angle else fnpath.glob('Vis_*')
             yield results
