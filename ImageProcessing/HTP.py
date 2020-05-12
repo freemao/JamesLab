@@ -62,14 +62,14 @@ class ParseProject():
             
 def main():
     actions = (
-        ('ExtractRGB', 'extract images from project folder'),
+        ('ExtractRGBs', 'extract images from project folder'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
-def ExtractRGB(args):
+def ExtractRGBs(args):
     '''
-    %prog ExtractRGB project_folder
+    %prog ExtractRGBs project_folder
 
     extract RGB images from project folder
     '''
@@ -83,9 +83,10 @@ def ExtractRGB(args):
     p.add_option('--angle',
         help = 'RBG viewing angle')
     opts, args = p.parse_args(args)
-    project_folder, = args
+    
     if len(args) == 0:
         sys.exit(not p.print_help())
+    project_folder, = args
     opts.samples = opts.samples.split(',') if opts.samples else opts.samples
     opts.dates = opts.dates.split(',') if opts.dates else opts.dates
 
