@@ -2,12 +2,16 @@
 schnablelab CLI tool
 Calls Zookeeper class
 '''
-
-from schnablelab.apps.base import ActionDispatcher, OptionParser
 import sys
+import math
+from pandas as pd
+from shutil import copyfile
+from schnablelab.apps.Tools import GenDataFrameFromPath
+from schnablelab.apps.base import ActionDispatcher, OptionParser, cutlist
 
 def main():
     actions = (
+        ('divide', 'divide a large number of images to sevearl smaller sets'),
         ('upload', 'load images to zooniverse'),
         ('export', 'Get annotation and other exports'),
         ('manifest', 'Generate a manifest for zooniverse subject set upload')
@@ -15,6 +19,29 @@ def main():
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
+def divide(args):
+    '''
+    %prog divide input_dir output_dir_prefix
+    '''
+    p = OptionParser(divide.__doc__)
+    p.add_option('--nimgs_per_folder', type='int', default=900,
+                 help='~ number of images in each smaller folder.')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    input_dir, out_prefix, args
+
+    df = GenDataFrameFromPath(Path(input_dir), pattern='*.png')
+    n_folders = math.ceil(df.shape[0]/opts.nimgs_per_folder)
+    n = 0
+    for _, grp in cutlist(df['fnpath'].values, n_folders):
+        n += 1
+        output_folder = Path('%s_'%(out_prefix,n))
+        print(output_folder)
+        if not output_folder.exists():
+            output_folder.mkdir()
+        for i in grp:
+            copyfile(i, out_dir/i.name)
 
 def upload(args):
     '''
