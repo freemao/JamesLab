@@ -62,7 +62,7 @@ class ParseProject():
             
 def main():
     actions = (
-        ('ExtractImage', 'extract images from project folder'),
+        ('ExtractRGB', 'extract images from project folder'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
