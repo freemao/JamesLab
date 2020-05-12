@@ -20,6 +20,7 @@ class ParseProject():
         except FileNotFoundError:
             print('project index file does not exist, creating one...')
             df = GenDataFrameFromPath(Path(prj_dir_name), pattern='*')
+            df = df[df['fnpath'].apply(lambda x: x.is_dir())]
             df['sm'] = df['fn'].apply(lambda x: x.split('_')[1])
             df['date'] = df['fn'].apply(lambda x: x.split('_')[2])
             df['time'] = df['fn'].apply(lambda x: x.split('_')[3])
