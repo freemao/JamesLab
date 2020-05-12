@@ -5,6 +5,7 @@ class and functions to deal with high throughput phenotyping data
 """
 import sys
 import pandas as pd
+from tqdm import tqdm
 from pathlib import Path
 from shutil import copyfile
 from schnablelab.apps.Tools import GenDataFrameFromPath
