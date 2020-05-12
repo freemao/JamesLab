@@ -117,6 +117,12 @@ def ExtractRGBs(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     project_folder, = args
+
+    out_dir = Path(opts.out_dir)
+    if not out_dir.exists:
+        print('%s does not exist, creating..'%out_dir)
+        out_dir.mkdir()
+
     opts.samples = opts.samples.split(',') if opts.samples else opts.samples
     opts.dates = opts.dates.split(',') if opts.dates else opts.dates
 
@@ -124,7 +130,7 @@ def ExtractRGBs(args):
     sm, d, hms, RGBs = prj.RGB(samples=opts.samples, dates=opts.dates, angle=opts.angle)
     for rgb in RGBs:
         out_fn = '%s_%s_%s_%s.png'%(sm, d, hms, rgb.name)
-        copyfile(rgb, Path(opts.out_dir)/out_fn)
+        copyfile(rgb, out_dir/out_fn)
         
 if __name__ == '__main__':
     main()
