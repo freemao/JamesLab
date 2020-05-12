@@ -105,7 +105,7 @@ def List(args):
         print('Specify either samples or dates for showing!')
     else:
         print('provide either samples or dates for showing')
-    print(prj.df[cond])
+    print(prj.df[cond][['fn', 'sm', 'date', 'time']])
 
 def Info(args):
     '''
@@ -122,9 +122,9 @@ def Info(args):
 
     prj = ParseProject(project_folder)
     print('Summary of samples:')
-    print(prj.sm_counts)
+    print(prj.sm_counts, '\n')
     print('Summary of dates:')
-    print(prj.date_counts)
+    print(prj.date_counts, '\n')
     print('Angles for RGB images:')
     for angle in prj.df.loc[0,'fnpath'].glob('Vis_*'):
         print(angle.name)
