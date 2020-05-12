@@ -93,3 +93,6 @@ def ExtractRGB(args):
     RGBs = prj.RGB(samples=opts.samples, dates=opts.dates, angle=opts.angle)
     for rgb in RGBs:
         print(rgb)
+
+if __name__ == '__main__':
+    main()
