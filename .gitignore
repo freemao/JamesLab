@@ -12,4 +12,4 @@
 *.log
 *.out
 **.nfs*
-**/imputation/tests
+**/tests
