@@ -4,13 +4,15 @@ Calls Zookeeper class
 '''
 import sys
 import math
-from pandas as pd
+import pandas as pd
+from pathlib import Path
 from shutil import copyfile
 from schnablelab.apps.Tools import GenDataFrameFromPath
 from schnablelab.apps.base import ActionDispatcher, OptionParser, cutlist
 
 def main():
     actions = (
+        ('toy', 'random pick up some images for testing purporse'),
         ('divide', 'divide a large number of images to sevearl smaller sets'),
         ('upload', 'load images to zooniverse'),
         ('export', 'Get annotation and other exports'),
@@ -19,29 +21,51 @@ def main():
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
+def toy(args):
+    '''
+    %prog toy input_dir output_dir n_toy_imgs
+
+    randomly pick up n toy images from input_dir and put to out_put_dir
+    '''
+    p = OptionParser(toy.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    input_dir, output_dir, n, = args
+    output_dir = Path(output_dir)
+    if not output_dir.exists():
+        output_dir.mkdir()
+    df = GenDataFrameFromPath(Path(input_dir), pattern='*.png')
+    for i in df['fnpath'].sample(int(n)):
+        fn = i.name
+        print(fn)
+        copyfile(i, output_dir/fn)
+    print('Done! Check images in %s.'%output_dir)
+
 def divide(args):
     '''
     %prog divide input_dir output_dir_prefix
     '''
     p = OptionParser(divide.__doc__)
-    p.add_option('--nimgs_per_folder', type='int', default=900,
-                 help='~ number of images in each smaller folder.')
+    p.add_option('--nimgs_per_folder', type='int', default=700,
+                 help='~ number of images (<1000) in each smaller folder')
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    input_dir, out_prefix, args
+    input_dir, out_prefix, = args
 
     df = GenDataFrameFromPath(Path(input_dir), pattern='*.png')
     n_folders = math.ceil(df.shape[0]/opts.nimgs_per_folder)
+    print('%s will be divided to %s datasets'%(df.shape[0], n_folders))
     n = 0
     for _, grp in cutlist(df['fnpath'].values, n_folders):
         n += 1
-        output_folder = Path('%s_'%(out_prefix,n))
-        print(output_folder)
+        output_folder = Path('%s_%s'%(out_prefix,n))
+        print(output_folder, grp.shape[0])
         if not output_folder.exists():
             output_folder.mkdir()
         for i in grp:
-            copyfile(i, out_dir/i.name)
+            copyfile(i, output_folder/i.name)
 
 def upload(args):
     '''
