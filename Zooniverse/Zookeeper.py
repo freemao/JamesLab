@@ -70,7 +70,7 @@ def divide(args):
 
 def upload(args):
     '''
-    %prog upload imgdir projid
+    %prog upload imgdir projid dataset_name
 
     - imgdir: Path to directory of the images to be uploaded
     - projid: Zooniverse project id (4 - 5 digit number)
@@ -103,7 +103,7 @@ def upload(args):
         p.print_help()
         exit(False)
 
-    imgdir, projid = args
+    imgdir, projid, dataset_name, = args
     user_info = dict()
     try:
         un = os.environ['ZOO_UN']
@@ -115,7 +115,7 @@ def upload(args):
         user_info['un'] = un
         user_info['pw'] = pw
 
-    load(imgdir, projid, opts, **user_info)
+    load(imgdir, projid, dataset_name, opts, **user_info)
 
     return True
 

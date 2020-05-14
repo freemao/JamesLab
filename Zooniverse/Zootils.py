@@ -25,7 +25,7 @@ log.info('### EXECUTION TIME: %s ###'%(dt.now().isoformat()))
 log.addHandler(logging.StreamHandler())
 
                
-def upload(imgdir, projid, opts, **kwargs):
+def upload(imgdir, projid, dataset_name, opts, **kwargs):
     '''
     %prog upload imgdir zoo_proj_id
     Does:
@@ -72,9 +72,9 @@ def upload(imgdir, projid, opts, **kwargs):
         subject_set.links.project = project
 
         while(True):
-            name = input("Enter subject set display name: ")
+            #name = input("Enter subject set display name: ")
             try:
-                subject_set.display_name = name
+                subject_set.display_name = dataset_name
                 subject_set.save()
             except PanoptesAPIException as e:
                 log.error("Could not set subject set display name")
