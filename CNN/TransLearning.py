@@ -77,8 +77,6 @@ def regression(args):
 
     # initialize the pre-trained model
     model, input_size = initialize_model(model_name=opts.pretrained_mn)
-    if device == 'cuda:0':
-        model.cuda()
     logging.debug(model)
 
     feature_extract = True if opts.tl_type == 'feature_extract' else False
