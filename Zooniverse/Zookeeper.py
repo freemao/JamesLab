@@ -99,7 +99,7 @@ def upload(args):
 
     opts, args = p.parse_args(args)
 
-    if len(args) != 2:
+    if len(args) != 3:
         p.print_help()
         exit(False)
 
