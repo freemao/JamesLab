@@ -65,6 +65,9 @@ def regression(args):
     train_csv, train_dir, valid_csv, valid_dir, model_name_prefix = args
     logging.basicConfig(filename=opts.logfile, level=logging.DEBUG, format="%(asctime)s:%(levelname)s:%(message)s")
 
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    logging.debug('device: %s'%device)
+
     # prepare training and validation data
     train_dataset = LeafcountingDataset(train_csv, train_dir, image_transforms['train'])
     valid_dataset = LeafcountingDataset(valid_csv, valid_dir, image_transforms['valid'])
@@ -74,10 +77,9 @@ def regression(args):
 
     # initialize the pre-trained model
     model, input_size = initialize_model(model_name=opts.pretrained_mn)
+    if device == 'cuda:0':
+        model.cuda()
     logging.debug(model)
-
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    logging.debug('device: %s'%device)
 
     feature_extract = True if opts.tl_type == 'feature_extract' else False
 
@@ -143,6 +145,8 @@ def prediction(args):
         sys.exit(not p.print_help())
     saved_model, test_csv, test_dir, output = args
 
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     if opts.pretrained_mn:
         model, input_size = initialize_model(model_name=opts.pretrained_mn)
         # turn all gradients off
@@ -151,7 +155,7 @@ def prediction(args):
     else:
         sys.exit('not implemented yet...')
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    
     model.load_state_dict(torch.load(saved_model, map_location=device))
     model.eval()
 
