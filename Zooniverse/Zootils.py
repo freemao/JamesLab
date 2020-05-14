@@ -54,7 +54,7 @@ def upload(imgdir, projid, opts, **kwargs):
         return False
 
     try:
-        project = utils.connect(projid)
+        project = utils.connect(projid, **kwargs)
     except PanoptesAPIException:
         return False
 
@@ -253,7 +253,7 @@ def export(projid, outfile, opts):
         None
     '''
 
-    project = utils.connect(projid)
+    project = utils.connect(projid, **kwargs)
 
     try:
         log.info("Getting export, this may take a lot of time.")

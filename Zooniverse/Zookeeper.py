@@ -2,6 +2,7 @@
 schnablelab CLI tool
 Calls Zookeeper class
 '''
+import os
 import sys
 import math
 import pandas as pd
@@ -28,7 +29,7 @@ def toy(args):
     randomly pick up n toy images from input_dir and put to out_put_dir
     '''
     p = OptionParser(toy.__doc__)
-    opts, args = p.parse_args(args)
+    _, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
     input_dir, output_dir, n, = args
@@ -103,8 +104,18 @@ def upload(args):
         exit(False)
 
     imgdir, projid = args
+    user_info = dict()
+    try:
+        un = os.environ['ZOO_UN']
+        pw = os.environ['ZOO_PW']
+    except KeyError:
+        print("ZOO_UN and ZOO_PW variables were not defined!")
+    else:
+        print('ZOO_UN and ZOO_PW variables were detected!')
+        user_info['un'] = un
+        user_info['pw'] = pw
 
-    load(imgdir, projid, opts)
+    load(imgdir, projid, opts, **user_info)
 
     return True
 
