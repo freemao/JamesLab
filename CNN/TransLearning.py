@@ -92,6 +92,7 @@ def regression(args):
     else:
         for name, param in model.named_parameters():
             if param.requires_grad == True:
+                pass
                 #logging.debug("\t%s"%name)
     # optimizer
     sgd_optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
