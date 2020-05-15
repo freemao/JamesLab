@@ -67,6 +67,8 @@ def regression(args):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     logging.debug('device: %s'%device)
+    logging.debug('pytorch version: %s'%torch.__version__)
+    logging.debug('cuda version: %s'%torch.version.cuda)
 
     # prepare training and validation data
     train_dataset = LeafcountingDataset(train_csv, train_dir, image_transforms['train'])

@@ -144,8 +144,7 @@ image_transforms = {
 
 def train_model_regression(model, dataloaders, criterion, optimizer, model_name_prefix, patience=10, num_epochs=10, is_inception=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    if device == 'cuda:0':
-        model.cuda()
+    model.to(device)
     valid_loss_history = []
     train_loss_history = []
     
