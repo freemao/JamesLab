@@ -84,17 +84,18 @@ def regression(args):
     feature_extract = True if opts.tl_type == 'feature_extract' else False
 
     params_to_update = model.parameters()
-    logging.debug("Params to learn:")
+    #logging.debug("Params to learn:")
     if feature_extract:
         params_to_update = []
         for name, param in model.named_parameters():
             if param.requires_grad == True:
                 params_to_update.append(param)
-                logging.debug("\t%s"%name)
+                #logging.debug("\t%s"%name)
     else:
         for name, param in model.named_parameters():
             if param.requires_grad == True:
-                logging.debug("\t%s"%name)
+                pass
+                #logging.debug("\t%s"%name)
     # optimizer
     sgd_optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
     # loss
