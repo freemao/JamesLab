@@ -127,7 +127,8 @@ def BatchResize(args):
     cmds = []
     for img_fn in pngs:
         img_fn = str(img_fn).replace(' ', '\ ')
-        cmd = 'python -m schnablelab.ImageProcessing.base Resize %s --output_dim %s --out_dir %s'%(img_fn, opts.output_dim, out_dir)
+        cmd = "python -m schnablelab.ImageProcessing.base Resize "\
+        f"{img_fn} --output_dim {opts.output_dim} --out_dir {out_dir}"
         cmds.append(cmd)
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
     pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
@@ -193,7 +194,8 @@ def BatchCropObject(args):
     cmds = []
     for img_fn in pngs:
         img_fn = str(img_fn).replace(' ', '\ ')
-        cmd = 'python -m schnablelab.ImageProcessing.base CropObject %s --out_dir %s --pad %s'%(img_fn, out_dir, opts.pad)
+        cmd = "python -m schnablelab.ImageProcessing.base CropObject "\
+            f"{img_fn} --out_dir {out_dir} --pad {opts.pad}"
         cmds.append(cmd)
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
     pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
@@ -211,7 +213,8 @@ def CropFrame(args):
     '''
     p = OptionParser(CropFrame.__doc__)
     p.add_option('--crop_dim', default = '410,0,2300,1675',
-        help = 'the dimension (left,upper,right,lower) after cropping')
+        help = 'the dimension (left,upper,right,lower) after cropping. '\
+            'using (849,200,1800,1645) for corn images under zoom level 2 ')
     p.add_option('--out_dir', default='.',
         help = 'specify the output image directory')
     opts, args = p.parse_args(args)
@@ -247,7 +250,8 @@ def BatchCropFrame(args):
     cmds = []
     for img_fn in pngs:
         img_fn = str(img_fn).replace(' ', '\ ')
-        cmd = 'python -m schnablelab.ImageProcessing.base CropFrame %s --crop_dim %s --out_dir %s'%(img_fn, opts.crop_dim, out_dir)
+        cmd = "python -m schnablelab.ImageProcessing.base CropFrame "\
+            f"{img_fn} --crop_dim {opts.crop_dim} --out_dir {out_dir}"
         cmds.append(cmd)
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
     pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
