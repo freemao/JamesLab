@@ -3,7 +3,7 @@
 """
 Transfer learning for feature extracting or finetuning. 
 """
-from schnablelab.apps.base import OptionParser, ActionDispatcher
+from schnablelab.apps.base import OptionParser, ActionDispatcher, put2slurm
 from schnablelab.CNN.base import EarlyStopping, LeafcountingDataset, image_transforms, initialize_model, train_model_regression 
 import sys
 import time
@@ -54,16 +54,29 @@ def regression(args):
                     help='pretrained model name. Available pretrained models: vgg16, googlenet, resnet18, resnet152...')
     p.add_option('--tl_type', default='feature_extract', choices=('feature_extract', 'finetuning'),
                     help='transfer learning type')
-    p.add_option('--logfile', default='training.log',
-                    help = 'the file saving log')
-    p.add_option('--history', default='history_loss.csv',
-                    help = 'the file saving training and validation losses.')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='run directly without generating slurm job')
+    p.add_slurm_opts(job_prefix=regression.__name__)
 
     opts, args = p.parse_args(args)
     if len(args) != 5:
         sys.exit(not p.print_help())
     train_csv, train_dir, valid_csv, valid_dir, model_name_prefix = args
-    logging.basicConfig(filename=opts.logfile, level=logging.DEBUG, format="%(asctime)s:%(levelname)s:%(message)s")
+    # genearte slurm file
+    if not opts.disable_slurm:
+        cmd_header = 'ml singularity'
+        cmd = "singularity exec docker://unlhcc/pytorch:1.5.0 "\
+            "python3 -m schnablelab.CNN.TransLearning regression "\
+            f"{train_csv} {train_dir} {valid_csv} {valid_dir} {model_name_prefix} "\
+            f"--batchsize {opts.batchsize} --pretrained_mn {opts.pretrained_mn} --disable_slurm"
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm([cmd], put2slurm_dict)
+        sys.exit()
+
+    logfile = model_name_prefix + '.log'
+    histfile = model_name_prefix + '.hist.csv'
+    logging.basicConfig(filename=logfile, level=logging.DEBUG, format="%(asctime)s:%(levelname)s:%(message)s")
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     logging.debug('device: %s'%device)
@@ -115,7 +128,7 @@ def regression(args):
     # save training and validation loss.
     logging.debug('saving loss history...')
     df = pd.DataFrame(dict(zip(['training', 'validation'], [train_hist, valid_hist])))
-    df.to_csv(opts.history, index=False)
+    df.to_csv(histfile, index=False)
     
     # plot training and validation loss
     logging.debug('plot loss history...')
@@ -124,7 +137,7 @@ def regression(args):
     ax.set_xlabel('Epoch', fontsize=12)
     ax.set_ylabel('Loss', fontsize=12)
     plt.tight_layout()
-    plt.savefig('%s.png'%opts.history, dpi=200)
+    plt.savefig('%s.loss.png'%model_name_prefix, dpi=200)
 
 def prediction(args):
     """
@@ -140,11 +153,28 @@ def prediction(args):
                     help='batch size')
     p.add_option('--pretrained_mn', default=None,
                     help='specifiy pretrained model name if a pretrained model was used')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='run directly without generating slurm job')
+    p.add_slurm_opts(job_prefix=prediction.__name__)
 
     opts, args = p.parse_args(args)
     if len(args) != 4:
         sys.exit(not p.print_help())
     saved_model, test_csv, test_dir, output = args
+
+    # genearte slurm file
+    if not opts.disable_slurm:
+        cmd_header = 'ml singularity'
+        cmd = "singularity exec docker://unlhcc/pytorch:1.5.0 "\
+            "python3 -m schnablelab.CNN.TransLearning prediction "\
+            f"{saved_model} {test_csv} {test_dir} {output} "\
+            f"--batchsize {opts.batchsize} --disable_slurm "
+        if opts.pretrained_mn:
+         cmd += f"--pretrained_mn {opts.pretrained_mn}"
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm([cmd], put2slurm_dict)
+        sys.exit()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -156,7 +186,6 @@ def prediction(args):
     else:
         sys.exit('not implemented yet...')
 
-    
     model.load_state_dict(torch.load(saved_model, map_location=device))
     model.eval()
 

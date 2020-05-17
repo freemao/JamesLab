@@ -27,7 +27,7 @@ def main():
         ('hmp2ped', 'convert hmp file to plink map and ped file'),
         ('ped2bed', 'convert plink ped format to binary bed format'),
         ('IndePvalue', 'estimate the number of independent SNPs using GEC'),
-        ('HmpSingle2Double', 'convert single hmp to double type hmp'),
+        ('hmpSingle2Double', 'convert single hmp to double type hmp'),
         ('Info', 'get basic info for a hmp file'),
         ('MAFs', 'calculate the MAF for all SNPs in hmp'),
         ('SortHmp', 'Sort hmp file based on chromosome order and position')
@@ -107,7 +107,6 @@ class ParseHmp():
         part1_cols = ['fam_id', 'indi_id', 'indi_id_father', 'indi_id_mother', 'sex', 'pheno']
         zeros = np.zeros(self.numSMs, dtype=int)
         df_ped_part1 = pd.DataFrame(dict(zip(part1_cols, [zeros, self.SMs, zeros, zeros, zeros, zeros])) )
-        
         df_hmp = df_hmp.iloc[:, 11:]
         if missing:
             df_hmp = df_hmp.replace('NN', '00')
@@ -455,7 +454,7 @@ def hmp2ped(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     inputhmp, = args
-    output_prefix = Path(inputhmp).name.rstrip('.hmp')
+    output_prefix = Path(inputhmp).name.split('.hmp')[0]
 
     hmp = ParseHmp(inputhmp)
     df_map, df_ped = hmp.AsMapPed(missing=False)
@@ -510,12 +509,12 @@ def IndePvalue(args):
         put2slurm_dict['memory'] = 20000
         put2slurm([cmd], put2slurm_dict)
 
-def HmpSingle2Double(args):
+def hmpSingle2Double(args):
     """
-    %prog HmpSingle2Double input_single_hmp 
+    %prog hmpSingle2Double input_single_hmp 
     convert single type hmp file to double type hmp file
     """
-    p = OptionParser(HmpSingle2Double.__doc__)
+    p = OptionParser(hmpSingle2Double.__doc__)
     _, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())

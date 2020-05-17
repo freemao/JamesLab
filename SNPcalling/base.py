@@ -151,7 +151,7 @@ def vcf2hmp(args):
     '''
     %prog vcf2hmp input_vcf
     convert file in vcf format to hmp format
-    can also try: 'run_pipeline.pl -Xms512m -Xmx10G -fork1 -vcf vcf_fn -export -exportType Hapmap'
+    can also try tassel: 'run_pipeline.pl -Xms512m -Xmx10G -fork1 -vcf vcf_fn -export -exportType Hapmap'
     '''
     p = OptionParser(vcf2hmp.__doc__)
     opts, args = p.parse_args(args)
@@ -166,7 +166,7 @@ def vcf2hmp(args):
         pbar = tqdm(vcf.ToHmp(), total=vcf.num_SNPs, desc='vcf 2 hmp', position=0)
         for i in pbar:
             f.write(i)
-            pbar.set_description('converting %s'%i.split()[2])
+            pbar.set_description('converting chromosome %s'%i.split()[2])
             #pbar.update(1)
     print('Done! check output %s...'%outputhmp)    
 

@@ -137,12 +137,12 @@ class OptionParser(OptionP):
                             help='prefix of job name and log file')
         group.add_option('--pu_type', default='cpu', choices=('cpu', 'gpu'),
                             help='PU type')
-        group.add_option('--partition', default='jclarke', choices=('jclarke', 'schnablelab'),
+        group.add_option('--partition', default='jclarke', choices=('jclarke', 'schnablelab', 'gpu'),
                             help = 'partition name')
         group.add_option('--ncpus_per_node', type='int', default=1,
                             help = 'number of cpus per node')
         group.add_option('--gpu_model',
-                            help = "gpu model (requires '--pu_type' is 'gpu')")
+                            help = "gpu model. 'gpu_k40', 'gpu_p100|gpu_v100' (requires '--pu_type' is 'gpu')")
         group.add_option('--ncmds_per_slurm', type='int', default=1,
                             help ='number of commands added to slurm')
         self.add_option_group(group)
@@ -268,14 +268,14 @@ def put2slurm(cmds, slurm_dict):
         cmds (list): list of all the commands
     kwargs:
         ncmds_per_slurm (int): number of commands for each slurm, default 1
-        partition: jclarke or schnablelab, default jclarke
+        partition: jclarke, schnablelab, gpu, default jclarke
         time: time in hour, default 120
         mem: memory in hour, default 10_000
         job_prefix: job name, default 'job'
         ncpus_per_node: numebr of CPUs requested in a node, default 1
         cmd_header: header command, ex: 'ml bcftools', default None
         gpu: if request a gpu, default False
-        gpu_model: request a specified gpu model, default None
+        gpu_model: request a specified gpu model, default None, 'gpu_k40', 'gpu_p100|gpu_v100'
     '''
     if len(cmds) < slurm_dict['ncmds_per_slurm']:
         sys.exit('# of commands per slurm > # of cmds !!!')
@@ -286,9 +286,9 @@ def put2slurm(cmds, slurm_dict):
         slurm_dict['jobname'] = jobname
         slurm_header = Slurm_header.format(**slurm_dict)
         if slurm_dict['pu_type']=='gpu':
-            slurm_header += '#SBATCH --gres=gpu:1\n'
+            slurm_header += '#SBATCH --gres=gpu\n'
             if slurm_dict['gpu_model']:
-                slurm_header += '#SBATCH --constraint=gpu_{gpu_model}\n'.format(gpu_model=slurm_dict['gpu_model'])
+                slurm_header += "#SBATCH --constraint='{gpu_model}'\n".format(gpu_model=slurm_dict['gpu_model'])
         slurm_header += '\n'
         if 'cmd_header' in slurm_dict:
             slurm_header += '%s\n'%slurm_dict['cmd_header']
