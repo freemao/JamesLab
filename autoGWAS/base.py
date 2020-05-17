@@ -29,8 +29,10 @@ def main():
         ('IndePvalue', 'estimate the number of independent SNPs using GEC'),
         ('hmpSingle2Double', 'convert single hmp to double type hmp'),
         ('Info', 'get basic info for a hmp file'),
-        ('MAFs', 'calculate the MAF for all SNPs in hmp'),
-        ('SortHmp', 'Sort hmp file based on chromosome order and position')
+        ('MAFs', 'calculate the MAF for all/specified SNPs in hmp'),
+        ('sortHmp', 'Sort hmp file based on chromosome order and position'),
+        ('reheader', 'edit sample names in header only'),
+
 )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
@@ -283,6 +285,39 @@ class ReadGWASfile():
         df_sigs = self.df[self.df['-log10Pvalue'] >= cutoff].reset_index(drop=True)
         return df_sigs
 
+def reheader(args):
+    """
+    %prog reheader input_hmp names.csv
+
+    substitute the sample names in hmp header using sed. 
+    name.csv:
+        comma separated without header line
+        1st column is old name
+        2nd column is the new name
+    """
+    p = OptionParser(reheader.__doc__)
+    _, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputhmp, names_csv, = args
+    outputhmp = Path(inputhmp).name.replace('.hmp', '_reheader.hmp')
+
+    hmp = ParseHmp(inputhmp)
+
+    cmd = 'sed '
+    for _, row in pd.read_csv(names_csv, header=None).iterrows():
+        old_nm, new_nm = row[0], row[1]
+        if old_nm not in hmp.SMs:
+            print('%s was not found in hmp...'%id)
+        else:
+            cmd += "-e '1s/%s/%s/' "%(old_nm, new_nm)
+    cmd += '%s > %s'%(inputhmp, outputhmp)
+    print('command:\n%s'%cmd)
+    choice = input("Run the above command? (yes/no) ")
+    if choice == 'yes':
+        call(cmd, shell=True)
+        print('Done! check %s'%outputhmp)
+
 def FilterMissing(args):
     """
     %prog FilterMissing input_hmp
@@ -409,7 +444,7 @@ def SubsamplingSMs(args):
     subsm = hmp.SMs_header
     for id in IDs:
         if id not in hmp.SMs:
-            print('%s not found in hmp...'%id)
+            print('%s was not found in hmp...'%id)
         else:
             subsm.append(id)
     print('%s out of %s found in Hmp'%(len(subsm)-11, num_IDs))
@@ -564,13 +599,13 @@ def MAFs(args):
             pbar.set_description('calculating %s'%i.split()[2])
     print('Done! check output %s...'%(outputcsv))
 
-def SortHmp(args):
+def sortHmp(args):
     """
-    %prog SortHmp input_hmp 
+    %prog sortHmp input_hmp 
     Sort hmp based on chromosome order and position. Can also try tassel:
      'run_pipeline.pl -Xms16g -Xmx18g -SortGenotypeFilePlugin -inputFile in_fn -outputFile out_fn -fileType Hapmap'
     """
-    p = OptionParser(SortHmp.__doc__)
+    p = OptionParser(sortHmp.__doc__)
     _, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())

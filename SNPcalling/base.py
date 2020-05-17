@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
+from subprocess import call
 from schnablelab.apps.base import ActionDispatcher, OptionParser
 
 def main():
@@ -19,7 +20,8 @@ def main():
         ('SubsamplingSMs', 'grep a subset of samples from a vcf file'),
         ('SummarizeLD', 'ld decay in log scale'),
         ('vcf2hmp', 'convert vcf to hmp foramt'),
-        ('Info', 'get basic information of a vcf file')
+        ('Info', 'get basic information of a vcf file'),
+        ('reheader', 'edit sample names in header only'),
             )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
@@ -146,6 +148,39 @@ class ParseVCF():
                 num_h = i.count('0/1')+ i.count('0|1')+i.count('1|0')
                 a1, a2 = num_a*2+num_h, num_b*2+num_h
                 yield  i, min(a1,a2)/(a1+a2)
+
+def reheader(args):
+    """
+    %prog reheader input_vcf names.csv
+
+    substitute the sample names in vcf header using sed. 
+    name.csv:
+        comma separated without header line
+        1st column is old name
+        2nd column is the new name
+    """
+    p = OptionParser(reheader.__doc__)
+    _, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    inputvcf, names_csv, = args
+    outputvcf = Path(inputvcf).name.replace('.vcf', '_reheader.vcf')
+
+    vcf = ParseVCF(inputvcf)
+
+    cmd = 'sed '
+    for _, row in pd.read_csv(names_csv, header=None).iterrows():
+        old_nm, new_nm = row[0], row[1]
+        if old_nm not in vcf.SMs:
+            print('%s was not found in vcf...'%id)
+        else:
+            cmd += "-e '%ss/%s/%s/' "%(vcf.numHash, old_nm, new_nm)
+    cmd += '%s > %s'%(inputvcf, outputvcf)
+    print('command:\n%s'%cmd)
+    choice = input("Run the above command? (yes/no) ")
+    if choice == 'yes':
+        call(cmd, shell=True)
+        print('Done! check %s'%outputvcf)
 
 def vcf2hmp(args):
     '''
