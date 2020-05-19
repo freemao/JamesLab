@@ -158,7 +158,8 @@ class ParseHmp():
         c = Counter(geno_list)
         return c[a], c[b], c[h1]+ c[h2]
 
-    def Missing(self):
+    @property
+    def Missings(self):
         '''
         yield (line, missing rate) for each line
         '''
@@ -169,7 +170,8 @@ class ParseHmp():
                 num_miss = c['NN']+c['N']
                 yield i, num_miss/self.numSMs
 
-    def MAF(self):
+    @property
+    def MAFs(self):
         '''
         yield (line, maf) for each line
         '''
@@ -212,7 +214,8 @@ class ParseHmp():
                         else:
                             yield i, maf 
 
-    def Hetero(self):
+    @property
+    def Heteros(self):
         '''
         yield (line, heterozgous rate) for each line
         '''
@@ -352,13 +355,13 @@ def FilterMissing(args):
     n = 0
     with open(outputhmp, 'w') as f:
         f.write(hmp.headerline)
-        pbar = tqdm(hmp.Missing(), total=hmp.numSNPs)
+        pbar = tqdm(hmp.Missings, total=hmp.numSNPs)
         for i, miss in pbar:
             if miss <= opts.missing_cutoff:
                 f.write(i)
             else: 
                 n +=1
-            pbar.set_description('processing %s'%i.split()[2])
+            pbar.set_description('processing chromosome %s'%i.split()[2])
     print('Done! %s SNPs removed! check output %s...'%(n, outputhmp))
 
 def FilterHetero(args):
@@ -379,13 +382,13 @@ def FilterHetero(args):
     n = 0
     with open(outputhmp, 'w') as f:
         f.write(hmp.headerline)
-        pbar = tqdm(hmp.Hetero(), total=hmp.numSNPs)
+        pbar = tqdm(hmp.Heteros, total=hmp.numSNPs)
         for i, het in pbar:
             if het <= opts.het_cutoff:
                 f.write(i)
             else:
                 n += 1
-            pbar.set_description('processing %s'%i.split()[2])
+            pbar.set_description('processing chromosome %s'%i.split()[2])
     print('Done! %s SNPs removed! check output %s...'%(n, outputhmp))
 
 def FilterMAF(args):
@@ -406,13 +409,13 @@ def FilterMAF(args):
     n = 0
     with open(outputhmp, 'w') as f:
         f.write(hmp.headerline)
-        pbar = tqdm(hmp.MAF(), total=hmp.numSNPs)
+        pbar = tqdm(hmp.MAFs, total=hmp.numSNPs)
         for i, maf in pbar:
             if maf >= opts.MAF_cutoff:
                 f.write(i)
             else:
                 n += 1
-            pbar.set_description('processing %s'%i.split()[2])
+            pbar.set_description('processing chromosome %s'%i.split()[2])
     print('Done! %s SNPs removed! check output %s...'%(n, outputhmp))
     
 def SubsamplingSNPs(args):
@@ -609,10 +612,10 @@ def MAFs(args):
     outputcsv = Path(inputhmp).name.replace('.hmp', '.maf.csv')
     hmp = ParseHmp(inputhmp)
     with open(outputcsv, 'w') as f:
-        pbar = tqdm(hmp.MAF(), total=hmp.numSNPs, desc='get MAF', position=0)
+        pbar = tqdm(hmp.MAFs, total=hmp.numSNPs, desc='get MAF', position=0)
         for i, maf in pbar:
             f.write('%s\n'%maf)
-            pbar.set_description('calculating %s'%i.split()[2])
+            pbar.set_description('calculating chromosome %s'%i.split()[2])
     print('Done! check output %s...'%(outputcsv))
 
 def sortHmp(args):

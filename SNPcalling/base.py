@@ -67,6 +67,7 @@ class ParseVCF():
         df = pd.read_csv(self.fn, skiprows=range(self.numHash-1), delim_whitespace=True)
         return df
     
+    @property
     def ToHmp(self):
         '''
         yield line in hmp format
@@ -108,7 +109,8 @@ class ParseVCF():
                 new_line = '\t'.join([rs, alleles, chr, pos, cen_NA, genos])+'\n'
                 yield new_line
 
-    def Missing(self):
+    @property
+    def Missings(self):
         '''
         yield missing rate for each line
         '''
@@ -127,7 +129,8 @@ class ParseVCF():
         num_h = c['0/1']+ c['1/0'] + c['0|1']+c['1|0']
         return num_a, num_b, num_h
 
-    def Hetero(self):
+    @property
+    def Heteros(self):
         '''
         yield (line, heterozygous rate) for each line
         '''
@@ -141,7 +144,8 @@ class ParseVCF():
                 else:
                     yield i, num_h/float(num_a + num_b + num_h)
 
-    def MAF(self):
+    @property
+    def MAFs(self):
         '''
         yield minor allele frequence for each line
         '''
@@ -202,7 +206,7 @@ def vcf2hmp(args):
     vcf = ParseVCF(inputvcf)
     with open(outputhmp, 'w') as f:
         f.write(vcf.hmpheader)
-        pbar = tqdm(vcf.ToHmp(), total=vcf.num_SNPs, desc='vcf 2 hmp', position=0)
+        pbar = tqdm(vcf.ToHmp, total=vcf.num_SNPs, desc='vcf 2 hmp', position=0)
         for i in pbar:
             f.write(i)
             pbar.set_description('converting chromosome %s'%i.split()[2])
@@ -227,13 +231,13 @@ def FilterMissing(args):
     n = 0
     with open(outputvcf, 'w') as f:
         f.writelines(vcf.HashChunk)
-        pbar = tqdm(vcf.Missing(), total=vcf.num_SNPs, desc='Filter Missing', position=0)
+        pbar = tqdm(vcf.Missings, total=vcf.num_SNPs, desc='Filter Missing', position=0)
         for i, miss in pbar:
             if miss <= opts.missing_cutoff:
                 f.write(i)
             else:
                 n += 1
-            pbar.set_description('processing %s'%i.split()[0])
+            pbar.set_description('processing chromosome %s'%i.split()[0])
     print('Done! %s SNPs removed! check output %s...'%(n, outputvcf))
 
 def FilterMAF(args):
@@ -254,13 +258,13 @@ def FilterMAF(args):
     n = 0
     with open(outputvcf, 'w') as f:
         f.writelines(vcf.HashChunk)
-        pbar = tqdm(vcf.MAF(), total=vcf.num_SNPs, desc='Filter MAF', position=0)
+        pbar = tqdm(vcf.MAFs, total=vcf.num_SNPs, desc='Filter MAF', position=0)
         for i, maf in pbar:
             if maf >= opts.maf_cutoff:
                 f.write(i)
             else:
                 n += 1
-            pbar.set_description('processing %s'%i.split()[0])
+            pbar.set_description('processing chromosome %s'%i.split()[0])
     print('Done! %s SNPs removed! check output %s...'%(n, outputvcf))
 
 def FilterHetero(args):
@@ -281,13 +285,13 @@ def FilterHetero(args):
     n = 0
     with open(outputvcf, 'w') as f:
         f.writelines(vcf.HashChunk)
-        pbar = tqdm(vcf.Hetero(), total=vcf.num_SNPs, desc='Filter Heterozygous', position=0)
+        pbar = tqdm(vcf.Heteros, total=vcf.num_SNPs, desc='Filter Heterozygous', position=0)
         for i, het in pbar:
             if het <= opts.het_cutoff:
                 f.write(i)
             else:
                 n += 1
-            pbar.set_description('processing %s'%i.split()[0])
+            pbar.set_description('processing chromosome %s'%i.split()[0])
     print('Done! %s SNPs removed! check output %s...'%(n, outputvcf))
     
 def SubsamplingSNPs(args):
