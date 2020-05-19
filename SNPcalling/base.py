@@ -9,6 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 from subprocess import call
+from collections import Counter
 from schnablelab.apps.base import ActionDispatcher, OptionParser
 
 def main():
@@ -76,7 +77,6 @@ class ParseVCF():
                 next(f)
             for i in f:
                 j = i.split()
-                
                 a1, a2 = j[3], j[4]
                 if len(a1) == len(a2) ==1:
                     a1a2 = ''.join([a1, a2])
@@ -119,6 +119,14 @@ class ParseVCF():
                 num_miss = i.count('./.')+i.count('.|.')
                 yield i, num_miss/self.numSMs
 
+    @staticmethod
+    def CountGenos(geno_ls):
+        c = Counter(geno_ls)
+        num_a = c['0/0']+c['0|0']
+        num_b = c['1/1']+ c['1|1']
+        num_h = c['0/1']+ c['1/0'] + c['0|1']+c['1|0']
+        return num_a, num_b, num_h
+
     def Hetero(self):
         '''
         yield (line, heterozygous rate) for each line
@@ -127,9 +135,7 @@ class ParseVCF():
             for _ in range(self.numHash):
                 next(f)
             for i in f:
-                num_a = i.count('0/0')+i.count('0|0')
-                num_b = i.count('1/1')+ i.count('1|1')
-                num_h = i.count('0/1')+ i.count('0|1')+i.count('1|0')
+                num_a, num_b, num_h = ParseVCF.CountGenos(i.split()[9:])
                 if num_h > max(num_a, num_b):
                     yield i, 1
                 else:
@@ -143,9 +149,7 @@ class ParseVCF():
             for _ in range(self.numHash):
                 next(f)
             for i in f:
-                num_a = i.count('0/0')+i.count('0|0')
-                num_b = i.count('1/1')+ i.count('1|1')
-                num_h = i.count('0/1')+ i.count('0|1')+i.count('1|0')
+                num_a, num_b, num_h = ParseVCF.CountGenos(i.split()[9:])
                 a1, a2 = num_a*2+num_h, num_b*2+num_h
                 yield  i, min(a1,a2)/(a1+a2)
 

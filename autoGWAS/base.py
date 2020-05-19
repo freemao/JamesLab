@@ -11,6 +11,7 @@ import os.path as op
 from tqdm import tqdm
 from pathlib import Path
 from subprocess import call
+from collections import Counter
 from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 plink = op.abspath(op.dirname(__file__)) + '/../apps/plink'
@@ -38,9 +39,16 @@ def main():
     p.dispatch(globals())
 
 # N:missing, -:gap
-geno_codification = {'A':'AA', 'C':'CC', 'G':'GG', 'T':'TT',
-    'R':'AG', 'Y':'CT', 'S':'GC', 'W':'AT', 'K':'GT', 'M':'AC',
+geno_one2two = {
+    'A':'AA', 'C':'CC', 'G':'GG', 'T':'TT',
+    'R':'AG', 'R':'GA', 
+    'Y':'CT', 'Y':'TC', 
+    'S':'GC', 'S':'CG', 
+    'W':'AT', 'W':'TA', 
+    'K':'GT', 'K':'TG', 
+    'M':'AC', 'M':'CA',
     'N':'NN', '-':'--'} 
+geno_two2one = {geno_one2two[i]:i for i in geno_one2two}
 
 def sortchr(x):
     '''
@@ -94,7 +102,7 @@ class ParseHmp():
         if self.type=='single':
             print('converting the single type to double type...')
             df_part1 = df.iloc[:, :11]
-            df_part2 = df.iloc[:, 11:].applymap(geno_codification.get).fillna('NN')
+            df_part2 = df.iloc[:, 11:].applymap(geno_one2two.get).fillna('NN')
             df = pd.concat([df_part1, df_part2], axis=1)
             self.type = 'double'
         return df
@@ -129,22 +137,37 @@ class ParseHmp():
     def BIMBAM(self):
         pass
     
+    @staticmethod
+    def ParseAllele_single(geno_list, a1, a2):
+        '''
+        geno_list: list of all genotypes
+        a1: allele1, string, single character
+        a2: allele2, string, single character
+        '''
+        h = geno_two2one[a1 + a2]
+        c = Counter(geno_list)
+        return  c[a1], c[a2], c[h]
+     
+    @staticmethod
+    def ParseAllele_double(geno_list, a1, a2):
+        '''
+        same as ParseAllele_single parameters
+        '''
+        a, b = a1*2, a2*2
+        h1, h2 = a1+a2, a2+a1
+        c = Counter(geno_list)
+        return c[a], c[b], c[h1]+ c[h2]
+
     def Missing(self):
         '''
         yield (line, missing rate) for each line
         '''
-        if self.type == 'double':
-            with open(self.fn) as f:
-                next(f)
-                for i in f:
-                    num_miss = i.split()[11:].count('NN')
-                    yield i, num_miss/self.numSMs
-        else:
-            with open(self.fn) as f:
-                next(f)
-                for i in f:
-                    num_miss = i.split()[11:].count('N')
-                    yield i, num_miss/self.numSMs
+        with open(self.fn) as f:
+            next(f)
+            for i in f:
+                c = Counter(i.split()[11:])
+                num_miss = c['NN']+c['N']
+                yield i, num_miss/self.numSMs
 
     def MAF(self):
         '''
@@ -161,8 +184,8 @@ class ParseHmp():
                     except ValueError:
                         yield i, 0
                     else:
-                        genos = ''.join(j[11:])
-                        a1, a2 = genos.count(allele1), genos.count(allele2)
+                        num_a, num_b, num_h = ParseHmp.ParseAllele_double(j[11:], allele1, allele2)
+                        a1, a2 = num_a*2+num_h, num_b*2+num_h
                         try:
                             maf = min(a1, a2)/(a1+a2)
                         except ZeroDivisionError:
@@ -172,7 +195,6 @@ class ParseHmp():
         else:
             with open(self.fn) as f:
                 next(f)
-                NN_ls = ['NN' for i in range(self.numSMs)]
                 for i in f:
                     j = i.split()
                     alleles = j[1].split('/')
@@ -181,10 +203,8 @@ class ParseHmp():
                     except ValueError:
                         yield i, 0
                     else:
-                        genos_single = j[11:]
-                        genos_double = list(map(geno_codification.get, genos_single, NN_ls))
-                        genos = ''.join(genos_double)
-                        a1, a2 = genos.count(allele1), genos.count(allele2)
+                        num_a, num_b, num_h = ParseHmp.ParseAllele_single(j[11:], allele1, allele2)
+                        a1, a2 = num_a*2+num_h, num_b*2+num_h
                         try:
                             maf = min(a1, a2)/(a1+a2)
                         except ZeroDivisionError:
@@ -201,37 +221,33 @@ class ParseHmp():
                 next(f)
                 for i in f:
                     j = i.split()
-                    genos = j[11:]
                     alleles = j[1].split('/')
-                    ab, ba = ''.join(alleles), ''.join(list(reversed(alleles)))
-                    aa, bb = list(map(lambda x: x*2, alleles))
-                    num_a = genos.count(aa)
-                    num_b = genos.count(bb)
-                    num_h = genos.count(ab)+genos.count(ba)
-                    if num_h > max(num_a, num_b):
+                    try:
+                        allele1, allele2 = alleles
+                    except ValueError:
                         yield i, 1
                     else:
-                        yield i, num_h/float(num_a + num_b + num_h)
+                        num_a, num_b, num_h = ParseHmp.ParseAllele_double(j[11:], allele1, allele2)
+                        if num_h > max(num_a, num_b):
+                            yield i, 1
+                        else:
+                            yield i, num_h/float(num_a + num_b + num_h)
         else:
             with open(self.fn) as f:
                 next(f)
                 for i in f:
                     j = i.split()
-                    genos = j[11:]
-                    genos = list(map(geno_codification.get, genos, genos))
-                    if None in genos:
-                            print(i)
-                            sys.exit('unkown character in hmp file')
                     alleles = j[1].split('/')
-                    ab, ba = ''.join(alleles), ''.join(list(reversed(alleles)))
-                    aa, bb = list(map(lambda x: x*2, alleles))
-                    num_a = genos.count(aa)
-                    num_b = genos.count(bb)
-                    num_h = genos.count(ab)+genos.count(ba)
-                    if num_h > max(num_a, num_b):
+                    try:
+                        allele1, allele2 = alleles
+                    except ValueError:
                         yield i, 1
                     else:
-                        yield i, num_h/float(num_a + num_b + num_h)
+                        num_a, num_b, num_h = ParseHmp.ParseAllele_single(j[11:], allele1, allele2)
+                        if num_h > max(num_a, num_b):
+                            yield i, 1
+                        else:
+                            yield i, num_h/float(num_a + num_b + num_h)
 
 class ReadGWASfile():
     
