@@ -61,8 +61,9 @@ def Manhattan(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     gwasfile, title = args
+    usecols = list(map(int, opts.usecols.split(','))) if opts.usecols else None
 
-    gwas0 = ReadGWASfile(gwasfile, opts.software, needsort=opts.sort)
+    gwas0 = ReadGWASfile(gwasfile, opts.software, needsort=opts.sort, usecols=usecols)
     df_plot = gwas0.df
     chr_pos_df = df_plot.groupby('chr').max()
     chr_lens = chr_pos_df['pos'].cumsum().tolist()[0:-1]
@@ -143,7 +144,9 @@ def UniquePeaks(args):
             opts.usecols = [int(i) for i in opts.usecols.split(',')]
             print('indics of columns to be read: %s'%opts.usecols)
 
-    gwas0 = ReadGWASfile(gwasfile, opts.software, needsort=opts.sort, usecols=opts.usecols)
+    usecols = list(map(int, opts.usecols.split(','))) if opts.usecols else None
+
+    gwas0 = ReadGWASfile(gwasfile, opts.software, usecols=usecols)
     df = gwas0.SignificantSNPs(p_cutoff=0.05, MeRatio=opts.MeRatio)
     print('number of significant SNPs: %s'%df.shape[0])
 
@@ -318,8 +321,10 @@ def SigSNPs(args):
         sys.exit(not p.print_help())
     gwasfile, output_fn, = args
 
-    gwas = ReadGWASfile(gwasfile, opts.software)
-    df_significant = gwas.SignificantSNPs(p_cutoff=0.05, MeRatio=opts.MeRatio)
+    usecols = list(map(int, opts.usecols.split(','))) if opts.usecols else None
+
+    gwas0 = ReadGWASfile(gwasfile, opts.software, usecols=usecols)
+    df_significant = gwas0.SignificantSNPs(p_cutoff=0.05, MeRatio=opts.MeRatio)
     if opts.chrom != 'all':
         df_significant = df_significant[df_significant['chr']==opts.chrom]
     df_significant.to_csv(output_fn, index=False, sep='\t')

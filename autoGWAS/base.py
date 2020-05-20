@@ -41,14 +41,14 @@ def main():
 # N:missing, -:gap
 geno_one2two = {
     'A':'AA', 'C':'CC', 'G':'GG', 'T':'TT',
-    'R':'AG', 'R':'GA', 
-    'Y':'CT', 'Y':'TC', 
-    'S':'GC', 'S':'CG', 
-    'W':'AT', 'W':'TA', 
-    'K':'GT', 'K':'TG', 
-    'M':'AC', 'M':'CA',
+    'R':'AG', 'Y':'CT', 'S':'GC', 'W':'AT', 'K':'GT', 'M':'AC',
     'N':'NN', '-':'--'} 
-geno_two2one = {geno_one2two[i]:i for i in geno_one2two}
+geno_two2one = {
+    'AA': 'A', 'CC': 'C', 'GG': 'G', 'TT': 'T',
+    'GA': 'R', 'AG': 'R', 'TC': 'Y', 'CT': 'Y',
+    'CG': 'S', 'GC': 'S', 'TA': 'W', 'AT': 'W',
+    'TG': 'K', 'GT': 'K', 'CA': 'M', 'AC': 'M',
+    'NN': 'N', '--': '-'}
 
 def sortchr(x):
     '''
@@ -80,20 +80,22 @@ class ParseHmp():
             type = 'single' if len(firstgeno)==1 else 'double'
             #print('guess hmp type: %s'%type)
             numSNPs = sum(1 for _ in f)
+            dtype_dict = {i:'str' for i in headerline.split()}
+            dtype_dict['pos'] = np.int64
         self.headerline = headerline
         self.SMs_header = SMs_header
         self.SMs = SMs
         self.numSMs = numSMs
         self.numSNPs = numSNPs+1
         self.type = type
+        self.dtype_dict = dtype_dict
         
     def AsDataframe(self, needsort=False):
         '''
         args:
             needsort: if hmp need to be sorted
         '''
-        df = pd.read_csv(self.fn, delim_whitespace=True)
-        df['chrom'] = df['chrom'].astype('str')
+        df = pd.read_csv(self.fn, delim_whitespace=True, dtype=self.dtype_dict)
         if needsort:
             chrs = list(df['chrom'].unique())
             chrs_ordered = sorted(chrs, key=sortchr)
@@ -101,9 +103,8 @@ class ParseHmp():
             df = df.sort_values(['chrom', 'pos']).reset_index(drop=True)
         if self.type=='single':
             print('converting the single type to double type...')
-            df_part1 = df.iloc[:, :11]
             df_part2 = df.iloc[:, 11:].applymap(geno_one2two.get).fillna('NN')
-            df = pd.concat([df_part1, df_part2], axis=1)
+            df = pd.concat([df.iloc[:, :11], df_part2], axis=1)
             self.type = 'double'
         return df
     
@@ -114,24 +115,20 @@ class ParseHmp():
         map_cols = ['chrom', 'rs#', 'centi', 'pos']
         df_map = df_map[map_cols]
 
-        part1_cols = ['fam_id', 'indi_id', 'indi_id_father', 'indi_id_mother', 'sex', 'pheno']
-        zeros = np.zeros(self.numSMs, dtype=int)
-        df_ped_part1 = pd.DataFrame(dict(zip(part1_cols, [zeros, self.SMs, zeros, zeros, zeros, zeros])) )
-        df_hmp = df_hmp.iloc[:, 11:]
         if missing:
             df_hmp = df_hmp.replace('NN', '00')
-        tmp_ss = []
-        pbar = tqdm(self.SMs)
-        for col in pbar:
-            col_a1, col_a2 = df_hmp[col].str.get(0), df_hmp[col].str.get(1)
-            col_a1.index = np.arange(0, df_hmp.shape[0]*2, 2)
-            col_a2.index = np.arange(1, df_hmp.shape[0]*2, 2)
-            tmp_s= pd.concat([col_a1, col_a2]).sort_index()
-            tmp_ss.append(tmp_s)
-            pbar.set_description('converting %s'%col)
-        df_ped_part2 = pd.DataFrame(tmp_ss).reset_index(drop=True)
 
-        df_ped = pd.concat([df_ped_part1, df_ped_part2], axis=1)
+        #part1_cols = ['fam_id', 'indi_id', 'indi_id_father', 'indi_id_mother', 'sex', 'pheno']
+        df_ped = np.zeros((self.numSMs, 6+self.numSNPs*2), dtype='str')
+        pbar = tqdm(self.SMs)
+        for idx, col in enumerate(pbar):
+            # this is much faster than df[col].apply(lambda x: pd.Series(list(x))).to_numpy().ravel()
+            col_a1, col_a2 = df_hmp[col].str[0].to_numpy(), df_hmp[col].str[1].to_numpy()
+            df_ped[idx, 6:] = np.column_stack((col_a1, col_a2)).ravel()
+            pbar.set_description('converting %s'%col)
+        df_ped = np.where(df_ped=='', 0, df_ped)
+        df_ped = pd.DataFrame(df_ped, dtype='str')
+        df_ped[1]=self.SMs
         return df_map, df_ped
     
     def BIMBAM(self):
@@ -260,7 +257,7 @@ class ReadGWASfile():
             filename: gwas result filename
             software: gwas software (gemma, farmcpu, mvp, gapit)
             needsort: if the gwas file need to be sorted
-            mvp_p_col: specify which pvlue column if multiple approaches used in MVP
+            usecols: specify which pvlue column if multiple approaches used in MVP
         '''
         self.fn = filename
         self.software = software
@@ -268,11 +265,14 @@ class ReadGWASfile():
         self.usecols = usecols
         
         if self.software == 'gemma':
-            df = pd.read_csv(self.fn, delim_whitespace=True, usecols=['chr', 'rs', 'ps', 'p_lrt'])
+            dtype_dict = {'chr':'str', 'rs':'str', 'ps':np.int64, 'p_lrt':np.float64}
+            df = pd.read_csv(self.fn, delim_whitespace=True, usecols=['chr', 'rs', 'ps', 'p_lrt'], dtype=dtype_dict)
             df = df[['rs', 'chr', 'ps', 'p_lrt']]
         elif self.software == 'farmcpu':
-            df = pd.read_csv(self.fn, usecols=['SNP', 'Chromosome', 'Position', 'P.value'])
+            dtype_dict = {'Chromosome':'str', 'SNP':'str', 'Position':np.int64, 'P.value':np.float64}
+            df = pd.read_csv(self.fn, usecols=['SNP', 'Chromosome', 'Position', 'P.value'], dtype=dtype_dict)
         elif self.software == 'gapit':
+            dtype_dict = {'Chromosome':'str', 'SNP':'str', 'Position':np.int64, 'P.value':np.float64}
             df = pd.read_csv(self.fn, usecols=['SNP', 'Chromosome', 'Position ', 'P.value'])
         elif self.software == 'other':
             if self.usecols is None:
@@ -281,11 +281,15 @@ class ReadGWASfile():
                 sys.exit('usecols must be a list')
             if len(self.usecols) != 4:
                 sys.exit('usecols must have the lenght of 4')
-            df = pd.read_csv(self.fn, usecols=self.usecols)
+            with open(self.fn) as f:
+                j = f.readline().split(',')
+                snp_idx, chr_idx, pos_idx, pv_idx = self.usecols
+                snp, chr, pos, pv = j[snp_idx], j[chr_idx], j[pos_idx], j[pv_idx]
+                dtype_dict = {chr:'str', snp:'str', pos:np.int64, pv:np.float64}
+            df = pd.read_csv(self.fn, usecols=self.usecols, dtype=dtype_dict)
         else:
             sys.exit('only gemma, farmcpu, gapit, and other are supported!')
         df.columns = ['snp', 'chr', 'pos', 'pvalue']
-        df['chr'] = df['chr'].astype('str')
         df['pvalue'] = -np.log10(df['pvalue'])
         df.columns = ['snp', 'chr', 'pos', '-log10Pvalue']
         if needsort:
@@ -512,7 +516,9 @@ def hmp2ped(args):
 
     hmp = ParseHmp(inputhmp)
     df_map, df_ped = hmp.AsMapPed(missing=False)
+    print('saving map file...')
     df_map.to_csv('%s.map'%output_prefix, sep='\t', index=False, header=None)
+    print('saving ped file...')
     df_ped.to_csv('%s.ped'%output_prefix, sep='\t', index=False, header=None)
 
 def ped2bed(args):
