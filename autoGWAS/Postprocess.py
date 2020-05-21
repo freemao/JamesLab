@@ -141,12 +141,10 @@ def UniquePeaks(args):
         if opts.usecols is None:
             sys.exit('--usecols must be specified if software is other')
         else:
-            opts.usecols = [int(i) for i in opts.usecols.split(',')]
+            opts.usecols = list(map(int, opts.usecols.split(',')))
             print('indics of columns to be read: %s'%opts.usecols)
 
-    usecols = list(map(int, opts.usecols.split(','))) if opts.usecols else None
-
-    gwas0 = ReadGWASfile(gwasfile, opts.software, usecols=usecols)
+    gwas0 = ReadGWASfile(gwasfile, opts.software, usecols=opts.usecols)
     df = gwas0.SignificantSNPs(p_cutoff=0.05, MeRatio=opts.MeRatio)
     print('number of significant SNPs: %s'%df.shape[0])
 
