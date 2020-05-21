@@ -61,9 +61,14 @@ def Manhattan(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
     gwasfile, title = args
-    usecols = list(map(int, opts.usecols.split(','))) if opts.usecols else None
+    if opts.software == 'other':
+        if opts.usecols is None:
+            sys.exit('--usecols must be specified if software is other')
+        else:
+            opts.usecols = list(map(int, opts.usecols.split(',')))
+            print('indics of columns to be read: %s'%opts.usecols)
 
-    gwas0 = ReadGWASfile(gwasfile, opts.software, needsort=opts.sort, usecols=usecols)
+    gwas0 = ReadGWASfile(gwasfile, opts.software, needsort=opts.sort, usecols=opts.usecols)
     df_plot = gwas0.df
     chr_pos_df = df_plot.groupby('chr').max()
     chr_lens = chr_pos_df['pos'].cumsum().tolist()[0:-1]
@@ -319,9 +324,14 @@ def SigSNPs(args):
         sys.exit(not p.print_help())
     gwasfile, output_fn, = args
 
-    usecols = list(map(int, opts.usecols.split(','))) if opts.usecols else None
+    if opts.software == 'other':
+        if opts.usecols is None:
+            sys.exit('--usecols must be specified if software is other')
+        else:
+            opts.usecols = list(map(int, opts.usecols.split(',')))
+            print('indics of columns to be read: %s'%opts.usecols)
 
-    gwas0 = ReadGWASfile(gwasfile, opts.software, usecols=usecols)
+    gwas0 = ReadGWASfile(gwasfile, opts.software, usecols=opts.usecols)
     df_significant = gwas0.SignificantSNPs(p_cutoff=0.05, MeRatio=opts.MeRatio)
     if opts.chrom != 'all':
         df_significant = df_significant[df_significant['chr']==opts.chrom]
