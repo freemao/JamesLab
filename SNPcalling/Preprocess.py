@@ -3,15 +3,17 @@
 """
 Prepare fastq files ready for SNP calling
 """
-
+import re
 import sys
 import subprocess
+import numpy as np
+import pandas as pd
 import os.path as op
 from pathlib import Path
 from subprocess import run
+from schnablelab.apps.Tools import GenDataFrameFromPath
 from schnablelab.apps.natsort import natsorted
-from schnablelab.apps.base import ActionDispatcher, OptionParser, glob, Slurm_header
-
+from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 def main():
     actions = (
@@ -20,7 +22,7 @@ def main():
         ('trim_single', 'quality control on single reads'),
         ('combineFQ', 'combine splitted fastq files'),
         ('index_ref', 'index the genome sequences'),
-        ('align', 'align reads to the reference'),
+        ('align_pe', 'paired-end alignment using bwa'),
         ('sam2bam', 'convert sam format to bam format'),
         ('sortbam', 'sort bam files'),
         ('index_bam', 'index bam files'),
@@ -30,6 +32,80 @@ def main():
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
+
+def find_sm(target_str, re_pattern):
+    sms = re_pattern.findall(target_str)
+    if len(sms)==1:
+        sm = sms[0][1:-1]
+        return '-'.join(re.split('[_-]', sm))
+    else:
+        print(target_str)
+        sys.exit('bad file name')
+
+def align_pe(args):
+    """
+    %prog align ref_indx_base dir1 dir2 ...
+
+    paire-end alignment using bwa.
+    args:
+        ref_index_base: the prefix of reference index files
+        dir1: where fastq files are located
+            add more directory names if fastq files are at different directories
+    """
+    p = OptionParser(align_pe.__doc__)
+    p.add_option('--fq_fn_pattern', default='*.fastq.gz',
+                help = 'file extension of fastq files')
+    p.add_option('--sm_re_pattern', default=r'[^a-z0-9]P[0-9]{3}[_-]W[A-Z][0-9]{2}[^a-z0-9]', 
+                help = 'the regular expression pattern to pull sample name from filename')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                help='do not convert commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=align_pe.__name__)
+    opts, args = p.parse_args(args)
+    if len(args)==0:
+        sys.exit(not p.print_help())
+    ref_base, *fq_dirs = args
+
+    tmp_df_ls = []
+    for fq_dir in fq_dirs:
+        fq_dir = Path(fq_dir)
+        if not fq_dir.exists():
+            sys.exit(f'{fq_dir} does not exist!')
+        tmp_df = GenDataFrameFromPath(fq_dir, pattern=opts.fq_fn_pattern)
+        if tmp_df.shape[0]<2:
+            sys.exit(f'no fastq files found under {fq_dir}!')
+        print(f'{tmp_df.shape[0]} fastq files found under {fq_dir}!')
+        tmp_df_ls.append(tmp_df)
+    df = pd.concat(tmp_df_ls)
+
+    prog = re.compile(opts.sm_re_pattern)
+    df['sm'] = df['fn'].apply(lambda x: find_sm(x, prog))
+    df = df.sort_values(['sm', 'fn']).reset_index(drop=True)
+    print(f"Total {df['sm'].unique().shape[0]} samples found!")
+    print(df['sm'].value_counts())
+    df_R1, df_R2 = df[::2], df[1::2]
+    if df_R1.shape[0] != df_R2.shape[0]:
+        sys.exit('number of R1 and R2 files are not consistent!')
+
+    cmds = []
+    for (_,r1), (r,r2) in zip(df_R1.iterrows(), df_R2.iterrows()):
+        r1_fn, r2_fn, sm = r1['fnpath'], r2['fnpath'], r1['sm']
+        r1_fn_arr, r2_fn_arr = np.array(list(r1_fn.name)), np.array(list(r2_fn.name))
+        bools = (r1_fn_arr != r2_fn_arr)
+        if bools.sum() != 1:
+            print(r1_fn, r2_fn)
+            sys.exit('check fq file names!')
+        idx = np.argmax(bools)
+        prefix = re.split('[-_]R', r1_fn.name[:idx])[0]
+        RG = r"'@RG\tID:%s\tSM:%s'"%(sm, sm)
+        bam_fn = f'{prefix}.pe.sorted.bam'
+        cmd = f"bwa mem -t {opts.ncpus_per_node} -R {RG} {ref_base} {r1_fn} {r2_fn} | samtools sort -@{opts.ncpus_per_node} -o {bam_fn} -"
+        cmds.append(cmd)
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print(f'check {cmd_sh} for all the commands!')
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm(cmds, put2slurm_dict)
 
 def bam_list(args):
     """
@@ -163,41 +239,6 @@ def sam2bam(args):
         header += cmd
         with open('%s.sam2bam.slurm'%prf, 'w') as f:
             f.write(header)
-
-def align(args):
-    """
-    %prog align indx_base fq_fn ...
-
-    do alignment using bwa.
-    """
-    p = OptionParser(align.__doc__)
-    opts, args = p.parse_args(args)
-    if len(args)==0:
-        sys.exit(not p.print_help())
-    ref_base = args[0]
-    fq_fns = args[1:]
-    print(fq_fns)
-    sm = Path(fq_fns[0]).name.split('_trim')[0]
-    gid = sm.split('R')[0]
-    print(gid)
-    R = r"'@RG\tID:%s\tSM:%s'"%(gid, gid)
-    if len(fq_fns)==1:
-        sam = sm+'.se.sam'
-        print('run single-end alignment')
-        cmd = 'bwa mem -R %s %s %s > %s \n'%(R, ref_base, fq_fns[0], sam)
-        prf = '%s.se.align'%sm
-    elif len(fq_fns)==2:
-        sam = sm+'.pe.sam'
-        print('run paired-end alignment')
-        cmd = 'bwa mem -R %s %s %s %s > %s \n'%(R, ref_base, fq_fns[0], fq_fns[1], sam)
-        prf = '%s.pe.align'%sm
-    else:
-        sys.exit('only one or two read files')
-    header = Slurm_header%(100, 10000, prf, prf, prf)
-    header += 'ml bwa\n'
-    header += cmd
-    with open('%s.slurm'%prf, 'w') as f:
-        f.write(header)
 
 def index_ref(args):
     """
