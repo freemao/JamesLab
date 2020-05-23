@@ -16,7 +16,7 @@ from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 def main():
     actions = (
-        ('genGVCF', 'generate gvcf for each sample using GATK HaplotypeCaller'),
+        ('genGVCFs', 'generate gvcf for each sample using GATK HaplotypeCaller'),
         ('freebayes', 'call SNPs using freebayes'),
         ('samtools', 'call SNPs using samtools'),
         ('gatk', 'call SNPs using gatk'),
@@ -24,9 +24,9 @@ def main():
     p = ActionDispatcher(actions)
     p.dispatch(globals())
     
-def genGVCF(args):
+def genGVCFs(args):
     """
-    %prog genGVCF ref.fa bams.csv region.txt out_dir
+    %prog genGVCFs ref.fa bams.csv region.txt out_dir
 
     run GATK HaplotypeCaller in GVCF mode
     args:
@@ -36,7 +36,10 @@ def genGVCF(args):
             example regions: Chr01, Chr01:1-100
         out_dir: where the gVCF files save to
     """
-    p = OptionParser(genGVCF.__doc__)
+    p = OptionParser(genGVCFs.__doc__)
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                help='do not convert commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=genGVCFs.__name__)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
