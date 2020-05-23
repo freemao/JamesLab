@@ -24,7 +24,7 @@ def main():
         ('pre_ref', 'index the reference genome sequences'),
         ('pre_fqs', 'prepare fastq files read for mapping'),
         ('align_pe', 'paired-end alignment using bwa'),
-        ('rmdupBam', 'remove potential PRC duplicates in sorted bam files'),
+        ('markdupBam', 'remove potential PRC duplicates in sorted bam files'),
         ('sam2bam', 'convert sam format to bam format'),
         ('sortbam', 'sort bam files'),
         ('index_bam', 'index bam files'),
@@ -180,21 +180,21 @@ def align_pe(args):
         put2slurm_dict['cmd_header'] = cmd_header
         put2slurm(cmds, put2slurm_dict)
 
-def rmdupBam(args):
+def markdupBam(args):
     """
-    %prog rmdupBam input_dir output_dir
+    %prog markdupBam input_dir output_dir
 
     remove potential PCR duplicates
     args:
         input_dir: where sorted bam located
         output_dir: where the output rmduped bam shoud save to
     """
-    p = OptionParser(rmdupBam.__doc__)
+    p = OptionParser(markdupBam.__doc__)
     p.add_option('--bam_fn_pattern', default='*.sorted.bam',
                 help = 'pattern of bam files')
     p.add_option('--disable_slurm', default=False, action="store_true",
                 help='do not convert commands to slurm jobs')
-    p.add_slurm_opts(job_prefix=rmdupBam.__name__)
+    p.add_slurm_opts(job_prefix=markdupBam.__name__)
     opts, args = p.parse_args(args)
     if len(args)==0:
         sys.exit(not p.print_help())
@@ -205,8 +205,8 @@ def rmdupBam(args):
     bams = in_dir_path.glob(opts.bam_fn_pattern)
     cmds = []
     for bam in bams:
-        rmdup_bam = bam.name.replace('.bam', '.rmdup.bam')
-        cmd = f'samtools rmdup {bam} {out_dir_path/rmdup_bam}'
+        rmdup_bam = bam.name.replace('.bam', '.mdup.bam')
+        cmd = f'samtools markdup {bam} {out_dir_path/rmdup_bam}'
         cmds.append(cmd)
 
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
