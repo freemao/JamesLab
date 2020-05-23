@@ -24,6 +24,7 @@ def main():
         ('pre_ref', 'index the reference genome sequences'),
         ('pre_fqs', 'prepare fastq files read for mapping'),
         ('align_pe', 'paired-end alignment using bwa'),
+        ('rmdupBam', 'remove potential PRC duplicates in sorted bam files'),
         ('sam2bam', 'convert sam format to bam format'),
         ('sortbam', 'sort bam files'),
         ('index_bam', 'index bam files'),
@@ -130,7 +131,7 @@ def pre_fqs(args):
 
 def align_pe(args):
     """
-    %prog align_pe ref_indx_base fq_fns.csv
+    %prog align_pe ref_indx_base fq_fns.csv output_dir
 
     paire-end alignment using bwa.
     args:
@@ -144,7 +145,10 @@ def align_pe(args):
     opts, args = p.parse_args(args)
     if len(args)==0:
         sys.exit(not p.print_help())
-    ref_base, fq_csv = args
+    ref_base, fq_csv, output_dir = args
+    output_dir = Path(output_dir)
+    if not output_dir.exists():
+        sys.exit(f'output directory {output_dir} does not exist!')
     df = pd.read_csv(fq_csv)
 
     df_R1, df_R2 = df[::2], df[1::2]
@@ -163,13 +167,50 @@ def align_pe(args):
         prefix = re.split('[-_]R', r1_fn.name[:idx])[0]
         RG = r"'@RG\tID:%s\tSM:%s'"%(sm, sm)
         bam_fn = f'{prefix}.pe.sorted.bam'
-        cmd = f"bwa mem -t {opts.ncpus_per_node} -R {RG} {ref_base} {r1_fn} {r2_fn} | samtools sort -@{opts.ncpus_per_node} -o {bam_fn} -"
+        cmd = f"bwa mem -t {opts.ncpus_per_node} -R {RG} {ref_base} {r1_fn} {r2_fn} | samtools sort -@{opts.ncpus_per_node} -o {output_dir/bam_fn} -"
         cmds.append(cmd)
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
     pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
     print(f'check {cmd_sh} for all the commands!')
 
     cmd_header = 'ml bwa\nml samtools'
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm(cmds, put2slurm_dict)
+
+def rmdupBam(args):
+    """
+    %prog rmdupBam input_dir output_dir
+
+    remove potential PCR duplicates
+    args:
+        input_dir: where sorted bam located
+        output_dir: where the output rmduped bam shoud save to
+    """
+    p = OptionParser(rmdupBam.__doc__)
+    p.add_option('--bam_fn_pattern', default='*.sorted.bam',
+                help = 'pattern of bam files')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                help='do not convert commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=rmdupBam.__name__)
+    opts, args = p.parse_args(args)
+    if len(args)==0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir = args
+    in_dir_path = Path(in_dir)
+    bams = in_dir_path.glob(opts.bam_fn_pattern)
+    cmds = []
+    for bam in bams:
+        rmdup_bam = bam.name.replace('.bam', 'rmdup.bam')
+        cmd = f'samtools {bam} {bam.parent/rmdup_bam}'
+        cmds.append(cmd)
+
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print(f'check {cmd_sh} for all the commands!')
+
+    cmd_header = 'ml samtools'
     if not opts.disable_slurm:
         put2slurm_dict = vars(opts)
         put2slurm_dict['cmd_header'] = cmd_header
