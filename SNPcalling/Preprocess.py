@@ -26,10 +26,10 @@ def main():
         ('align_pe', 'paired-end alignment using bwa'),
         ('markdupBam', 'remove potential PRC duplicates in sorted bam files'),
         ('pre_bams', 'parse preprocessed bam fils to get the sample names'),
+        ('split_fa_region', 'genearte a list of genomic intervals'),
         ('sam2bam', 'convert sam format to bam format'),
         ('sortbam', 'sort bam files'),
         ('index_bam', 'index bam files'),
-        ('split_fa_region', 'genearte a list of freebayes/bamtools region specifiers'),
         ('bam_list', 'genearte a list of bam files for freebayes -L use'),
     )
     p = ActionDispatcher(actions)
@@ -281,35 +281,37 @@ def bam_list(args):
 
 def split_fa_region(args):
     """
-    %prog fa.fai region_size out_fn
+    %prog split_fa_region fa.fai out_fn
         fa.fai: index file for the fa file
-        region_size: the size for each splitted region
         out_fn: the output file
 
-    genearte a list of freebayes/bamtools region specifiers
+    split the whole genome to subset intervals to speed up SNP calling
     """
     p = OptionParser(split_fa_region.__doc__)
+    p.add_option('--num_chunk', type='int', default=1,
+                help = 'number of chunks in each chromosome')
+    p.add_option('--include_contig', default=False, action='store_true',
+                help = 'include both chr and contigs')
     opts, args = p.parse_args(args)
     if len(args)==0:
         sys.exit(not p.print_help())
-    fasta_index_file, region_size, fn_out, = args
-    fasta_index_file = open(fasta_index_file)
-    region_size = int(region_size)
-    fn_out = open(fn_out, 'w')
-    for line in fasta_index_file:
-        fields = line.strip().split("\t")
-        chrom_name = fields[0]
-        chrom_length = int(fields[1])
-        region_start = 0
-        while region_start < chrom_length:
-            start = region_start
-            end = region_start + region_size
-            if end > chrom_length:
-                end = chrom_length
-            line = chrom_name + ":" + str(region_start) + "-" + str(end)+'\n'
-            fn_out.write(line)
-            region_start = end
-    fn_out.close()
+    fai_fn, fn_out, = args
+    df = pd.read_csv(fai_fn, header=None, delim_whitespace=True, usecols=[0,1])
+    df.columns = ['chr', 'length']
+    if not opts.include_contig:
+        df = df[df['chr'].apply(lambda x: ('chr' in x) | ('Chr' in x))]
+
+    with open(fn_out, 'w') as f:
+        for _, row in df.iterrows():
+            chr, length = row['chr'], row['length']
+            print(f'spliting {chr}...')
+            if opts.num_chunk == 1:
+                f.write(chr+'\n')
+            else:
+                for interval in pd.qcut(np.arange(length), opts.num_chunk, precision=0).categories:
+                    st, ed = int(interval.left+2), int(interval.right+1)
+                    f.write(f'{chr}:{st}-{ed}\n')
+    print(f'Done! check {fn_out}')
 
 def index_bam(args):
     """
