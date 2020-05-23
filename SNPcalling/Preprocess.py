@@ -205,7 +205,7 @@ def rmdupBam(args):
     bams = in_dir_path.glob(opts.bam_fn_pattern)
     cmds = []
     for bam in bams:
-        rmdup_bam = bam.name.replace('.bam', 'rmdup.bam')
+        rmdup_bam = bam.name.replace('.bam', '.rmdup.bam')
         cmd = f'samtools rmdup {bam} {out_dir_path/rmdup_bam}'
         cmds.append(cmd)
 
