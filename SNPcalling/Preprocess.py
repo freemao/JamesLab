@@ -90,10 +90,13 @@ def find_sm(target_str, re_pattern):
 def pre_fqs(args):
     """
     %prog pre_fqs dir1 dir2 ... output.csv
+
+    parse RG and SM info of all fastq files and get them ready for mapping
+
     dir1: where fastq files are located
         add more directories if fastq files are located at different directories
     output.csv:
-        output csv file con all parsed fq files
+        output csv file containing all parsed fq files
     """
     p = OptionParser(pre_fqs.__doc__)
     p.add_option('--fq_fn_pattern', default='*.fastq.gz',
