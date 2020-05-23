@@ -137,7 +137,7 @@ class OptionParser(OptionP):
                             help='prefix of job name and log file')
         group.add_option('--pu_type', default='cpu', choices=('cpu', 'gpu'),
                             help='PU type')
-        group.add_option('--partition', default='jclarke', choices=('jclarke', 'schnablelab', 'gpu'),
+        group.add_option('--partition', default='jclarke', choices=('jclarke', 'schnablelab', 'gpu', 'batch'),
                             help = 'partition name')
         group.add_option('--ncpus_per_node', type='int', default=1,
                             help = 'number of cpus per node')
