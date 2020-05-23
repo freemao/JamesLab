@@ -137,6 +137,7 @@ def align_pe(args):
     args:
         ref_index_base: the prefix of reference index files
         fq_fns.csv: the csv file including parsed fq files from pre_fqs function.
+        output_dir: where the generated bam files save to
     """
     p = OptionParser(align_pe.__doc__)
     p.add_option('--disable_slurm', default=False, action="store_true",
@@ -157,7 +158,7 @@ def align_pe(args):
 
     cmds = []
     for (_,r1), (_,r2) in zip(df_R1.iterrows(), df_R2.iterrows()):
-        r1_fn, r2_fn, sm = r1['fnpath'], r2['fnpath'], r1['sm']
+        r1_fn, r2_fn, sm = Path(r1['fnpath']), Path(r2['fnpath']), r1['sm']
         r1_fn_arr, r2_fn_arr = np.array(list(r1_fn.name)), np.array(list(r2_fn.name))
         bools = (r1_fn_arr != r2_fn_arr)
         if bools.sum() != 1:
