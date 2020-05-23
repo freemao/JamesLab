@@ -25,6 +25,7 @@ def main():
         ('pre_fqs', 'prepare fastq files read for mapping'),
         ('align_pe', 'paired-end alignment using bwa'),
         ('markdupBam', 'remove potential PRC duplicates in sorted bam files'),
+        ('pre_bams', 'parse preprocessed bam fils to get the sample names'),
         ('sam2bam', 'convert sam format to bam format'),
         ('sortbam', 'sort bam files'),
         ('index_bam', 'index bam files'),
@@ -90,7 +91,7 @@ def find_sm(target_str, re_pattern):
 
 def pre_fqs(args):
     """
-    %prog pre_fqs dir1 dir2 ... output.csv
+    %prog pre_fqs dir1 ... output.csv
 
     parse RG and SM info of all fastq files and get them ready for mapping
 
@@ -218,6 +219,47 @@ def markdupBam(args):
         put2slurm_dict = vars(opts)
         put2slurm_dict['cmd_header'] = cmd_header
         put2slurm(cmds, put2slurm_dict)
+
+def pre_bams(args):
+    """
+    %prog pre_bams dir1 ... output.csv
+
+    parse SM info of preprocessed bam files for GATK
+
+    dir1: where bam files are located
+        add more directories if bam files are located at different directories
+    output.csv:
+        output csv file containing sample names of bam files
+    """
+    p = OptionParser(pre_bams.__doc__)
+    p.add_option('--bam_fn_pattern', default='*.mdup.bam',
+                help = 'file extension of preprocessed bam files')
+    p.add_option('--sm_re_pattern', default=r"[^a-z0-9]P[0-9]{3}[_-]W[A-Z][0-9]{2}[^a-z0-9]", 
+                help = 'the regular expression pattern to pull sample name from filename')
+    opts, args = p.parse_args(args)
+    if len(args)==0:
+        sys.exit(not p.print_help())
+    *bam_dirs, out_csv = args
+
+    tmp_df_ls = []
+    for bam_dir in bam_dirs:
+        bam_dir = Path(bam_dir)
+        if not bam_dir.exists():
+            sys.exit(f'{bam_dir} does not exist!')
+        tmp_df = GenDataFrameFromPath(bam_dir, pattern=opts.bam_fn_pattern)
+        if tmp_df.shape[0]==0:
+            sys.exit(f"no bam files found under '{bam_dir}' directory!")
+        print(f'{tmp_df.shape[0]} bam files found under {bam_dir}!')
+        tmp_df_ls.append(tmp_df)
+    df = pd.concat(tmp_df_ls)
+
+    prog = re.compile(opts.sm_re_pattern)
+    df['sm'] = df['fn'].apply(lambda x: find_sm(x, prog))
+    df = df.sort_values(['sm', 'fn']).reset_index(drop=True)
+    print(f"Total {df['sm'].unique().shape[0]} samples found!")
+    print(df['sm'].value_counts())
+    df.to_csv(out_csv, index=False)
+    print(f'check out {out_csv}!')
 
 def bam_list(args):
     """
