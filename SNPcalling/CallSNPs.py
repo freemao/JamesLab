@@ -16,6 +16,7 @@ from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 def main():
     actions = (
+        ('genGVCF', 'generate gvcf for each sample using GATK HaplotypeCaller'),
         ('freebayes', 'call SNPs using freebayes'),
         ('samtools', 'call SNPs using samtools'),
         ('gatk', 'call SNPs using gatk'),
