@@ -62,7 +62,7 @@ def genGVCF(args):
         for region in regions:
             print(f'region: {region}')
             # --sample-name: Name of single sample to use from a multi-sample bam
-            cmd = f"gatk --java-options '-Xmx{mem}g' HaplotypeCaller -R {ref} {input_bam} -O {out_dir_path/output_fn} --sample-name {sm} --emit-ref-confidence GVCF -L {region}"
+            cmd = f"gatk --java-options '-Xmx{mem}g' HaplotypeCaller -R {ref} {input_bam} -O {out_dir_path/output_fn} --sample-name {sm} --emit-ref-confidence GVCF -L {region.rstrip()}"
             cmds.append(cmd)
     
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
