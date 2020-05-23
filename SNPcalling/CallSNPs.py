@@ -1,18 +1,18 @@
 # -*- coding: UTF-8 -*-
 
 """
-Call SNPs on GBS data using freebayes.
+Call SNPs on HTS data using GATK, Freebayes.
 """
 
 import os
-import os.path as op
 import sys
-import pandas as pd
 import numpy as np
+import pandas as pd
+import os.path as op
 from pathlib import Path
-from schnablelab.apps.base import ActionDispatcher, OptionParser
-from schnablelab.apps.headers import Slurm_header
 from subprocess import run
+from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
+
 
 def main():
     actions = (
@@ -46,13 +46,64 @@ def freebayes(args):
             reg_fn = reg.replace(':','_')
             reg_fn_vcf = '%s.fb.vcf'%reg_fn
             reg_fn_vcf_path = out_path/reg_fn_vcf
-            cmd = 'freebayes -r %s -f %s -C 1 -F 0.05 -L %s -u -n 2 -g %s > %s\n'%(reg, ref, bams,opts.max_depth, reg_fn_vcf_pth)
+            cmd = 'freebayes -r %s -f %s -C 1 -F 0.05 -L %s -u -n 2 -g %s > %s\n'%(reg, ref, bams,opts.max_depth, reg_fn_vcf_path)
             header = Slurm_header%(165, 50000, reg_fn, reg_fn, reg_fn)
             header += 'ml freebayes/1.3\n'
             header += cmd
             with open('%s.fb.slurm'%reg_fn, 'w') as f1:
                 f1.write(header)
             print('slurm files %s.fb.slurm has been created'%reg_fn)
+
+def genGVCF(args):
+    """
+    %prog genGVCF ref.fa bams.csv region.txt out_dir
+
+    run GATK HaplotypeCaller in GVCF mode
+    args:
+        ref.fa: reference sequence file
+        bams.csv: csv file containing all bam files and their sample names
+        region.txt: genomic intervals defined by each row to speed up GVCF calling. 
+            example regions: Chr01, Chr01:1-100
+        out_dir: where the gVCF files save to
+    """
+    p = OptionParser(genGVCF.__doc__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    ref, bams_csv, region_txt, out_dir, = args
+    out_dir_path = Path(out_dir)
+    if not out_dir_path.exists():
+        sys.exit(f'output directory {out_dir_path} does not exist!')
+    
+    regions = []
+    with open(region_txt) as f:
+        for i in f:
+            regions.append(i.rstrip())
+    
+    mem = int(opts.memory)//1024
+
+    print('defined genomic intervals: %s'%(','.join(regions)))
+    df_bam = pd.read_csv(bams_csv)
+    cmds = []
+    for sm, grp in df_bam.groupby('sm'):
+        print(f'{grp.shape[0]} bam files for sample {sm}')
+        input_bam = '-I ' + ' -I '.join(grp['bam_fn'].tolist())
+        output_fn = f'{sm}.g.vcf'
+        for region in regions:
+            print(f'region: {region}')
+            # --sample-name: Name of single sample to use from a multi-sample bam
+            cmd = f"gatk --java-options '-Xmx{mem}g' HaplotypeCaller -R {ref} {input_bam} -O {out_dir_path/output_fn} --sample-name {sm} --emit-ref-confidence GVCF -L {region}"
+            cmds.append(cmd)
+    
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print(f'check {cmd_sh} for all the commands!')
+
+    cmd_header = 'ml gatk4'
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm(cmds, put2slurm_dict)
 
 def gatk(args):
     """

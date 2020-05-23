@@ -199,12 +199,14 @@ def rmdupBam(args):
     if len(args)==0:
         sys.exit(not p.print_help())
     in_dir, out_dir = args
-    in_dir_path = Path(in_dir)
+    in_dir_path, out_dir_path = Path(in_dir), Path(out_dir)
+    if not out_dir_path.exists():
+        sys.exit(f'output directory {out_dir_path} does not exist!')
     bams = in_dir_path.glob(opts.bam_fn_pattern)
     cmds = []
     for bam in bams:
         rmdup_bam = bam.name.replace('.bam', 'rmdup.bam')
-        cmd = f'samtools {bam} {bam.parent/rmdup_bam}'
+        cmd = f'samtools rmdup {bam} {out_dir_path/rmdup_bam}'
         cmds.append(cmd)
 
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
