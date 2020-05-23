@@ -60,12 +60,12 @@ def genGVCFs(args):
     cmds = []
     for sm, grp in df_bam.groupby('sm'):
         print(f'{grp.shape[0]} bam files for sample {sm}')
-        input_bam = '-I ' + ' -I '.join(grp['fn_path'].tolist())
+        input_bam = '-I ' + ' -I '.join(grp['fnpath'].tolist())
         output_fn = f'{sm}.g.vcf'
         for region in regions:
             print(f'region: {region}')
             # --sample-name: Name of single sample to use from a multi-sample bam
-            cmd = f"gatk --java-options '-Xmx{mem}g' HaplotypeCaller -R {ref} {input_bam} -O {out_dir_path/output_fn} --sample-name {sm} --emit-ref-confidence GVCF -L {region.rstrip()}"
+            cmd = f"gatk --java-options '-Xmx{mem}g' HaplotypeCaller -R {ref} {input_bam} -O {out_dir_path/output_fn} --sample-name {sm} --emit-ref-confidence GVCF -L {region}"
             cmds.append(cmd)
     
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
