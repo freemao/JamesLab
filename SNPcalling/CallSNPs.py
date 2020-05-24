@@ -5,25 +5,115 @@ Call SNPs on HTS data using GATK, Freebayes.
 """
 
 import os
+import re
 import sys
 import numpy as np
 import pandas as pd
 import os.path as op
 from pathlib import Path
 from subprocess import run
+from .base import find_sm
+from schnablelab.apps.Tools import GenDataFrameFromPath
 from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
-
 
 def main():
     actions = (
         ('genGVCFs', 'generate gvcf for each sample using GATK HaplotypeCaller'),
+        ('aggGVCFs', 'aggregate GVCF files to a GenomicsDB datastore for each genomic interval'),
         ('freebayes', 'call SNPs using freebayes'),
         ('samtools', 'call SNPs using samtools'),
         ('gatk', 'call SNPs using gatk'),
 )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def aggGVCFs(args):
+    """
+    %prog aggGVCFs input_dir out_dir 
+
+    aggregate GVCF files to a GenomicsDB datastore for each genomic interval
+    args:
+        intput_dir: the directory containing all gvcf files
+        out_dir: the output directory. a subdir will be created for each genomic interval
+    """
+    p = OptionParser(aggGVCFs.__doc__)
+    p.add_option('--gvcf_fn_pattern', default='*.g.vcf',
+                help = 'file extension of gvcf files')
+    p.add_option('--sm_re_pattern', default=r"^P[0-9]{3}[_-]W[A-Z][0-9]{2}[^a-z0-9]", 
+                help = 'the regular expression pattern to pull sample name from filename')
+    p.add_option('--gatk_tmp_dir', default='./gatk_tmp',
+                help = 'temporary directory for genomicsDBImport')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                help='do not convert commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=aggGVCFs.__name__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir, = args
+    in_dir_path = Path(in_dir)
+    out_dir_path = Path(out_dir)
+    if not in_dir_path.exists():
+        sys.exit(f'input directory {in_dir_path} does not exist!')
+    if not out_dir_path.exists():
+        sys.exit(f'output directory {out_dir_path} does not exist!')
+    tmp_dir = Path(opts.gatk_tmp_dir)
+    if not tmp_dir.exists():
+        print('tmp directory does not exist, creating...')
+        tmp_dir.mkdir()
     
+    # The -Xmx value the tool is run with should be less than the total amount of physical memory available by at least a few GB
+    mem = int(opts.memory)//1024-2
+
+    # set the environment variable TILEDB_DISABLE_FILE_LOCKING=1
+    try:
+        os.environ['TILEDB_DISABLE_FILE_LOCKING']
+    except KeyError:
+        sys.exit('Set the environment variable TILEDB_DISABLE_FILE_LOCKING=1 before running gatk!')
+
+    df = GenDataFrameFromPath(in_dir_path, pattern=opts.gvcf_fn_pattern)
+    df['interval'] = df['fn'].apply(lambda x: x.split('.')[0].split('_')[1])
+    prog = re.compile(opts.sm_re_pattern)
+    df['sm'] = df['fn'].apply(lambda x: find_sm(x, prog))
+
+    cmds = []
+    for interval, grp in df.groupby('interval'):
+        interval_dir = Path(interval.replace(':','_'))
+        # The --genomicsdb-workspace-path must point to a non-existent or empty directory
+        if interval_dir.exists():
+            if len(interval_dir.glob('*')) != 0:
+                sys.exit(f'{interval_dir} is not an empty directory!')
+        gvcf_map = str(interval_dir) + '.map'
+        print(f'{grp.shape[0]} gvcf files found for interval {interval}, generating the corresponding map file {gvcf_map}...')
+        grp[['sm', 'fnpath']].to_csv(gvcf_map, header=None, index=False, sep='\t')
+
+        cmd = f"gatk '-Xmx{mem}g -Xms{mem}g' GenomicsDBImport --sample-name-map {gvcf_map} "\
+        f"--genomicsdb-workspace-path {interval_dir} --batch-size 50 --intervals {interval} "\
+        f"--reader-threads {opts.ncpus_per_node} --tmp-dir {tmp_dir}"
+        cmds.append(cmd)
+
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print(f'check {cmd_sh} for all the commands!')
+
+    cmd_header = 'ml gatk4'
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm(cmds, put2slurm_dict)
+
+def genoGVCFs(args):
+    """
+
+    create the raw SNP and indel VCFs from a GenomicsDB datastore
+
+     gatk GenotypeGVCFs \
+    -R data/ref/ref.fasta \
+    -V gendb://my_database \
+    -newQual \
+    -O test_output.vcf 
+    """
+    pass
+
 def genGVCFs(args):
     """
     %prog genGVCFs ref.fa bams.csv region.txt out_dir
@@ -60,8 +150,8 @@ def genGVCFs(args):
     for sm, grp in df_bam.groupby('sm'):
         print(f'{grp.shape[0]} bam files for sample {sm}')
         input_bam = '-I ' + ' -I '.join(grp['fnpath'].tolist())
-        output_fn = f'{sm}.g.vcf'
         for region in regions:
+            output_fn = f'{sm}_{region}.g.vcf'
             cmd = f"gatk --java-options '-Xmx{mem}g' HaplotypeCaller -R {ref} {input_bam} -O {out_dir_path/output_fn} --sample-name {sm} --emit-ref-confidence GVCF -L {region}"
             cmds.append(cmd)
     
