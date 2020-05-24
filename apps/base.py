@@ -62,7 +62,8 @@ class ActionDispatcher(object):
         help = 'Usage:\n    python -m %s\n\n\n' % ('.'.join(args))
         help += 'Available %ss:\n' % meta
         max_action_len = max(len(action) for action, ah in self.actions)
-        for action, action_help in sorted(self.actions):
+        #for action, action_help in sorted(self.actions):
+        for action, action_help in self.actions:
             action = action.rjust(max_action_len + 4)
             help += " | ".join((action, action_help[0].upper() +
                                 action_help[1:])) + '\n'
@@ -82,7 +83,6 @@ class ActionDispatcher(object):
             eprint(sys.stderr, "Did you mean one of these?\n\t%s\n" % (", ".join(alt)))
             self.print_help()
         globals[action](sys.argv[2:])
-
 
 class OptionParser(OptionP):
     def __init__(self, doc):
@@ -159,7 +159,6 @@ class OptionParser(OptionP):
         self.add_option("--cpus", default=cpus, type="int",
                      help="Number of CPUs to use, 0=unlimited [default: %default]")
 
-
 def get_module_docstring(filepath):
     "Get module-level docstring of Python module at filepath, e.g. 'path/to/file.py'."
     co = compile(open(filepath).read(), filepath, 'exec')
@@ -186,13 +185,13 @@ def splitall(path):
     allparts = allparts[::-1]
     return allparts
 
-
 def dmain(mainfile, type='action'):
     cwd = op.dirname(mainfile)
     pyscripts = [x for x in glob(op.join(cwd, "*", '__main__.py'))] \
         if type == "module" \
         else glob(op.join(cwd, "*.py"))
     actions = []
+    #for ps in sorted(pyscripts):
     for ps in sorted(pyscripts):
         action = op.basename(op.dirname(ps)) \
             if type == 'module' \
@@ -207,7 +206,6 @@ def dmain(mainfile, type='action'):
     a = ActionDispatcher(actions)
     a.print_help()
 
-
 def glob(pathname, pattern=None):
     """
     Wraps around glob.glob(), but return a sorted list.
@@ -216,7 +214,6 @@ def glob(pathname, pattern=None):
     if pattern:
         pathname = op.join(pathname, pattern)
     return natsorted(gl.glob(pathname))
-
 
 def iglob(pathname, patterns):
     """
@@ -234,10 +231,9 @@ def iglob(pathname, patterns):
             matches.append(op.join(root, filename))
     return natsorted(matches)
 
-
 def cutlist(lst, n):
     """
-    cut list to different groupts with equal size
+    cut list to different groups with equal size
     yield index range for each group and the group itself
     """
     series = pd.Series(lst)
