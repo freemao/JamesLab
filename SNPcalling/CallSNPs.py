@@ -146,6 +146,13 @@ def genGVCFs(args):
     mem = int(opts.memory)//1024
 
     df_bam = pd.read_csv(bams_csv)
+
+    # check if bai files exist
+    for bam in df_bam['fnpath']:
+        if not Path(bam+'.bai').exists():
+            print(f'no index file for {bam}...')
+            sys.exit('Index your bam files first!')
+
     cmds = []
     for sm, grp in df_bam.groupby('sm'):
         print(f'{grp.shape[0]} bam files for sample {sm}')
