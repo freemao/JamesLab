@@ -3,6 +3,7 @@
 """
 base class and functions to handle with vcf file
 """
+import re
 import sys
 import numpy as np
 import pandas as pd
@@ -26,6 +27,14 @@ def main():
             )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def find_sm(target_str, re_pattern):
+    sms = re_pattern.findall(target_str)
+    if len(sms)==1:
+        sm = sms[0][1:-1]
+        return '-'.join(re.split('[_-]', sm))
+    else:
+        sys.exit(f"bad file name '{target_str}'!")
 
 class ParseVCF():
     '''

@@ -11,8 +11,9 @@ import pandas as pd
 import os.path as op
 from pathlib import Path
 from subprocess import run
-from schnablelab.apps.Tools import GenDataFrameFromPath
+from .base import find_sm
 from schnablelab.apps.natsort import natsorted
+from schnablelab.apps.Tools import GenDataFrameFromPath
 from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 def main():
@@ -80,14 +81,6 @@ def pre_ref(args):
             print('commands running on local:\n%s'%('\n'.join(cmds)))
     else:
         print('All reference index files have already existed!')
-
-def find_sm(target_str, re_pattern):
-    sms = re_pattern.findall(target_str)
-    if len(sms)==1:
-        sm = sms[0][1:-1]
-        return '-'.join(re.split('[_-]', sm))
-    else:
-        sys.exit(f"bad file name '{target_str}'!")
 
 def pre_fqs(args):
     """
