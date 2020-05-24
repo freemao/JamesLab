@@ -55,7 +55,6 @@ def genGVCFs(args):
     
     mem = int(opts.memory)//1024
 
-    print('defined genomic intervals: %s'%(','.join(regions)))
     df_bam = pd.read_csv(bams_csv)
     cmds = []
     for sm, grp in df_bam.groupby('sm'):
@@ -63,8 +62,6 @@ def genGVCFs(args):
         input_bam = '-I ' + ' -I '.join(grp['fnpath'].tolist())
         output_fn = f'{sm}.g.vcf'
         for region in regions:
-            print(f'region: {region}')
-            # --sample-name: Name of single sample to use from a multi-sample bam
             cmd = f"gatk --java-options '-Xmx{mem}g' HaplotypeCaller -R {ref} {input_bam} -O {out_dir_path/output_fn} --sample-name {sm} --emit-ref-confidence GVCF -L {region}"
             cmds.append(cmd)
     
