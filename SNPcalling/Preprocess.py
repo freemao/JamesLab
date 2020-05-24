@@ -25,11 +25,11 @@ def main():
         ('pre_fqs', 'prepare fastq files read for mapping'),
         ('align_pe', 'paired-end alignment using bwa'),
         ('markdupBam', 'remove potential PRC duplicates in sorted bam files'),
+        ('indexBam', 'index bam files'),
         ('pre_bams', 'parse preprocessed bam fils to get the sample names'),
         ('split_fa_region', 'genearte a list of genomic intervals'),
         ('sam2bam', 'convert sam format to bam format'),
         ('sortbam', 'sort bam files'),
-        ('index_bam', 'index bam files'),
         ('bam_list', 'genearte a list of bam files for freebayes -L use'),
     )
     p = ActionDispatcher(actions)
@@ -220,6 +220,40 @@ def markdupBam(args):
         put2slurm_dict['cmd_header'] = cmd_header
         put2slurm(cmds, put2slurm_dict)
 
+def indexBam(args):
+    """
+    %prog indexBam dir1 ...
+
+    index bam files using samtools index
+
+    dir1: where bam files are located
+        add more directories if bam files are located at different directories
+    """
+    p = OptionParser(indexBam.__doc__)
+    p.add_option('--bam_fn_pattern', default='*.mdup.bam',
+                help = 'file extension of preprocessed bam files')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                help='do not convert commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=indexBam.__name__)
+    opts, args = p.parse_args(args)
+    if len(args)==0:
+        sys.exit(not p.print_help())
+    for bam_dir in args:
+        bam_dir = Path(bam_dir)
+        if not bam_dir.exists():
+            sys.exit(f'{bam_dir} does not exist!')
+        bams = bam_dir.glob(opts.bam_fn_pattern)
+        cmds = [f'samtools index {bam}' for bam in bams]
+        cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+        pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+        print(f'check {cmd_sh} for all the commands!')
+        
+        cmd_header = 'ml samtools'
+        if not opts.disable_slurm:
+            put2slurm_dict = vars(opts)
+            put2slurm_dict['cmd_header'] = cmd_header
+            put2slurm(cmds, put2slurm_dict)
+
 def pre_bams(args):
     """
     %prog pre_bams dir1 ... output.csv
@@ -312,29 +346,6 @@ def split_fa_region(args):
                     st, ed = int(interval.left+2), int(interval.right+1)
                     f.write(f'{chr}:{st}-{ed}\n')
     print(f'Done! check {fn_out}')
-
-def index_bam(args):
-    """
-    %prog bam_dir 
-        bam_dir: sorted bam files folder
-
-    index bam files using samtools/0.1 sort function.
-    """
-    p = OptionParser(index_bam.__doc__)
-    opts, args = p.parse_args(args)
-    if len(args)==0:
-        sys.exit(not p.print_help())
-    bam_dir, = args
-    dir_path = Path(bam_dir)
-    bams = dir_path.glob('*.sorted.bam')
-    for bam in bams:
-        prf = bam.name.split('.sorted.bam')[0]
-        cmd = 'samtools index %s'%bam
-        header = Slurm_header%(10, 8000, prf, prf, prf)
-        header += 'ml samtools/0.1\n'
-        header += cmd
-        with open('%s.indexbam.slurm'%prf, 'w') as f:
-            f.write(header)
 
 def sortbam(args):
     """
