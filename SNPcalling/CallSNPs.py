@@ -56,7 +56,7 @@ def aggGVCFs(args):
     if not in_dir_path.exists():
         sys.exit(f'input directory {in_dir_path} does not exist!')
     if not out_dir_path.exists():
-        sys.exit(f'output directory {out_dir_path} does not exist, creating...')
+        print(f'output directory {out_dir_path} does not exist, creating...')
         out_dir_path.mkdir()
     tmp_dir = Path(opts.gatk_tmp_dir)
     if not tmp_dir.exists():
@@ -126,7 +126,7 @@ def genoGVCFs(args):
     ref, db_dir, out_dir, = args
     out_dir_path = Path(out_dir)
     if not out_dir_path.exists():
-        sys.exit(f'output directory {out_dir_path} does not exist, creating...')
+        print(f'output directory {out_dir_path} does not exist, creating...')
         out_dir_path.mkdir()
     mem = int(opts.memory)//1024-1
 
@@ -170,7 +170,7 @@ def genGVCFs(args):
     ref, bams_csv, region_txt, out_dir, = args
     out_dir_path = Path(out_dir)
     if not out_dir_path.exists():
-        sys.exit(f'output directory {out_dir_path} does not exist, creating...')
+        print(f'output directory {out_dir_path} does not exist, creating...')
         out_dir_path.mkdir()
     
     regions = []
