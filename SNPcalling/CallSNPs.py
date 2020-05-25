@@ -103,17 +103,47 @@ def aggGVCFs(args):
 
 def genoGVCFs(args):
     """
+    %prog genoGVCFs ref.fa genomicDB_dir out_dir 
 
     create the raw SNP and indel VCFs from a GenomicsDB datastore
-
-     gatk GenotypeGVCFs \
-    -R data/ref/ref.fasta \
-    -V gendb://my_database \
-    -newQual \
-    -O test_output.vcf 
+    args:
+        ref.fa: the reference sequence fasta file
+        genomicDB_dir: the root directory of genomicDB workspace
+        out_dir: where the vcf files will be saved
     """
-    pass
+    p = OptionParser(genoGVCFs.__doc__)
+    p.add_option('--gatk_tmp_dir', default='./gatk_tmp',
+                help = 'temporary directory to use')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                help='do not convert commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=genoGVCFs.__name__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    ref, db_dir, out_dir, = args
+    out_dir_path = Path(out_dir)
+    if not out_dir_path.exists():
+        sys.exit(f'output directory {out_dir_path} does not exist!')
+    mem = int(opts.memory)//1024-1
 
+    cmds = []
+    for db in Path(db_dir).glob('*'):
+        if db.is_dir():
+            region = db.name
+            vcf_fn = f"{region}.vcf.gz"
+            cmd = f"gatk --java-options '-Xmx{mem}g' GenotypeGVCFs "\
+            f"-R {ref} -V gendb://{db} -O {out_dir_path/vcf_fn} --tmp-dir={opts.gatk_tmp_dir}"
+            cmds.append(cmd)
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print(f'check {cmd_sh} for all the commands!')
+
+    cmd_header = 'ml gatk4'
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm(cmds, put2slurm_dict)
+    
 def genGVCFs(args):
     """
     %prog genGVCFs ref.fa bams.csv region.txt out_dir
