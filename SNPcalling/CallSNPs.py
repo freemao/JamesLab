@@ -20,6 +20,7 @@ def main():
     actions = (
         ('genGVCFs', 'generate gvcf for each sample using GATK HaplotypeCaller'),
         ('aggGVCFs', 'aggregate GVCF files to a GenomicsDB datastore for each genomic interval'),
+        ('genoGVCFs', 'create the raw VCFs from GenomicsDB datastores'),
         ('freebayes', 'call SNPs using freebayes'),
         ('samtools', 'call SNPs using samtools'),
         ('gatk', 'call SNPs using gatk'),
@@ -55,7 +56,8 @@ def aggGVCFs(args):
     if not in_dir_path.exists():
         sys.exit(f'input directory {in_dir_path} does not exist!')
     if not out_dir_path.exists():
-        sys.exit(f'output directory {out_dir_path} does not exist!')
+        sys.exit(f'output directory {out_dir_path} does not exist, creating...')
+        out_dir_path.mkdir()
     tmp_dir = Path(opts.gatk_tmp_dir)
     if not tmp_dir.exists():
         print('tmp directory does not exist, creating...')
@@ -106,7 +108,7 @@ def genoGVCFs(args):
     """
     %prog genoGVCFs ref.fa genomicDB_dir out_dir 
 
-    create the raw SNP and indel VCFs from a GenomicsDB datastore
+    create the raw VCFs from GenomicsDB datastores
     args:
         ref.fa: the reference sequence fasta file
         genomicDB_dir: the root directory of genomicDB workspace
@@ -124,7 +126,8 @@ def genoGVCFs(args):
     ref, db_dir, out_dir, = args
     out_dir_path = Path(out_dir)
     if not out_dir_path.exists():
-        sys.exit(f'output directory {out_dir_path} does not exist!')
+        sys.exit(f'output directory {out_dir_path} does not exist, creating...')
+        out_dir_path.mkdir()
     mem = int(opts.memory)//1024-1
 
     cmds = []
@@ -167,7 +170,8 @@ def genGVCFs(args):
     ref, bams_csv, region_txt, out_dir, = args
     out_dir_path = Path(out_dir)
     if not out_dir_path.exists():
-        sys.exit(f'output directory {out_dir_path} does not exist!')
+        sys.exit(f'output directory {out_dir_path} does not exist, creating...')
+        out_dir_path.mkdir()
     
     regions = []
     with open(region_txt) as f:
