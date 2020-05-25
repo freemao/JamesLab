@@ -98,7 +98,7 @@ def aggGVCFs(args):
     pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
     print(f'check {cmd_sh} for all the commands!')
 
-    cmd_header = 'ml gatk4'
+    cmd_header = 'ml gatk4/4.1'
     if not opts.disable_slurm:
         put2slurm_dict = vars(opts)
         put2slurm_dict['cmd_header'] = cmd_header
@@ -142,7 +142,7 @@ def genoGVCFs(args):
     pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
     print(f'check {cmd_sh} for all the commands!')
 
-    cmd_header = 'ml gatk4'
+    cmd_header = 'ml gatk4/4.1'
     if not opts.disable_slurm:
         put2slurm_dict = vars(opts)
         put2slurm_dict['cmd_header'] = cmd_header
@@ -203,7 +203,7 @@ def genGVCFs(args):
     pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
     print(f'check {cmd_sh} for all the commands!')
 
-    cmd_header = 'ml gatk4'
+    cmd_header = 'ml gatk4/4.1'
     if not opts.disable_slurm:
         put2slurm_dict = vars(opts)
         put2slurm_dict['cmd_header'] = cmd_header

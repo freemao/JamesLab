@@ -70,7 +70,7 @@ def pre_ref(args):
     dict_fn = ref_dir/(ref_prefix+'.dict')
     if not dict_fn.exists():
         print('dict index does not exist...')
-        cmd = f'ml gatk4\ngatk CreateSequenceDictionary -R {ref_fn} -O {dict_fn}'
+        cmd = f'ml gatk4/4.1\ngatk CreateSequenceDictionary -R {ref_fn} -O {dict_fn}'
         cmds.append(cmd)
 
     if len(cmds)>0:
