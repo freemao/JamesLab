@@ -77,17 +77,18 @@ def aggGVCFs(args):
 
     cmds = []
     for interval, grp in df.groupby('interval'):
-        interval_dir = Path(interval.replace(':','_'))
+        interval_dir = out_dir_path/(interval.replace(':','_'))
         # The --genomicsdb-workspace-path must point to a non-existent or empty directory
         if interval_dir.exists():
             if len(interval_dir.glob('*')) != 0:
                 sys.exit(f'{interval_dir} is not an empty directory!')
-        gvcf_map = str(interval_dir) + '.map'
+        gvcf_map = str(interval) + '.map'
         print(f'{grp.shape[0]} gvcf files found for interval {interval}, generating the corresponding map file {gvcf_map}...')
         grp[['sm', 'fnpath']].to_csv(gvcf_map, header=None, index=False, sep='\t')
 
-        cmd = f"gatk '-Xmx{mem}g -Xms{mem}g' GenomicsDBImport --sample-name-map {gvcf_map} "\
-        f"--genomicsdb-workspace-path {interval_dir} --batch-size 50 --intervals {interval} "\
+        cmd = f"gatk --java-options '-Xmx{mem}g -Xms{mem}g' GenomicsDBImport "\
+	f"--sample-name-map {gvcf_map} --genomicsdb-workspace-path {interval_dir} "\
+	f"--batch-size 50 --intervals {interval} "\
         f"--reader-threads {opts.ncpus_per_node} --tmp-dir {tmp_dir}"
         cmds.append(cmd)
 
@@ -159,7 +160,9 @@ def genGVCFs(args):
         input_bam = '-I ' + ' -I '.join(grp['fnpath'].tolist())
         for region in regions:
             output_fn = f'{sm}_{region}.g.vcf'
-            cmd = f"gatk --java-options '-Xmx{mem}g' HaplotypeCaller -R {ref} {input_bam} -O {out_dir_path/output_fn} --sample-name {sm} --emit-ref-confidence GVCF -L {region}"
+            cmd = f"gatk --java-options '-Xmx{mem}g' HaplotypeCaller -R {ref} "\
+		f"{input_bam} -O {out_dir_path/output_fn} --sample-name {sm} "\
+		f"--emit-ref-confidence GVCF -L {region}"
             cmds.append(cmd)
     
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
