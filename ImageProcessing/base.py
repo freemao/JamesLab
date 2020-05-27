@@ -17,6 +17,8 @@ from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 def main():
     actions = (
+        ('toJPG', 'convert png to jpg'),
+        ('Batch2JPG', 'apply toJPG on HPC'),
         ('Resize', 'resize images'),
         ('BatchResize', 'apply Resize on large number of images on HPC'),
         ('CropFrame', 'crop borders'),
@@ -82,6 +84,53 @@ class ProsImage():
         #plant part: 2, non-hull part: 0 (False) (black), hull-part excluding plant: 1 (True) gray
         chull_diff = np.where(thresh_ivt == 255, 2, chull)
 
+def toJPG(args):
+    '''
+    %prog toJPG img1 img2 img3 ...
+
+    convert PNG to JPG using PIL. 
+    '''
+    p = OptionParser(toJPG.__doc__)
+    p.add_option('--out_dir', default='.',
+        help = 'specify the output image directory')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    for img_fn in args:
+        img_out_fn = Path(img_fn).name.replace('.png', '.jpg')
+        ProsImage(img_fn).PIL_img.save(Path(opts.out_dir)/img_out_fn)
+
+def Batch2JPG(args):
+    '''
+    %prog Batch2JPG in_dir out_dir
+
+    apply toJPG on a large number of images
+    '''
+    p = OptionParser(Batch2JPG.__doc__)
+    p.add_option('--pattern', default='*.png',
+                 help="file pattern of png files under the 'dir_in'")
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='do not convert commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=Batch2JPG.__name__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    in_dir, out_dir, = args
+    in_dir_path = Path(in_dir)
+    pngs = in_dir_path.glob(opts.pattern)
+    cmds = []
+    for img_fn in pngs:
+        img_fn = str(img_fn).replace(' ', '\ ')
+        cmd = "python -m schnablelab.ImageProcessing.base toJPG "\
+        f"{img_fn} --out_dir {out_dir}"
+        cmds.append(cmd)
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print('check %s for all the commands!'%cmd_sh)
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm(cmds, put2slurm_dict)
+
 def Resize(args):
     '''
     %prog Resize img1 img2 img3 ...
@@ -106,7 +155,7 @@ def Resize(args):
 
 def BatchResize(args):
     '''
-    %prog in_dir out_dir
+    %prog BatchResize in_dir out_dir
 
     apply BatchResize on a large number of images
     '''

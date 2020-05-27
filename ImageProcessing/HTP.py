@@ -79,7 +79,7 @@ class ParseProject():
         for _,row in pbar:
             sm, d, hms = row['sm'], row['date'], row['time']
             results = row['fnpath'].glob('Vis_SV_%s'%angle) if angle else row['fnpath'].glob('Vis_*')
-            pbar.set_description('extracting %s %s %s...'%(sm, d, hms))
+            #pbar.set_description('extracting %s %s %s...'%(sm, d, hms))
             yield sm, d, hms, results
 
 def List(args):
