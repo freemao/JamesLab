@@ -76,6 +76,8 @@ def upload(args):
 
     - imgdir: Path to directory of the images to be uploaded
     - projid: Zooniverse project id (4 - 5 digit number)
+    - dataset_name: specify a name for this dataset. the name
+		will be ignored if subject_id is provided. 
 
     DESC:
         Uploads images from the image directory to zooniverse
@@ -85,19 +87,12 @@ def upload(args):
     from schnablelab.Zooniverse.Zootils import upload as load
 
     p = OptionParser(upload.__doc__)
-    p.add_option('-s', '--subject', default=False,
+    p.add_option('-s', '--subject_id', default=False,
                  help='Designate a subject set id.')
     p.add_option('-q', '--quiet', action='store_true', default=False,
                  help='Silences output when uploading images to zooniverse.')
     p.add_option('-x', '--extension', default=False,
                  help='Specify the extension of the image files to be uploaded.')
-    '''
-    p.add_option('-c', '--convert', action='store_true', default=False,
-                 help="Compress and convert files to jpg for faster load times"
-                 + " on zooniverse.\n"
-                 + " Command: magick -strip -interlace Plane -quality 85%"
-                 + " -format jpg <img_directory>/<filename>.png")
-    '''
 
     opts, args = p.parse_args(args)
 

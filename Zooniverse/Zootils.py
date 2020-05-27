@@ -58,9 +58,9 @@ def upload(imgdir, projid, dataset_name, opts, **kwargs):
     except PanoptesAPIException:
         return False
 
-    if opts.subject:
+    if opts.subject_id:
         try:
-            subject_set = pan.SubjectSet.find(opts.subject)
+            subject_set = pan.SubjectSet.find(opts.subject_id)
         except PanoptesAPIException as e:
             log.error("Could not find subject set id")
             for arg in e.args:
@@ -87,24 +87,12 @@ def upload(imgdir, projid, dataset_name, opts, **kwargs):
                               + ' Display name has already been taken':
                         log.info("To use {} as the display name,"
                                  + " get the subject set id from zooniverse"
-                                 + " and call this command with --subject <id>")
+                                 + " and call this command with --subject_id <id>")
                         if not utils.get_yn('Try again?'):
                             exit(False)
                 continue
 
             break
-
-    # NOTE: This would need to be cross-platform and efficient
-    #       I am removing this feature and leaving file compression to
-    #       the user.
-    '''
-    if opts.convert:
-        log.info("Compressing and converting to jpg")
-        log.critical("Warning: All jpg files will be overwritten.")
-
-        if utils.get_yn("Continue?"):
-            utils.convert(imgdir)
-    '''
 
     if not osp.isfile(osp.join(imgdir, 'manifest.csv')):
         log.info("Generating manifest")
