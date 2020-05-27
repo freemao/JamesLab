@@ -35,8 +35,13 @@ class ProsImage():
     '''
     def __init__(self, filename):
         self.fn = filename
-        # four channels: RGBA
-        self.PIL_img = Image.open(filename).convert('RGB')
+        self.format = filename.split('.')[-1]
+        if self.format == 'png':
+            # four channels: RGBA
+            self.PIL_img = Image.open(filename).convert('RGB')
+        elif self.format == 'jpg':
+            # three channles: RGB
+            self.PIL_img = Image.open(filename)
         self.width, self.height = self.PIL_img.size
         self.array = np.array(self.PIL_img)
         self.array_g = self.array[:,:,1]
@@ -149,9 +154,9 @@ def Resize(args):
     
     dim = ([int(i) for i in opts.output_dim.split(',')])
     for img_fn in args:
-        img_out_fn = Path(img_fn).name.replace('.png', '.Rsz.png')
         img = ProsImage(img_fn)
-        img.resize(dim).save(Path(opts.out_dir)/img_out_fn, 'PNG')
+        img_out_fn = Path(img.fn).name.replace(f'.{img.format}', f'.Rsz.{img.format}')
+        img.resize(dim).save(Path(opts.out_dir)/img_out_fn)
 
 def BatchResize(args):
     '''
