@@ -11,6 +11,16 @@ from shutil import copyfile
 from schnablelab.apps.Tools import GenDataFrameFromPath
 from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
+def main():
+    actions = (
+        ('ExtractRGBs', 'extract images from project folder'),
+        ('Info', 'summary of image data under the project folder'),
+        ('List', 'list specified image folders'),
+
+    )
+    p = ActionDispatcher(actions)
+    p.dispatch(globals())
+
 class ParseProject():
     def __init__(self, prj_dir_name):
         self.prj_dir_path = Path(prj_dir_name)
@@ -71,16 +81,6 @@ class ParseProject():
             results = row['fnpath'].glob('Vis_SV_%s'%angle) if angle else row['fnpath'].glob('Vis_*')
             pbar.set_description('extracting %s %s %s...'%(sm, d, hms))
             yield sm, d, hms, results
-            
-def main():
-    actions = (
-        ('ExtractRGBs', 'extract images from project folder'),
-        ('Info', 'summary of image data under the project folder'),
-        ('List', 'list specified image folders'),
-
-    )
-    p = ActionDispatcher(actions)
-    p.dispatch(globals())
 
 def List(args):
     '''
@@ -143,9 +143,9 @@ def ExtractRGBs(args):
     p.add_option('--out_dir', default='.',
         help = 'specify the output image directory')
     p.add_option('--samples',
-        help = 'samples')
+        help = 'extract particular samples. multiple samples separated by comma without space')
     p.add_option('--dates',
-        help = 'dates')
+        help = 'extract particular dates. multiple dates separated by comma without space.')
     p.add_option('--angle',
         help = 'RBG viewing angle')
     opts, args = p.parse_args(args)
@@ -165,8 +165,16 @@ def ExtractRGBs(args):
     prj = ParseProject(project_folder)
     for sm, d, hms, RGBs in prj.RGB(samples=opts.samples, dates=opts.dates, angle=opts.angle):
         for rgb in RGBs:
-            out_fn = '%s_%s_%s_%s.png'%(sm, d, hms, rgb.name)
-            copyfile(rgb/'0_0_0.png', out_dir/out_fn)
+            source_fn = rgb/'0_0_0.png'
+            if source_fn.exists():
+                dest_fn = '%s_%s_%s_%s.png'%(sm, d, hms, rgb.name)
+                dest = out_dir/dest_fn
+                if dest.exists():
+                    print(f'{dest} already exists, omit!')
+                else:
+                    copyfile(source_fn, dest)
+            else:
+                print(f'{source_fn} does not exist in the project directory, omit!')
         
 if __name__ == '__main__':
     main()
