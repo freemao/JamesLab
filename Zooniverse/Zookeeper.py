@@ -48,6 +48,8 @@ def divide(args):
     %prog divide input_dir output_dir_prefix
     '''
     p = OptionParser(divide.__doc__)
+    p.add_option('--pattern', default='*.jpg',
+                 help='file name pattern')
     p.add_option('--nimgs_per_folder', type='int', default=700,
                  help='~ number of images (<1000) in each smaller folder')
     opts, args = p.parse_args(args)
@@ -55,7 +57,7 @@ def divide(args):
         sys.exit(not p.print_help())
     input_dir, out_prefix, = args
 
-    df = GenDataFrameFromPath(Path(input_dir), pattern='*.png')
+    df = GenDataFrameFromPath(Path(input_dir), pattern=opts.pattern)
     n_folders = math.ceil(df.shape[0]/opts.nimgs_per_folder)
     print('%s will be divided to %s datasets'%(df.shape[0], n_folders))
     n = 0
