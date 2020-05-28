@@ -12,11 +12,13 @@ from PIL import Image
 from tqdm import tqdm
 from pathlib import Path
 from skimage.util import invert
+from collections import namedtuple
 from skimage.morphology import convex_hull_image
 from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 def main():
     actions = (
+        ('PlantArea', 'calculate plant pixel area'),
         ('toJPG', 'convert png to jpg'),
         ('Batch2JPG', 'apply toJPG on HPC'),
         ('Resize', 'resize images'),
@@ -36,17 +38,20 @@ class ProsImage():
     def __init__(self, filename):
         self.fn = filename
         self.format = filename.split('.')[-1]
-        if self.format == 'png':
+        self.PIL_img = Image.open(filename)
+        #if self.format == 'png':
             # four channels: RGBA
-            self.PIL_img = Image.open(filename).convert('RGB')
-        elif self.format == 'jpg':
+            # self.PIL_img = Image.open(filename).convert('RGB')
+        # elif self.format == 'jpg':
             # three channles: RGB
-            self.PIL_img = Image.open(filename)
+            # self.PIL_img = Image.open(filename)
         self.width, self.height = self.PIL_img.size
-        self.array = np.array(self.PIL_img)
+        self.array = np.array(self.PIL_img)[:,:,0:3]
+        self.array_r = self.array[:,:,0]
         self.array_g = self.array[:,:,1]
+        self.array_b = self.array[:,:,2]
         # 2*green/(red+blue)
-        #self.array_gidx = (2*self.array_g)/(self.array[:,:,0]+self.array[:,:,2])
+        self.array_gidx = (2*self.array_g)/(self.array_r+self.array_b+0.01)
         self.h_w_c = self.array.shape
 
     def crop(self, crp_dim):
@@ -61,15 +66,18 @@ class ProsImage():
         '''
         return self.PIL_img.resize(resize_dim)
     
-    def binary_thresh(self, method='green_channel'):
+    def binary_thresh(self, method, value):
+        '''
+        method: green_channel or green_index
+        threshold: the thresh cutoff. 130 for green_channle, 1.12 for green_index
+        '''
         if method == 'green_channel':
-            # background: white(255), plant: black(0)
-            _, thresh = cv2.threshold(self.array_g, 130, 255, cv2.THRESH_BINARY)
+            _, thresh = cv2.threshold(self.array_g, value, 255, cv2.THRESH_BINARY) # background: white(255), plant: black(0)
+            thresh = invert(thresh) # background: black(0), plant: whilte(255)
         elif method == 'green_index':
-            _, thresh = cv2.threshold(self.array_gidx, 1.12, 255, cv2.THRESH_BINARY)
-        # background: black(0), plant: whilte(255)
-        thresh_ivt = invert(thresh)
-        return thresh_ivt
+            _, thresh = cv2.threshold(self.array_gidx, value, 255, cv2.THRESH_BINARY) # background: black(0), plant: whilte(255) 
+        thresh = thresh.astype('uint8')
+        return thresh # 2d numpy array
 
     def box_size(self, thresh_method='green_channel'):
         thresh_ivt = self.binary_thresh(method=thresh_method)
@@ -268,7 +276,7 @@ def CropFrame(args):
     p = OptionParser(CropFrame.__doc__)
     p.add_option('--crop_dim', default = '410,0,2300,1675',
         help = 'the dimension (left,upper,right,lower) after cropping. '\
-            'using (849,200,1800,1645) for corn images under zoom level 2 ')
+            'using (849,200,1780,1645) for corn images under zoom level 2 ')
     p.add_option('--out_dir', default='.',
         help = 'specify the output image directory')
     opts, args = p.parse_args(args)
@@ -277,9 +285,9 @@ def CropFrame(args):
     
     dim = ([int(i) for i in opts.crop_dim.split(',')])
     for img_fn in args:
-        img_out_fn = Path(img_fn).name.replace('.png', '.CrpFrm.png')
         img = ProsImage(img_fn)
-        img.crop(dim).save(Path(opts.out_dir)/img_out_fn, 'PNG')
+        img_out_fn = Path(img.fn).name.replace(f'.{img.format}', f'.CrpFrm.{img.format}')
+        img.crop(dim).save(Path(opts.out_dir)/img_out_fn)
     
 def BatchCropFrame(args):
     '''
@@ -313,6 +321,53 @@ def BatchCropFrame(args):
     if not opts.disable_slurm:
         put2slurm_dict = vars(opts)
         put2slurm(cmds, put2slurm_dict)
-    
+
+def PlantArea(args):
+    '''
+    %prog PlantArea img1 img2 img3 ...
+
+    estimate plant area 
+    '''
+    p = OptionParser(PlantArea.__doc__)
+    p.add_option('--out_dir', default='.',
+        help = 'specify the output image directory')
+    p.add_option('--frame_size', default = '410,0,2300,1675',
+        help = "specify the frame size following left,upper,right,lower. "\
+                "For reference: corn image under zoom1: '410,0,2300,1675', "\
+                "corn image under zoom2: '849,200,1780,1645'.")
+    p.add_option('--thresh_method', default='green_index', choices=('green_index', 'green_channel'),
+        help='choose the threshold method')
+    p.add_option('--cutoff', type='float', default=1.32,
+        help='choose the cutoff of the threshold method. For reference: green_index (1.32), green_channel(130)')
+    p.add_option('--out_csv', default='plant_area_summary.csv',
+        help='specify csv file including plant pixel area results')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+
+    frame_dim = namedtuple('frame_dim', 'left, upper, right, lower')    
+    dim = ([int(i) for i in opts.frame_size.split(',')])
+    dim = frame_dim._make(dim)
+
+    fns, areas = [], []
+    for img_fn in args:
+        print(f'Processing {Path(img_fn).name}...')
+        fns.append(Path(img_fn).name)
+        img = ProsImage(img_fn)
+        img_out_fn = Path(img.fn).name.replace(f'.{img.format}', f'.seg.{img.format}')
+        arr_thresh = img.binary_thresh(method=opts.thresh_method, value=opts.cutoff)
+        arr_thresh[0:dim.upper]=0
+        arr_thresh[dim.lower:]=0
+        arr_thresh[:, 0:dim.left]=0
+        arr_thresh[:, dim.right:]=0
+        Image.fromarray(arr_thresh).save(Path(opts.out_dir)/img_out_fn)
+        area = (arr_thresh==255).sum()
+        areas.append(area)
+    df_out = pd.DataFrame(dict(zip(['fn', 'pixel_area'], [fns, areas])))
+    df_out['threshold_method'] = opts.thresh_method
+    df_out['threshold_cutoff'] = opts.cutoff
+    df_out[['fn', 'threshold_method', 'threshold_cutoff', 'pixel_area']].to_csv(Path(opts.out_dir)/opts.out_csv, index=False)
+        
+
 if __name__ == "__main__":
     main()
