@@ -9,18 +9,44 @@ import pandas as pd
 from pathlib import Path
 from shutil import copyfile
 from schnablelab.apps.Tools import GenDataFrameFromPath
-from schnablelab.apps.base import ActionDispatcher, OptionParser, cutlist
+from schnablelab.apps.base import ActionDispatcher, OptionParser, cutlist, put2slurm
 
 def main():
     actions = (
         ('toy', 'random pick up some images for testing purporse'),
-        ('divide', 'divide a large number of images to sevearl smaller sets'),
+        ('divide', 'divide a large number of images to sevearl subsets'),
         ('upload', 'load images to zooniverse'),
+        ('BatchUpload', 'upload multiple dirs on HCC'),
         ('export', 'Get annotation and other exports'),
         ('manifest', 'Generate a manifest for zooniverse subject set upload')
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def BatchUpload(args):
+    '''
+    %prog BatchUpload dir1 dir2... project_id subject_id
+
+    upload multiple dataset 
+    '''
+    p = OptionParser(BatchUpload.__doc__)
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                help='do not convert commands to slurm job')
+    p.add_slurm_opts(job_prefix=BatchUpload.__name__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    *img_dirs, p_id, s_id = args
+    cmds = []
+    for img_dir in img_dirs:
+        cmd = f'python -m schnablelab.Zooniverse.Zookeeper upload {img_dir} {p_id} {img_dir} --subject_id {s_id}'
+        cmds.append(cmd)
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print(f'check {cmd_sh} for all the commands!')
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm(cmds, put2slurm_dict)
 
 def toy(args):
     '''

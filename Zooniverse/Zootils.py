@@ -1,13 +1,15 @@
-from getpass import getpass
-import sys
-import os.path as osp
+
 import os
-from datetime import datetime as dt
+import re
+import sys
 import csv
 import logging
-import re
-from subprocess import run, CalledProcessError
+import os.path as osp
 from pprint import pprint
+from getpass import getpass
+from datetime import datetime as dt
+from subprocess import run, CalledProcessError
+
 try:
     import panoptes_client as pan
     from panoptes_client.panoptes import PanoptesAPIException
@@ -20,11 +22,9 @@ except ImportError:
 
 log = logging.getLogger(__file__)
 log.setLevel(logging.DEBUG)
-log.addHandler(logging.FileHandler(osp.join(osp.dirname(osp.abspath(__file__)), "log")))
-log.info('### EXECUTION TIME: %s ###'%(dt.now().isoformat()))
+log.addHandler(logging.FileHandler(f"zooniverse_{dt.now().isoformat()}.log"))
 log.addHandler(logging.StreamHandler())
 
-               
 def upload(imgdir, projid, dataset_name, opts, **kwargs):
     '''
     %prog upload imgdir zoo_proj_id
