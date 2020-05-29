@@ -31,7 +31,7 @@ def main():
         ('only_ALT', 'filter number of ALT'),
         ('fixGTsep', 'fix the allele separator for beagle imputation'),
         ('SummarizeLD', 'summarize ld decay in log scale'),
-        ('EstimateLD', 'estimate ld using tassel'),
+        ('calculateLD', 'calculate r2 using Plink'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
@@ -384,35 +384,60 @@ def FixIndelHmp(args):
     f.close()
     f1.close()
 
-def EstimateLD(args):
+def calculateLD(args):
     """
-    %prog dir_in dir_out
-    run LD decay using tassel
+    %prog vcf_fn/plink_prefix genome_size(bp) num_SNPs
+
+    calculate LD using Plink
+    args:
+        vcf_fn/plink_prefix: specify either vcf/vcf.gz file or the prefix of plink bed/bim/fam files. 
+        genome_size(bp): the size of the reference genome in bp. For reference: sorghum 68,400,000
+        num_SNPs: the number of SNPs in the genotype file.
     """
-    p = OptionParser(EstimateLD.__doc__)
-    p.set_slurm_opts(jn=True)
-    p.add_option('--pattern', default='*vcf',
-                 help='pattern of vcf files')
-    p.add_option('--window_size', default='1000',
-                 help='specify how many SNPs in the sliding window')
+    p = OptionParser(calculateLD.__doc__)
+    p.add_option('--maf_cutoff', default='0.01',
+                 help='only use SNP with the MAF higher than this cutoff to calculate LD')
+    p.add_option('--max_distance', type='int', default=1000000,
+                 help='the maximum distance for a pair of SNPs to calcualte LD')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='do not convert commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=calculateLD.__name__)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    dir_in, dir_out = args
-    dir_out = Path(dir_out)
-    if not dir_out.exists():
-        dir_out.mkdir()
-    for vcf in Path(dir_in).glob(opts.pattern):
-        prefix = vcf.name.replace('.vcf', '')
-        out_fn = '%s.ld'%prefix
-        cmd = 'run_pipeline.pl -Xms512m -Xmx14g -fork1 -vcf %s -ld -ldWinSize %s -ldType SlidingWindow -td_tab %s/%s\n'%(vcf, opts.window_size, dir_out, out_fn)
-        header = Slurm_header % (opts.time, 15000, prefix, prefix, prefix)
-        header += 'ml java/1.8\n'
-        header += 'ml tassel/5.2\n'
-        header += cmd
-        with open('%s.estLD.slurm' % prefix, 'w') as f:
-            f.write(header)
-        print('slurm file %s.estLD.slurm has been created, you can submit your job file.' % prefix)
+    in_fn, g_size, n_snps, = args
+    in_fn, g_size, n_snps = Path(in_fn), int(g_size), int(n_snps)
+
+    if in_fn.name.endswith('.vcf') or in_fn.name.endswith('.vcf.gz'):
+        input = f'--vcf {in_fn}'
+    else:
+        input = f'--bfile {in_fn}'
+    n = 10
+    ld_window, ld_window_bp = [], [] 
+    while True:
+        ld_window.append(n)
+        dist = g_size//n_snps*n
+        ld_window_bp.append(dist)
+        n *= 10
+        if dist>=1000000:
+            break
+    
+    cmds = []
+    for win_snp, win_bp in zip(ld_window, ld_window_bp):
+        out_fn = Path(in_fn).name.split('.')[0]
+        prob = 10/win_snp
+        cmd = f'plink {input} --thin {prob} --r2 --ld-window 10 --ld-window-kb {win_bp//1000} --ld-window-r2 0 --maf {opts.maf_cutoff} --out {out_fn}.r2.thin{prob}.csv'
+        cmds.append(cmd)
+        print(cmd)
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print(f'check {cmd_sh} for all the commands!')
+
+    cmd_header = 'ml plink'
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm(cmds, put2slurm_dict)
 
 def SummarizeLD(args):
     """
