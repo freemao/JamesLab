@@ -423,11 +423,11 @@ def calculateLD(args):
         if dist>=1000000:
             break
     
+    out_fn = Path(in_fn).name.split('.')[0]
     cmds = []
     cmd = f'plink {input} --r2 --ld-window 10 --ld-window-kb {ld_window_bp[0]//1000} --ld-window-r2 0 --maf {opts.maf_cutoff} --out {out_fn}'
     cmds.append(cmd)
     for win_snp, win_bp in zip(ld_window[1:], ld_window_bp[1:]):
-        out_fn = Path(in_fn).name.split('.')[0]
         prob = 10/win_snp
         cmd = f'plink {input} --thin {prob} --r2 --ld-window 10 --ld-window-kb {win_bp//1000} --ld-window-r2 0 --maf {opts.maf_cutoff} --out {out_fn}.thin{prob}'
         cmds.append(cmd)
