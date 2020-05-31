@@ -28,6 +28,68 @@ def main():
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
+def genGVCFs(args):
+    """
+    %prog genGVCFs ref.fa bams.csv region.txt out_dir
+
+    run GATK HaplotypeCaller in GVCF mode. 
+    one g.vcf file for one smaple may contain multiple replicates
+    args:
+        ref.fa: reference sequence file
+        bams.csv: csv file containing all bam files and their sample names
+        region.txt: genomic intervals defined by each row to speed up GVCF calling. 
+            example regions: Chr01, Chr01:1-100
+        out_dir: where the gVCF files save to
+    """
+    p = OptionParser(genGVCFs.__doc__)
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                help='do not convert commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=genGVCFs.__name__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    ref, bams_csv, region_txt, out_dir, = args
+    out_dir_path = Path(out_dir)
+    if not out_dir_path.exists():
+        print(f'output directory {out_dir_path} does not exist, creating...')
+        out_dir_path.mkdir()
+    
+    regions = []
+    with open(region_txt) as f:
+        for i in f:
+            regions.append(i.rstrip())
+    
+    mem = int(opts.memory)//1024
+
+    df_bam = pd.read_csv(bams_csv)
+
+    # check if bai files exist
+    for bam in df_bam['fnpath']:
+        if not Path(bam+'.bai').exists():
+            print(f'no index file for {bam}...')
+            sys.exit('Index your bam files first!')
+
+    cmds = []
+    for sm, grp in df_bam.groupby('sm'):
+        print(f'{grp.shape[0]} bam files for sample {sm}')
+        input_bam = '-I ' + ' -I '.join(grp['fnpath'].tolist())
+        for region in regions:
+            output_fn = f'{sm}_{region}.g.vcf'
+            cmd = f"gatk --java-options '-Xmx{mem}g' HaplotypeCaller -R {ref} "\
+		f"{input_bam} -O {out_dir_path/output_fn} --sample-name {sm} "\
+		f"--emit-ref-confidence GVCF -L {region}"
+            cmds.append(cmd)
+    
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print(f'check {cmd_sh} for all the commands!')
+
+    cmd_header = 'ml gatk4/4.1'
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm(cmds, put2slurm_dict)
+
 def aggGVCFs(args):
     """
     %prog aggGVCFs input_dir out_dir 
@@ -148,67 +210,6 @@ def genoGVCFs(args):
         put2slurm_dict['cmd_header'] = cmd_header
         put2slurm(cmds, put2slurm_dict)
     
-def genGVCFs(args):
-    """
-    %prog genGVCFs ref.fa bams.csv region.txt out_dir
-
-    run GATK HaplotypeCaller in GVCF mode
-    args:
-        ref.fa: reference sequence file
-        bams.csv: csv file containing all bam files and their sample names
-        region.txt: genomic intervals defined by each row to speed up GVCF calling. 
-            example regions: Chr01, Chr01:1-100
-        out_dir: where the gVCF files save to
-    """
-    p = OptionParser(genGVCFs.__doc__)
-    p.add_option('--disable_slurm', default=False, action="store_true",
-                help='do not convert commands to slurm jobs')
-    p.add_slurm_opts(job_prefix=genGVCFs.__name__)
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    ref, bams_csv, region_txt, out_dir, = args
-    out_dir_path = Path(out_dir)
-    if not out_dir_path.exists():
-        print(f'output directory {out_dir_path} does not exist, creating...')
-        out_dir_path.mkdir()
-    
-    regions = []
-    with open(region_txt) as f:
-        for i in f:
-            regions.append(i.rstrip())
-    
-    mem = int(opts.memory)//1024
-
-    df_bam = pd.read_csv(bams_csv)
-
-    # check if bai files exist
-    for bam in df_bam['fnpath']:
-        if not Path(bam+'.bai').exists():
-            print(f'no index file for {bam}...')
-            sys.exit('Index your bam files first!')
-
-    cmds = []
-    for sm, grp in df_bam.groupby('sm'):
-        print(f'{grp.shape[0]} bam files for sample {sm}')
-        input_bam = '-I ' + ' -I '.join(grp['fnpath'].tolist())
-        for region in regions:
-            output_fn = f'{sm}_{region}.g.vcf'
-            cmd = f"gatk --java-options '-Xmx{mem}g' HaplotypeCaller -R {ref} "\
-		f"{input_bam} -O {out_dir_path/output_fn} --sample-name {sm} "\
-		f"--emit-ref-confidence GVCF -L {region}"
-            cmds.append(cmd)
-    
-    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
-    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
-    print(f'check {cmd_sh} for all the commands!')
-
-    cmd_header = 'ml gatk4/4.1'
-    if not opts.disable_slurm:
-        put2slurm_dict = vars(opts)
-        put2slurm_dict['cmd_header'] = cmd_header
-        put2slurm(cmds, put2slurm_dict)
-
 def gatk(args):
     """
     %prog gatk ref.fa bam_list.txt region.txt out_dir

@@ -482,7 +482,7 @@ def summarizeLD(args):
     line1 = plt.Line2D(range(1), range(1), linestyle='none', color="k", marker='o', 
                         markerfacecolor="white",markersize=5)
     line2 = plt.Line2D(range(1), range(1), color="#1f77b4")
-    plt.legend((line1,line2),('Original','Fitted'), frameon=False)
+    plt.legend((line1,line2),('Original','Fitted'), frameon=False, numpoints=2)
 
     ax.set_xlim(0, 60)
     ax.set_ylim(bottom=0)
@@ -497,9 +497,6 @@ def summarizeLD(args):
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     plt.savefig(f'{out_prefix}.png', dpi=300)
-
-    
-
 
 if __name__ == "__main__":
     main()
