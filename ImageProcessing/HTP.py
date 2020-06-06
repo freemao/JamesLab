@@ -22,20 +22,20 @@ def main():
     p.dispatch(globals())
 
 class ParseProject():
-    def __init__(self, prj_dir_name):
+    def __init__(self, prj_dir_name, sm_idx=1, date_idx=2, time_idx=3):
         self.prj_dir_path = Path(prj_dir_name)
         try:
-            df = pd.read_csv('%s.idx.csv'%self.prj_dir_path)
+            df = pd.read_csv('%s.idx.csv'%self.prj_dir_path.name)
             df['fnpath'] = df['fnpath'].apply(lambda x: Path(x))
         except FileNotFoundError:
             print('project index file does not exist, creating one...')
             df = GenDataFrameFromPath(self.prj_dir_path, pattern='*')
             df = df[df['fnpath'].apply(lambda x: x.is_dir())]
-            df['sm'] = df['fn'].apply(lambda x: x.split('_')[1])
-            df['date'] = df['fn'].apply(lambda x: x.split('_')[2])
-            df['time'] = df['fn'].apply(lambda x: x.split('_')[3])
+            df['sm'] = df['fn'].apply(lambda x: x.split('_')[sm_idx])
+            df['date'] = df['fn'].apply(lambda x: x.split('_')[date_idx])
+            df['time'] = df['fn'].apply(lambda x: x.split('_')[time_idx])
             df = df.sort_values(['sm', 'date', 'time']).reset_index(drop=True)
-            df.to_csv('%s.idx.csv'%self.prj_dir_path, index=False)
+            df.to_csv('%s.idx.csv'%self.prj_dir_path.name, index=False)
         finally:
             self.df = df
         self.sm_counts = self.df['sm'].value_counts().sort_index()
@@ -65,7 +65,7 @@ class ParseProject():
         cond = self.df['date'].isin(dates)
         return cond
 
-    def RGB(self, samples=None, dates=None, angle=None):
+    def RGB(self, samples=None, dates=None, angle=None, backup_angle=None):
         if samples and not dates:
             df = self.df[self.Subsamples(samples)]
         elif not samples and dates:
@@ -78,9 +78,17 @@ class ParseProject():
         pbar = tqdm(df.iterrows(), total=df.shape[0])
         for _,row in pbar:
             sm, d, hms = row['sm'], row['date'], row['time']
-            results = row['fnpath'].glob('Vis_SV_%s'%angle) if angle else row['fnpath'].glob('Vis_*')
-            #pbar.set_description('extracting %s %s %s...'%(sm, d, hms))
-            yield sm, d, hms, results
+            if angle:
+                img_fn = row['fnpath']/('Vis_SV_%s/0_0_0.png'%angle)
+                if not img_fn.exists():
+                    if backup_angle:
+                        img_fn = row['fnpath']/('Vis_SV_%s/0_0_0.png'%backup_angle)
+                    else:
+                        print(f'{img_fn} does not exist in the project directory, omit!')
+                        continue
+            else:
+                sys.exit('specif at least one vewing angle for RGB images')
+            yield sm, d, hms, img_fn
 
 def List(args):
     '''
@@ -89,16 +97,19 @@ def List(args):
     list specified image folders
     '''
     p = OptionParser(List.__doc__)
+    p.add_option('--item_idx', default='1,2,3',
+        help = 'the index of sample name, date, and time in each image directory name')
     p.add_option('--samples',
-        help = 'specify samples (comma separated without space)')
+        help = 'specify samples (comma separated without space if speciy more than one samples)')
     p.add_option('--dates',
-        help = 'specify dates (comma separated without space)')
+        help = 'specify dates (comma separated without space if speciy more than one dates)')
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
     project_folder, = args
 
-    prj = ParseProject(project_folder)
+    sm_idx, date_idx, time_idx = [int(i) for i in opts.item_idx.split(',')]
+    prj = ParseProject(project_folder, sm_idx, date_idx, time_idx)
     if opts.samples and not opts.dates:
         samples = opts.samples.split(',')
         cond = prj.Subsamples(samples)
@@ -118,17 +129,22 @@ def Info(args):
     Show summary of images under project_folder
     '''
     p = OptionParser(Info.__doc__)
+    p.add_option('--item_idx', default='1,2,3',
+        help = 'the index of sample name, date, and time in each image directory name')
     opts, args = p.parse_args(args)
     
     if len(args) == 0:
         sys.exit(not p.print_help())
     project_folder, = args
 
-    prj = ParseProject(project_folder)
+    sm_idx, date_idx, time_idx = [int(i) for i in opts.item_idx.split(',')]
+    prj = ParseProject(project_folder, sm_idx, date_idx, time_idx)
     print('Summary of samples:')
-    print(prj.sm_counts, '\n')
+    for i,j in prj.sm_counts.items():
+        print(i, j)
     print('Summary of dates:')
-    print(prj.date_counts, '\n')
+    for i,j in prj.date_counts.items():
+        print(i, j)
     print('Angles for RGB images:')
     for angle in prj.df.loc[0,'fnpath'].glob('Vis_*'):
         print(angle.name)
@@ -140,14 +156,18 @@ def ExtractRGBs(args):
     extract RGB images from project folder
     '''
     p = OptionParser(ExtractRGBs.__doc__)
+    p.add_option('--item_idx', default='1,2,3',
+        help = 'the index of sample name, date, and time in each image directory name')
     p.add_option('--out_dir', default='.',
         help = 'specify the output image directory')
     p.add_option('--samples',
         help = 'extract particular samples. multiple samples separated by comma without space')
     p.add_option('--dates',
         help = 'extract particular dates. multiple dates separated by comma without space.')
-    p.add_option('--angle',
-        help = 'RBG viewing angle')
+    p.add_option('--angle', default='108',
+        help = 'which viewing angle are you going to extract?')
+    p.add_option('--backup_angle',
+        help = 'specify an alternative viewing angle for RGB images if the above angle does not exist.')
     opts, args = p.parse_args(args)
     
     if len(args) == 0:
@@ -156,25 +176,23 @@ def ExtractRGBs(args):
 
     out_dir = Path(opts.out_dir)
     if not out_dir.exists():
-        print('%s does not exist, creating..'%out_dir)
+        print("The output directory '%s' does not exist, creating.."%out_dir)
         out_dir.mkdir()
 
     opts.samples = opts.samples.split(',') if opts.samples else opts.samples
     opts.dates = opts.dates.split(',') if opts.dates else opts.dates
 
-    prj = ParseProject(project_folder)
-    for sm, d, hms, RGBs in prj.RGB(samples=opts.samples, dates=opts.dates, angle=opts.angle):
-        for rgb in RGBs:
-            source_fn = rgb/'0_0_0.png'
-            if source_fn.exists():
-                dest_fn = '%s_%s_%s_%s.png'%(sm, d, hms, rgb.name)
-                dest = out_dir/dest_fn
-                if dest.exists():
-                    print(f'{dest} already exists, omit!')
-                else:
-                    copyfile(source_fn, dest)
-            else:
-                print(f'{source_fn} does not exist in the project directory, omit!')
-        
+    sm_idx, date_idx, time_idx = [int(i) for i in opts.item_idx.split(',')]
+    prj = ParseProject(project_folder, sm_idx, date_idx, time_idx)
+
+    for sm, d, hms, path_img_fn in prj.RGB(samples=opts.samples, dates=opts.dates, angle=opts.angle, backup_angle=opts.backup_angle):
+        angle_dir_name = path_img_fn.parts[-2]
+        dest_fn = '%s_%s_%s_%s.png'%(sm, d, hms, angle_dir_name)
+        dest = out_dir/dest_fn
+        if dest.exists():
+            print(f'{dest} already exists, omit!')
+        else:
+            copyfile(path_img_fn, dest)
+            
 if __name__ == '__main__':
     main()
