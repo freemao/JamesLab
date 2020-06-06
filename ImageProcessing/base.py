@@ -8,12 +8,15 @@ import cv2
 import sys
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from PIL import Image
 from tqdm import tqdm
 from pathlib import Path
+from skimage import io
 from skimage.util import invert
 from collections import namedtuple
 from skimage.morphology import convex_hull_image
+from matplotlib.patches import Arrow, Circle
 from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 def main():
@@ -31,6 +34,24 @@ def main():
     p = ActionDispatcher(actions)
     p.dispatch(globals())
 
+def ShowMarkers(img_fn, coordinate_array, colors):
+    '''
+    show markers on an image
+    args:
+        img_fn: image filename
+        coordinate_array: 2D array with shape (, 2)
+        colors: list of colors for each coordinate
+    return:
+        matplotlib ax with patches added 
+    '''
+    img = io.imread(img_fn)
+    _, ax = plt.subplots(1)
+    ax.imshow(img)
+    for xy, c in zip(coordinate_array, colors):
+        circle = Circle(xy, radium=2, color=c)
+        ax.add_patch(circle)
+    return ax
+
 class ProsImage():
     '''
     basic functions of processing image
@@ -39,12 +60,6 @@ class ProsImage():
         self.fn = filename
         self.format = filename.split('.')[-1]
         self.PIL_img = Image.open(filename)
-        #if self.format == 'png':
-            # four channels: RGBA
-            # self.PIL_img = Image.open(filename).convert('RGB')
-        # elif self.format == 'jpg':
-            # three channles: RGB
-            # self.PIL_img = Image.open(filename)
         self.width, self.height = self.PIL_img.size
         self.array = np.array(self.PIL_img)[:,:,0:3]
         self.array_r = self.array[:,:,0]
@@ -111,7 +126,7 @@ def toJPG(args):
         sys.exit(not p.print_help())
     for img_fn in args:
         img_out_fn = Path(img_fn).name.replace('.png', '.jpg')
-        ProsImage(img_fn).PIL_img.save(Path(opts.out_dir)/img_out_fn)
+        ProsImage(img_fn).PIL_img.convert('RGB').save(Path(opts.out_dir)/img_out_fn)
 
 def Batch2JPG(args):
     '''
@@ -156,6 +171,8 @@ def Resize(args):
         help = 'the dimension (width,height) after resizing')
     p.add_option('--out_dir', default='.',
         help = 'specify the output image directory')
+    p.add_option('--to_jpg', default=False, action='store_true',
+        help = 'in save image as jpg format')
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
@@ -163,8 +180,12 @@ def Resize(args):
     dim = ([int(i) for i in opts.output_dim.split(',')])
     for img_fn in args:
         img = ProsImage(img_fn)
-        img_out_fn = Path(img.fn).name.replace(f'.{img.format}', f'.Rsz.{img.format}')
-        img.resize(dim).save(Path(opts.out_dir)/img_out_fn)
+        if opts.to_jpg:
+            img_out_fn = Path(img.fn).name.replace(f'.{img.format}', '.Rsz.jpg')
+            img.resize(dim).convert('RGB').save(Path(opts.out_dir)/img_out_fn)
+        else:
+            img_out_fn = Path(img.fn).name.replace(f'.{img.format}', f'.Rsz.{img.format}')
+            img.resize(dim).save(Path(opts.out_dir)/img_out_fn)
 
 def BatchResize(args):
     '''
@@ -177,6 +198,8 @@ def BatchResize(args):
                  help="file pattern of png files under the 'dir_in'")
     p.add_option('--output_dim', default = '1227,1028',
         help = 'the dimension (width,height) after resizing')
+    p.add_option('--to_jpg', default=False, action='store_true',
+        help = 'in save image as jpg format')
     p.add_option('--disable_slurm', default=False, action="store_true",
                  help='do not convert commands to slurm jobs')
     p.add_slurm_opts(job_prefix=BatchResize.__name__)
@@ -189,12 +212,16 @@ def BatchResize(args):
     cmds = []
     for img_fn in pngs:
         img_fn = str(img_fn).replace(' ', '\ ')
-        cmd = "python -m schnablelab.ImageProcessing.base Resize "\
-        f"{img_fn} --output_dim {opts.output_dim} --out_dir {out_dir}"
+        cmd = 'python -m schnablelab.ImageProcessing.base Resize '\
+        f'{img_fn} --output_dim {opts.output_dim} --out_dir {out_dir}'
+        if opts.to_jpg:
+            cmd += ' --to_jpg'
         cmds.append(cmd)
-    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
-    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
-    print('check %s for all the commands!'%cmd_sh)
+    fn_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    with open(fn_sh, 'w') as f:
+        for i in cmds:
+            f.write(i+'\n')
+    print('check %s for all the commands!'%fn_sh)
     if not opts.disable_slurm:
         put2slurm_dict = vars(opts)
         put2slurm(cmds, put2slurm_dict)
@@ -368,6 +395,5 @@ def PlantArea(args):
     df_out['threshold_cutoff'] = opts.cutoff
     df_out[['fn', 'threshold_method', 'threshold_cutoff', 'pixel_area']].to_csv(Path(opts.out_dir)/opts.out_csv, index=False)
         
-
 if __name__ == "__main__":
     main()
