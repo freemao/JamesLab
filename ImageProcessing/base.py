@@ -4,15 +4,15 @@
 base class and functions for image processing
 """
 import csv
-import cv2
+#import cv2
 import sys
 import numpy as np
 import pandas as pd
 from PIL import Image
 from tqdm import tqdm
 from pathlib import Path
-from skimage.util import invert
-from skimage.morphology import convex_hull_image
+#from skimage.util import invert
+#from skimage.morphology import convex_hull_image
 from schnablelab.apps.base import ActionDispatcher, OptionParser, put2slurm
 
 def main():

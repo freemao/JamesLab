@@ -6,6 +6,7 @@ class and functions to deal with high throughput phenotyping data
 import sys
 import pandas as pd
 from tqdm import tqdm
+from PIL import Image
 from pathlib import Path
 from shutil import copyfile
 from schnablelab.apps.Tools import GenDataFrameFromPath
@@ -148,6 +149,11 @@ def ExtractRGBs(args):
         help = 'extract particular dates. multiple dates separated by comma without space.')
     p.add_option('--angle',
         help = 'RBG viewing angle')
+    p.add_option('--copy_only', default=False, action='store_true',
+        help = 'only do copy without resizing and converting image format')
+    p.add_option('--disable_slurm', default=False, action='store_true',
+        help = 'do not convert commands to slurmm jobs')
+    p.add_slurm_opts(job_prefix=ExtractRGBs.__name__)
     opts, args = p.parse_args(args)
     
     if len(args) == 0:
@@ -159,20 +165,37 @@ def ExtractRGBs(args):
         print('%s does not exist, creating..'%out_dir)
         out_dir.mkdir()
 
+    cmd = f'python -m schnablelab.ImageProcessing.HTP ExtractRGBs {project_folder} --out_dir {out_dir} --disable_slurm '
+    if opts.samples:
+        cmd += f'--sampels {opts.samples} '
+    if opts.dates:
+        cmd += f'--dates {opts.dates} '
+    if opts.angle:
+        cmd += f'--angle {opts.angle} '
+    if opts.copy_only:
+        cmd += f'--copy_only '
+    print(cmd)
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm([cmd], put2slurm_dict)
+        return 
+
     opts.samples = opts.samples.split(',') if opts.samples else opts.samples
     opts.dates = opts.dates.split(',') if opts.dates else opts.dates
-
     prj = ParseProject(project_folder)
     for sm, d, hms, RGBs in prj.RGB(samples=opts.samples, dates=opts.dates, angle=opts.angle):
         for rgb in RGBs:
             source_fn = rgb/'0_0_0.png'
             if source_fn.exists():
-                dest_fn = '%s_%s_%s_%s.png'%(sm, d, hms, rgb.name)
+                dest_fn = '%s_%s_%s_%s.jpg'%(sm, d, hms, rgb.name)
                 dest = out_dir/dest_fn
                 if dest.exists():
                     print(f'{dest} already exists, omit!')
                 else:
-                    copyfile(source_fn, dest)
+                    if opts.copy_only:
+                        copyfile(source_fn, dest)
+                    else:
+                        Image.open(source_fn).convert('RGB').resize((1227, 1028)).save(dest)
             else:
                 print(f'{source_fn} does not exist in the project directory, omit!')
         
