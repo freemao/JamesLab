@@ -9,18 +9,44 @@ import pandas as pd
 from pathlib import Path
 from shutil import copyfile
 from schnablelab.apps.Tools import GenDataFrameFromPath
-from schnablelab.apps.base import ActionDispatcher, OptionParser, cutlist
+from schnablelab.apps.base import ActionDispatcher, OptionParser, cutlist, put2slurm
 
 def main():
     actions = (
         ('toy', 'random pick up some images for testing purporse'),
-        ('divide', 'divide a large number of images to sevearl smaller sets'),
+        ('divide', 'divide a large number of images to sevearl subsets'),
         ('upload', 'load images to zooniverse'),
+        ('BatchUpload', 'upload multiple dirs on HCC'),
         ('export', 'Get annotation and other exports'),
         ('manifest', 'Generate a manifest for zooniverse subject set upload')
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
+
+def BatchUpload(args):
+    '''
+    %prog BatchUpload dir1 dir2... project_id subject_id
+
+    upload multiple dataset 
+    '''
+    p = OptionParser(BatchUpload.__doc__)
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                help='do not convert commands to slurm job')
+    p.add_slurm_opts(job_prefix=BatchUpload.__name__)
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    *img_dirs, p_id, s_id = args
+    cmds = []
+    for img_dir in img_dirs:
+        cmd = f'python -m schnablelab.Zooniverse.Zookeeper upload {img_dir} {p_id} {img_dir} --subject_id {s_id}'
+        cmds.append(cmd)
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print(f'check {cmd_sh} for all the commands!')
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm(cmds, put2slurm_dict)
 
 def toy(args):
     '''
@@ -48,6 +74,8 @@ def divide(args):
     %prog divide input_dir output_dir_prefix
     '''
     p = OptionParser(divide.__doc__)
+    p.add_option('--pattern', default='*.jpg',
+                 help='file name pattern')
     p.add_option('--nimgs_per_folder', type='int', default=700,
                  help='~ number of images (<1000) in each smaller folder')
     opts, args = p.parse_args(args)
@@ -55,7 +83,7 @@ def divide(args):
         sys.exit(not p.print_help())
     input_dir, out_prefix, = args
 
-    df = GenDataFrameFromPath(Path(input_dir), pattern='*.png')
+    df = GenDataFrameFromPath(Path(input_dir), pattern=opts.pattern)
     n_folders = math.ceil(df.shape[0]/opts.nimgs_per_folder)
     print('%s will be divided to %s datasets'%(df.shape[0], n_folders))
     n = 0
@@ -74,6 +102,8 @@ def upload(args):
 
     - imgdir: Path to directory of the images to be uploaded
     - projid: Zooniverse project id (4 - 5 digit number)
+    - dataset_name: specify a name for this dataset. the name
+		will be ignored if subject_id is provided. 
 
     DESC:
         Uploads images from the image directory to zooniverse
@@ -83,19 +113,12 @@ def upload(args):
     from schnablelab.Zooniverse.Zootils import upload as load
 
     p = OptionParser(upload.__doc__)
-    p.add_option('-s', '--subject', default=False,
+    p.add_option('-s', '--subject_id', default=False,
                  help='Designate a subject set id.')
     p.add_option('-q', '--quiet', action='store_true', default=False,
                  help='Silences output when uploading images to zooniverse.')
     p.add_option('-x', '--extension', default=False,
                  help='Specify the extension of the image files to be uploaded.')
-    '''
-    p.add_option('-c', '--convert', action='store_true', default=False,
-                 help="Compress and convert files to jpg for faster load times"
-                 + " on zooniverse.\n"
-                 + " Command: magick -strip -interlace Plane -quality 85%"
-                 + " -format jpg <img_directory>/<filename>.png")
-    '''
 
     opts, args = p.parse_args(args)
 

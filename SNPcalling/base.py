@@ -20,7 +20,6 @@ def main():
         ('FilterHetero', 'filter out SNPs with high heterozygous rates'),
         ('SubsamplingSNPs', 'grep a subset of SNPs from a vcf file'),
         ('SubsamplingSMs', 'grep a subset of samples from a vcf file'),
-        ('SummarizeLD', 'ld decay in log scale'),
         ('vcf2hmp', 'convert vcf to hmp foramt'),
         ('Info', 'get basic information of a vcf file'),
         ('reheader', 'edit sample names in header only'),
@@ -377,42 +376,6 @@ def Info(args):
     print("number of hash ('#') lines: {val:,}".format(val=vcf.numHeaderLines))
     print('number of SNPs: {val:,}'.format(val=vcf.num_SNPs))
     print('Sample names: \n  %s'%'\n  '.join(vcf.SMs))
-
-def SummarizeLD(args):
-    """
-    %prog ld.csv num0 out.txt
-    ld.csv: ld tab delimited file generated from tassel
-    num0: 0s in the distance
-
-    summarize ld decay in log scale 0-100kb
-    """
-    p = OptionParser(SummarizeLD.__doc__)
-    opts, args = p.parse_args(args)
-    if len(args) == 0:
-        sys.exit(not p.print_help())
-    ld_fn,num0,out_fn, = args
-    df = pd.read_csv(ld_fn, delim_whitespace=True, usecols=['Dist_bp', 'R^2'])
-    df = df.dropna().sort_values('Dist_bp').reset_index(drop=True)
-
-    mybin = [10**i for i in np.arange(0, float(num0)+0.1, 0.1)]
-    blockPreIndex = np.histogram(df['Dist_bp'].values, bins=mybin)[0]
-
-    a = list(blockPreIndex)
-    a.insert(0,0)
-    boxlist = []
-    for idx,ele in enumerate(a):
-        st = sum(a[0:idx])
-        ed = sum(a[0:idx+1])
-        boxlist.append(df['R^2'][st:ed].values)
-    boxlist.pop(0)
-    
-    with open(out_fn, 'w') as f:
-        for idx,ele in enumerate(boxlist):
-            if len(ele) >= 1:
-                averageR2, sd = sum(ele)/float(len(ele)), np.var(ele)
-            elif len(ele) == 0:
-                averageR2, sd = '',''
-            f.write('%s\t%s\t%s\t%s\n'%(10**(idx*0.1),(10**((idx+1)*0.1)), averageR2, sd))
 
 if __name__ == "__main__":
     main()

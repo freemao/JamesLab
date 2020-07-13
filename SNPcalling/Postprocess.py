@@ -4,9 +4,10 @@
 functions to process vcf files
 """
 import sys
+import subprocess
+import numpy as np
 import pandas as pd
 import os.path as op
-import subprocess
 from pathlib import Path
 from subprocess import run
 from schnablelab.apps.base import ActionDispatcher, OptionParser, glob, put2slurm
@@ -30,8 +31,8 @@ def main():
         ('FilterVCF', 'remove bad snps using bcftools'),
         ('only_ALT', 'filter number of ALT'),
         ('fixGTsep', 'fix the allele separator for beagle imputation'),
-        ('SummarizeLD', 'summarize ld decay in log scale'),
-        ('EstimateLD', 'estimate ld using tassel'),
+        ('calculateLD', 'calculate r2 using Plink'),
+        ('summarizeLD', 'summarize ld decay in log scale')
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
@@ -384,65 +385,118 @@ def FixIndelHmp(args):
     f.close()
     f1.close()
 
-def EstimateLD(args):
+def calculateLD(args):
     """
-    %prog dir_in dir_out
-    run LD decay using tassel
+    %prog vcf_fn/plink_prefix genome_size(Mb) num_SNPs
+
+    calculate LD using Plink
+    args:
+        vcf_fn/plink_prefix: specify either vcf/vcf.gz file or the prefix of plink bed/bim/fam files. 
+        genome_size(Mb): the size of the reference genome in Mb. For reference: sorghum 684Mb
+        num_SNPs: the number of SNPs in the genotype file.
     """
-    p = OptionParser(EstimateLD.__doc__)
-    p.set_slurm_opts(jn=True)
-    p.add_option('--pattern', default='*vcf',
-                 help='pattern of vcf files')
-    p.add_option('--window_size', default='1000',
-                 help='specify how many SNPs in the sliding window')
+    p = OptionParser(calculateLD.__doc__)
+    p.add_option('--maf_cutoff', default='0.01',
+                 help='only use SNP with the MAF higher than this cutoff to calculate LD')
+    p.add_option('--max_distance', type='int', default=1000000,
+                 help='the maximum distance of a pair of SNPs to calcualte LD (bp)')
+    p.add_option('--disable_slurm', default=False, action="store_true",
+                 help='do not convert commands to slurm jobs')
+    p.add_slurm_opts(job_prefix=calculateLD.__name__)
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    dir_in, dir_out = args
-    dir_out = Path(dir_out)
-    if not dir_out.exists():
-        dir_out.mkdir()
-    for vcf in Path(dir_in).glob(opts.pattern):
-        prefix = vcf.name.replace('.vcf', '')
-        out_fn = '%s.ld'%prefix
-        cmd = 'run_pipeline.pl -Xms512m -Xmx14g -fork1 -vcf %s -ld -ldWinSize %s -ldType SlidingWindow -td_tab %s/%s\n'%(vcf, opts.window_size, dir_out, out_fn)
-        header = Slurm_header % (opts.time, 15000, prefix, prefix, prefix)
-        header += 'ml java/1.8\n'
-        header += 'ml tassel/5.2\n'
-        header += cmd
-        with open('%s.estLD.slurm' % prefix, 'w') as f:
-            f.write(header)
-        print('slurm file %s.estLD.slurm has been created, you can submit your job file.' % prefix)
+    in_fn, g_size, n_snps, = args
+    in_fn, g_size, n_snps = Path(in_fn), int(g_size)*1000000, int(n_snps)
 
-def SummarizeLD(args):
+    if in_fn.name.endswith('.vcf') or in_fn.name.endswith('.vcf.gz'):
+        input = f'--vcf {in_fn}'
+    else:
+        input = f'--bfile {in_fn}'
+    n = 10
+    ld_window, ld_window_bp = [], [] 
+    while True:
+        ld_window.append(n)
+        dist = g_size//n_snps*n
+        ld_window_bp.append(dist)
+        n *= 10
+        if dist>=1000000:
+            break
+    
+    out_fn = Path(in_fn).name.split('.')[0]
+    cmds = []
+    cmd = f'plink {input} --r2 --ld-window 10 --ld-window-kb {ld_window_bp[0]//1000} --ld-window-r2 0 --maf {opts.maf_cutoff} --out {out_fn}'
+    cmds.append(cmd)
+    for win_snp, win_bp in zip(ld_window[1:], ld_window_bp[1:]):
+        prob = 10/win_snp
+        cmd = f'plink {input} --thin {prob} --r2 --ld-window 10 --ld-window-kb {win_bp//1000} --ld-window-r2 0 --maf {opts.maf_cutoff} --out {out_fn}.thin{prob}'
+        cmds.append(cmd)
+        print(cmd)
+    cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
+    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    print(f'check {cmd_sh} for all the commands!')
+
+    cmd_header = 'ml plink'
+    if not opts.disable_slurm:
+        put2slurm_dict = vars(opts)
+        put2slurm_dict['cmd_header'] = cmd_header
+        put2slurm(cmds, put2slurm_dict)
+
+
+def summarizeLD(args):
     """
-    %prog dir_in dir_out
-    summarize LD decay in log scale
+    %prog summarizeLD ld1 ld2 ... output_prefix
+
+    summarize LD results from plink results
+    args:
+        ld1: the output file from Plink, add more if you have many
+        output_prefix: the output prefix of the summarizing results
     """
-    p = OptionParser(EstimateLD.__doc__)
-    p.set_slurm_opts(jn=True)
-    p.add_option('--pattern', default='*.ld.txt',
-                 help='pattern of ld.txt files')
-    p.add_option('--max_dist', default='1,000,000',
-                 help='the maximum ld distance')
+    p = OptionParser(summarizeLD.__doc__)
+    p.add_option('--order', type='int', default=4,
+                help='order for np.polyfit')
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
-    dir_in, dir_out = args
-    dir_out = Path(dir_out)
-    if not dir_out.exists():
-        dir_out.mkdir()
-    num0 = opts.max_dist.count('0')
+    *lds, out_prefix = args
+    df = pd.concat([pd.read_csv(ld, delim_whitespace=True, usecols=[1, 4, 6]) for ld in lds])
+    df = df.drop_duplicates(['BP_A', 'BP_B'])
+    df['Dist_bp'] = df['BP_B']-df['BP_A']
+    log_bin = [10**i for i in np.arange(0.1, float(6)+0.1, 0.1)]
+    inds = np.digitize(df['Dist_bp'].values, bins=log_bin)
+    df['x'] = inds
+    df_plot = df.groupby('x')['R2'].mean().reset_index()
+    df_plot.to_csv(f'{out_prefix}.LDsummary.csv', index=False, sep='\t')
 
-    for fn in Path(dir_in).glob(opts.pattern):
-        prefix = '.'.join(fn.name.split('.')[0:-1])
-        out_fn = '%s.sum.csv'%prefix
-        cmd = 'python -m schnablelab.SNPcalling.base SummarizeLD %s %s %s/%s\n'%(fn, num0, dir_out, out_fn)
-        header = Slurm_header % (opts.time, opts.memory, prefix, prefix, prefix)
-        header += cmd
-        with open('%s.sumLD.slurm' % prefix, 'w') as f:
-            f.write(header)
-        print('slurm file %s.sumLD.slurm has been created, you can submit your job file.' % prefix)
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    plt.rcParams['xtick.labelsize'] = 10
+    plt.rcParams['ytick.labelsize'] = 10
+    plt.rcParams['xtick.major.pad'] = 1
+    plt.rcParams['ytick.major.pad'] = 1
+    _, ax = plt.subplots(figsize=(5.5, 4))
+    ax = sns.regplot(x='x', y='R2', data=df_plot, order=opts.order, 
+                    scatter=True, 
+                    scatter_kws={'edgecolor':'k', 'facecolor':'white', 's':20})
+
+    line1 = plt.Line2D(range(1), range(1), linestyle='none', color="k", marker='o', 
+                        markerfacecolor="white",markersize=5)
+    line2 = plt.Line2D(range(1), range(1), color="#1f77b4")
+    plt.legend((line1,line2),('Original','Fitted'), frameon=False, numpoints=2)
+
+    ax.set_xlim(0, 60)
+    ax.set_ylim(bottom=0)
+
+    ax.set_xlabel('Distance', fontsize=12)
+    ax.set_ylabel(r'$r^2$', fontsize=12)
+
+    ax.set_xticklabels(['1bp', '10bp', '100bp', '1Kb', '10Kb', '100Kb', '1Mb'])
+
+    ax.spines['bottom'].set_position(('axes', -0.01))
+    ax.spines['left'].set_position(('axes', -0.01))
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.savefig(f'{out_prefix}.png', dpi=300)
 
 if __name__ == "__main__":
     main()
