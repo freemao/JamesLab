@@ -130,8 +130,8 @@ def UniquePeaks(args):
         help = 'softare where the GWAS result came from. If other, specify --usecols option')
     p.add_option('--WindowSize', type='int', default=150_000,
         help = 'Maximum distance between two significant SNPs in same peak in base pairs')
-    p.add_option('--MeRatio', type='float', default = 1.0,
-        help = "specify the ratio of independent SNPs, maize is 0.32, sorghum is 0.53")
+    p.add_option('--cutoff', type='float',
+        help = "specify the significant cutoff in log10")
     p.add_option('--sort', default=False, action='store_true',
         help = "If GWAS file needs to be sorted based on chromosome and position")
     p.add_option('--usecols', default=None,
@@ -150,7 +150,7 @@ def UniquePeaks(args):
             print('indics of columns to be read: %s'%opts.usecols)
 
     gwas0 = ReadGWASfile(gwasfile, opts.software, usecols=opts.usecols)
-    df = gwas0.SignificantSNPs(p_cutoff=0.05, MeRatio=opts.MeRatio)
+    df = gwas0.SignificantSNPs(sig_cutoff=opts.cutoff)
     print('number of significant SNPs: %s'%df.shape[0])
 
     # find peaks in each chromosome
@@ -441,14 +441,15 @@ def fetchGene(args):
         sys.exit(not p.print_help())
     SNPlist, gff, = args
 
-    df0 = pd.read_csv(SNPlist, delim_whitespace=True, header=None) \
+    df0 = pd.read_csv(SNPlist, header=None) \
         if opts.header == 'no' \
-        else pd.read_csv(SNPlist, delim_whitespace=True)
+        else pd.read_csv(SNPlist)
     cols = [df0.columns[int(i)] for i in opts.col_idx.split(',')]
     df0 = df0[cols]
     df0.columns = ['chr', 'pos', 'snp']
     df0 = df0.sort_values(['chr', 'pos'])
     df0 = df0.reset_index(drop=True)
+    print(df0)
 
     df1 = pd.read_csv(gff, sep='\t', header=None)
     # customize the rule right below

@@ -300,11 +300,12 @@ class ReadGWASfile():
         self.df = df
         self.numberofSNPs = df.shape[0]
 
-    def SignificantSNPs(self, p_cutoff=0.05, MeRatio=1):
+    def SignificantSNPs(self, p_cutoff=0.05, MeRatio=1, sig_cutoff=None):
         '''
         extract Significant SNPs
+        sig_cutoff: the log10 transformed p values cutoff 
         '''
-        cutoff = -np.log10(p_cutoff/(MeRatio * self.numberofSNPs))
+        cutoff = -np.log10(p_cutoff/(MeRatio * self.numberofSNPs)) if sig_cutoff is None else sig_cutoff
         df_sigs = self.df[self.df['-log10Pvalue'] >= cutoff].reset_index(drop=True)
         return df_sigs
 
