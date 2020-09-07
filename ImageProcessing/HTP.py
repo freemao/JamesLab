@@ -4,6 +4,7 @@
 class and functions to deal with high throughput phenotyping data
 """
 import sys
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from PIL import Image
@@ -66,8 +67,10 @@ class ParseProject():
         cond = self.df['date'].isin(dates)
         return cond
 
-    def RGB(self, samples=None, dates=None, angle=None, backup_angle=None):
-        if samples and not dates:
+    def RGB(self, folder_idx=None, samples=None, dates=None, angle=None, backup_angle=None):
+        if folder_idx is not None:
+            df = self.df.iloc[folder_idx,:]
+        elif samples and not dates:
             df = self.df[self.Subsamples(samples)]
         elif not samples and dates:
             df = self.df[self.Subdates(dates)]
@@ -157,6 +160,8 @@ def ExtractRGBs(args):
     extract RGB images from project folder
     '''
     p = OptionParser(ExtractRGBs.__doc__)
+    p.add_option('--npy_idx',
+        help = 'specify the numpy file including the indices for extraction')
     p.add_option('--item_idx', default='1,2,3',
         help = 'the index of sample name, date, and time in each image directory name')
     p.add_option('--out_dir', default='.',
@@ -186,8 +191,12 @@ def ExtractRGBs(args):
         out_dir.mkdir()
 
     cmd = f'python -m schnablelab.ImageProcessing.HTP ExtractRGBs {project_folder} --out_dir {out_dir} --disable_slurm '
+    if opts.npy_idx:
+        npy_idx = np.load(opts.npy_idx)
+        print(npy_idx)
+        cmd += f'--npy_idx {opts.npy_idx} '
     if opts.samples:
-        cmd += f'--sampels {opts.samples} '
+        cmd += f'--samples {opts.samples} '
     if opts.dates:
         cmd += f'--dates {opts.dates} '
     if opts.angle:
@@ -205,18 +214,19 @@ def ExtractRGBs(args):
 
     sm_idx, date_idx, time_idx = [int(i) for i in opts.item_idx.split(',')]
     prj = ParseProject(project_folder, sm_idx, date_idx, time_idx)
+   
 
-    for sm, d, hms, path_img_fn in prj.RGB(samples=opts.samples, dates=opts.dates, angle=opts.angle, backup_angle=opts.backup_angle):
+    for sm, d, hms, path_img_fn in prj.RGB(folder_idx=npy_idx, samples=opts.samples, dates=opts.dates, angle=opts.angle, backup_angle=opts.backup_angle):
         angle_dir_name = path_img_fn.parts[-2]
-        dest_fn = '%s_%s_%s_%s.png'%(sm, d, hms, angle_dir_name)
+        dest_fn = '%s_%s_%s_%s.jpg'%(sm, d, hms, angle_dir_name)
         dest = out_dir/dest_fn
         if dest.exists():
             print(f'{dest} already exists, omit!')
         else:
             if opts.copy_only:
-                copyfile(source_fn, dest)
+                copyfile(path_img_fn, dest)
             else:
-                Image.open(source_fn).convert('RGB').resize((1227, 1028)).save(dest)
+                Image.open(path_img_fn).convert('RGB').resize((1227, 1028)).save(dest)
             
 if __name__ == '__main__':
     main()
