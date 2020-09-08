@@ -3,11 +3,13 @@
 """
 base class and functions for image processing
 """
+import cv2
 import csv
 import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from datetime import datetime
 from PIL import Image
 from tqdm import tqdm
 from pathlib import Path
@@ -80,21 +82,28 @@ class ProsImage():
         '''
         return self.PIL_img.resize(resize_dim)
     
-    def binary_thresh(self, method, value):
-        '''
-        method: green_channel or green_index
-        threshold: the thresh cutoff. 130 for green_channle, 1.12 for green_index
-        '''
-        if method == 'green_channel':
-            _, thresh = cv2.threshold(self.array_g, value, 255, cv2.THRESH_BINARY) # background: white(255), plant: black(0)
-            thresh = invert(thresh) # background: black(0), plant: whilte(255)
-        elif method == 'green_index':
-            _, thresh = cv2.threshold(self.array_gidx, value, 255, cv2.THRESH_BINARY) # background: black(0), plant: whilte(255) 
+    def green_channel_thresh(self, cutoff=100):
+        _, thresh = cv2.threshold(self.array_g, cutoff, 255, cv2.THRESH_BINARY) # background: white(255), plant: black(0)
+        thresh = invert(thresh).astype('uint8') # background: black(0), plant: whilte(255)
+        return thresh
+
+    def green_index_thresh(self, cutoff=1.12):
+        _, thresh = cv2.threshold(self.array_gidx, cutoff, 255, cv2.THRESH_BINARY) # background: black(0), plant: whilte(255) 
         thresh = thresh.astype('uint8')
         return thresh # 2d numpy array
 
-    def box_size(self, thresh_method='green_channel'):
-        thresh_ivt = self.binary_thresh(method=thresh_method)
+    def box_size(self, frame=None):
+        '''
+        frame: tuple, left, upper, right, bottom
+        '''
+        thresh_ivt = self.green_channel_thresh()
+        if frame is not None:
+            left, upper, right, bottom = frame
+            thresh_ivt[0:upper]=0
+            thresh_ivt[bottom:]=0
+            thresh_ivt[:,0:left]=0
+            thresh_ivt[:,right:]=0
+
         height = np.sum(thresh_ivt, axis=1)
         width = np.sum(thresh_ivt, axis=0)
         idx_top = next(x for x, val in enumerate(height) if val > 0)
@@ -103,8 +112,8 @@ class ProsImage():
         idx_right = self.width-next(x for x, val in enumerate(width[::-1]) if val > 0) 
         return (idx_top, idx_bottom, idx_left, idx_right)
 
-    def hull(self, thresh_method='green_channel'):
-        thresh_ivt = self.binary_thresh(method=thresh_method)        
+    def hull(self):
+        thresh_ivt = self.green_channel_thresh()        
         # non-hull part: False, hull part: True
         chull = convex_hull_image(thresh_ivt)
         # view the hull image
@@ -234,17 +243,20 @@ def CropObject(args):
     p = OptionParser(CropObject.__doc__)
     p.add_option('--out_dir', default='.',
         help = 'specify the output image directory')
+    p.add_option('--boundry',
+        help = 'if the frames exist, provide the box coordinate following left,top,right,bottom format')
     p.add_option('--pad', type='int', default=50,
         help = 'specify the pad size')
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
+
+    boundry = tuple(int(i) for i in opts.boundry.split(',')) if opts.boundry else None
     
     for img_fn in args:
-        img_out_fn = Path(img_fn).name.replace('.png', '.CrpObj.png')
+        img_out_fn = Path(img_fn).name.replace('.jpg', '.Crp.jpg')
         img = ProsImage(img_fn)
-
-        idx_top, idx_bottom, idx_left, idx_right = img.box_size()
+        idx_top, idx_bottom, idx_left, idx_right = img.box_size(frame=boundry)
         print('box size:\n  top:%s, bottom:%s, left:%s, right:%s'%(idx_top, idx_bottom, idx_left, idx_right))
         
         idx_top -= opts.pad
@@ -257,7 +269,7 @@ def CropObject(args):
         idx_left = 0 if idx_left < 0 else idx_left
         idx_right = img.width if idx_right > img.width else idx_right
         crp_dim = (idx_left, idx_top, idx_right, idx_bottom)
-        img.crop(crp_dim).save(Path(opts.out_dir)/img_out_fn, 'PNG')
+        img.crop(crp_dim).save(Path(opts.out_dir)/img_out_fn)
 
 def BatchCropObject(args):
     '''
@@ -266,13 +278,20 @@ def BatchCropObject(args):
     apply BatchCropObject on a large number of images
     '''
     p = OptionParser(BatchCropObject.__doc__)
-    p.add_option('--pattern', default='*.png',
+    p.add_option('--pattern', default='*.jpg',
                  help="file pattern of png files under the 'dir_in'")
-    p.add_option('--pad', type='int', default=50,
+    p.add_option('--pad', type='int', default=5,
         help = 'specify the pad size')
+    p.add_option('--date_cutoff', 
+        help = 'date (yyyy-mm-dd_hh-mm)separating two zoom levels')
+    p.add_option('--frame_zoom1',
+        help = 'frame coordinates under zoom1')
+    p.add_option('--frame_zoom2',
+        help = 'frame coordinates under zoom2')
     p.add_option('--disable_slurm', default=False, action="store_true",
                  help='do not convert commands to slurm jobs')
     p.add_slurm_opts(job_prefix=BatchCropObject.__name__)
+
     opts, args = p.parse_args(args)
     if len(args) == 0:
         sys.exit(not p.print_help())
@@ -280,13 +299,25 @@ def BatchCropObject(args):
     in_dir_path = Path(in_dir)
     pngs = in_dir_path.glob(opts.pattern)
     cmds = []
+ 
     for img_fn in pngs:
         img_fn = str(img_fn).replace(' ', '\ ')
-        cmd = "python -m schnablelab.ImageProcessing.base CropObject "\
-            f"{img_fn} --out_dir {out_dir} --pad {opts.pad}"
+        if opts.date_cutoff and opts.frame_zoom1 and opts.frame_zoom2:
+            date_cutoff = datetime.strptime(opts.date_cutoff, '%Y-%m-%d_%H-%M')
+            ymd, hm = Path(img_fn).name.split('_')[1], '-'.join(Path(img_fn).name.split('_')[2].split('-')[0:-1])
+            image_date = datetime.strptime('%s_%s'%(ymd, hm), '%Y-%m-%d_%H-%M')
+            if image_date <= date_cutoff:
+                cmd = 'python -m schnablelab.ImageProcessing.base CropObject '\
+            f'{img_fn} --out_dir {out_dir} --pad {opts.pad} --boundry {opts.frame_zoom1}'
+            else:
+                cmd = 'python -m schnablelab.ImageProcessing.base CropObject '\
+            f'{img_fn} --out_dir {out_dir} --pad {opts.pad} --boundry {opts.frame_zoom2}'
+        else:
+            cmd = 'python -m schnablelab.ImageProcessing.base CropObject '\
+            f'{img_fn} --out_dir {out_dir} --pad {opts.pad}'
         cmds.append(cmd)
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
-    pd.DataFrame(cmds).to_csv(cmd_sh, index=False, header=None)
+    pd.Series(cmds).to_csv(cmd_sh, index=False, header=None)
     print('check %s for all the commands!'%cmd_sh)
     if not opts.disable_slurm:
         put2slurm_dict = vars(opts)
