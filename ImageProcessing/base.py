@@ -9,6 +9,10 @@ import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import multiprocessing
+from collections import deque
+from itertools import repeat
+from multiprocessing import Process
 from datetime import datetime
 from PIL import Image
 from tqdm import tqdm
@@ -31,6 +35,8 @@ def main():
         ('BatchCropFrame', 'apply CropBorder on large number of images on HPC'),
         ('CropObject', 'crop based on object box'),
         ('BatchCropObject', 'apply CropObject on large number of images on HPC'),
+        ('Combo', 'combine multiple images into one'),
+        ('BatchCombo', 'distribute Combo on HCC'),
     )
     p = ActionDispatcher(actions)
     p.dispatch(globals())
@@ -82,7 +88,7 @@ class ProsImage():
         '''
         return self.PIL_img.resize(resize_dim)
     
-    def green_channel_thresh(self, cutoff=100):
+    def green_channel_thresh(self, cutoff=130):
         _, thresh = cv2.threshold(self.array_g, cutoff, 255, cv2.THRESH_BINARY) # background: white(255), plant: black(0)
         thresh = invert(thresh).astype('uint8') # background: black(0), plant: whilte(255)
         return thresh
@@ -304,7 +310,8 @@ def BatchCropObject(args):
         img_fn = str(img_fn).replace(' ', '\ ')
         if opts.date_cutoff and opts.frame_zoom1 and opts.frame_zoom2:
             date_cutoff = datetime.strptime(opts.date_cutoff, '%Y-%m-%d_%H-%M')
-            ymd, hm = Path(img_fn).name.split('_')[1], '-'.join(Path(img_fn).name.split('_')[2].split('-')[0:-1])
+            ymd = Path(img_fn).name.split('_')[1]
+            hm = '-'.join(Path(img_fn).name.split('_')[2].split('-')[0:-1])
             image_date = datetime.strptime('%s_%s'%(ymd, hm), '%Y-%m-%d_%H-%M')
             if image_date <= date_cutoff:
                 cmd = 'python -m schnablelab.ImageProcessing.base CropObject '\
@@ -317,7 +324,7 @@ def BatchCropObject(args):
             f'{img_fn} --out_dir {out_dir} --pad {opts.pad}'
         cmds.append(cmd)
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
-    pd.Series(cmds).to_csv(cmd_sh, index=False, header=None)
+    pd.Series(cmds).to_csv(cmd_sh, index=False, header=False)
     print('check %s for all the commands!'%cmd_sh)
     if not opts.disable_slurm:
         put2slurm_dict = vars(opts)
@@ -424,6 +431,113 @@ def PlantArea(args):
     df_out['threshold_method'] = opts.thresh_method
     df_out['threshold_cutoff'] = opts.cutoff
     df_out[['fn', 'threshold_method', 'threshold_cutoff', 'pixel_area']].to_csv(Path(opts.out_dir)/opts.out_csv, index=False)
-        
+
+def _Combo(fn_core, suffix_pattern, out_dir, size=(150,150)):
+    '''
+    fn_core: str, the head part of the filename
+    suffix_pattern: str, the tail part of the filename with %s
+    '''
+    angles = [[0, 36, 72], [108, 144, 180], [216, 252, 288]]
+    arr_y = []
+    for i in angles:
+        arr_x = []
+        for j in i:
+            fn = fn_core + suffix_pattern%j
+            if not Path(fn).exists():
+                print(f'{fn} does not exist')
+            arr = np.array(Image.open(fn).resize(size))
+            arr_x.append(arr)
+        arr_x = np.hstack(arr_x)
+        arr_y.append(arr_x)
+    arr_y = np.vstack(arr_y)
+    new_fn = Path(fn_core).name+'.combo.jpg'
+    Image.fromarray(arr_y).save(Path(out_dir)/new_fn)
+
+def Combo(args):
+    '''
+    %prog fn_core_csv in_dir out_dir
+
+    combine multiple images into one
+    '''
+    p = OptionParser(Combo.__doc__)
+    p.add_option('--pattern', default='_Vis_SV_%s.Crp.jpg',
+                 help="The pattern of file suffix under the 'dir_in'")
+    p.add_option('--resize', default='150,150',
+        help = 'the resolution after resizing for each piece of image')
+    p.add_option('--ncpu', default=1, type='int',
+                 help='CPU cores if using multiprocessing')
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    fn_core_csv, in_dir, out_dir, = args
+
+    size = tuple(int(i) for i in opts.resize.split(','))
+    fn_cores = pd.read_csv(fn_core_csv, usecols=['core_fn'])['core_fn'].values
+
+    if opts.ncpu > 1:
+        ncpu = min(multiprocessing.cpu_count(), opts.ncpu)
+        print('available CPUs: %s'%ncpu)
+        if ncpu > 1 and len(fn_cores) >= ncpu:
+            pool = multiprocessing.Pool(processes=ncpu)
+            pool_args = zip([str(Path(in_dir)/fn_core) for fn_core in fn_cores], repeat(opts.pattern), repeat(out_dir), repeat(size))
+
+            # The pool will distribute those tasks to the worker processes(typically same in number as available cores) 
+            # and collects the return values in the form of list and pass it to the parent process.
+            results = pool.starmap(_Combo, pool_args)
+
+            pool.close()
+            pool.join()            
+            '''
+            procs = []
+            # instantiating process with arguments
+            for fn_core in fn_cores:
+                proc = Process(target=_Combo, args=(str(Path(in_dir)/fn_core), opts.pattern, out_dir, size))
+                procs.append(proc)
+                proc.start()
+            # complete the processes
+            for proc in procs:
+                proc.join()
+            sys.exit('parallel finish!')
+            '''
+    for fn_core in fn_cores:
+        _Combo(str(Path(in_dir)/fn_core), opts.pattern, out_dir, size)
+
+def BatchCombo(args):
+    '''
+    %prog fn_core_csv step_n in_dir out_dir
+    args:
+        fn_core_csv: csv file with the first column as fn_core
+        step_n: the step in range(st, ed, step) to split all fn_cores
+
+    distribute Combo on HCC
+    '''
+    p = OptionParser(BatchCombo.__doc__)
+    p.add_option('--pattern', default='_Vis_SV_%s.Crp.jpg',
+                 help="The pattern of file suffix under the 'dir_in'")
+    p.add_option('--resize', default='150,150',
+        help = 'the resolution after resizing for each piece of image')
+    p.add_option('--ncpu', default=1, type='int',
+                 help='CPU cores if using multiprocessing')
+    p.add_slurm_opts(job_prefix=BatchCombo.__name__)
+
+    opts, args = p.parse_args(args)
+    if len(args) == 0:
+        sys.exit(not p.print_help())
+    fn_core_csv, step_n, in_dir, out_dir, = args
+    
+    df = pd.read_csv(fn_core_csv, usecols=['core_fn'])
+    cuts = deque(range(0, len(df), int(step_n)))
+    cuts.popleft()
+
+    cmds = []
+    for idx, _df in enumerate(np.split(df, cuts), start=1):
+        new_csv_fn = fn_core_csv+'_%s'%idx
+        _df.to_csv(new_csv_fn, index=False)
+        cmd = "python -m schnablelab.ImageProcessing.base Combo "\
+            f"{new_csv_fn} {in_dir} {out_dir} --pattern {opts.pattern} --resize {opts.resize} --ncpu {opts.ncpu}"
+        cmds.append(cmd)
+    put2slurm_dict = vars(opts)
+    put2slurm(cmds, put2slurm_dict)
+
 if __name__ == "__main__":
     main()
