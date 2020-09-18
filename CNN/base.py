@@ -9,7 +9,7 @@ from PIL import Image
 from pathlib import Path
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset
+
 from torchvision import transforms, models
 
 def split_df_to2(df, n):
@@ -89,37 +89,6 @@ class EarlyStopping:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), '%s.pt'%self.mn_prefix)
         self.val_loss_min = val_loss
-
-class LeafcountingDataset(Dataset):
-    """leaf counting dataset."""
-
-    def __init__(self, csv_file, root_dir, transform=None):
-        """
-        Args:
-            csv_file (string): Path to the comma separated csv file without header. The 1st column is image file name and the 2nd column is the annotation/label. 
-            root_dir (string): Directory with all the images.
-        """
-        self.csv = pd.read_csv(csv_file, header=None)
-        self.root_dir = Path(root_dir)
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.csv)
-
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        img_name = self.csv.iloc[idx, 0]
-        image = Image.open(self.root_dir/img_name)
-        if len(image.getbands()) == 4:
-            image = image.convert('RGB')
-        label = self.csv.iloc[idx, 1].astype('float32').reshape(-1,)
-
-        if self.transform:
-            image = self.transform(image)
-
-        return image, label, img_name
 
 image_transforms = {
     # Train uses data augmentation
