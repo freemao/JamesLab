@@ -4,7 +4,8 @@
 Transfer learning for feature extracting or finetuning. 
 """
 from schnablelab.apps.base import OptionParser, ActionDispatcher, put2slurm
-from schnablelab.CNN.base import EarlyStopping, LeafcountingDataset, image_transforms, initialize_model, train_model_regression 
+from schnablelab.CNN.base import EarlyStopping, image_transforms, initialize_model, train_model_regression 
+from schnablelab.CNN.DatasetReady import LeafcountingDataset
 import sys
 import time
 import torch
@@ -44,18 +45,20 @@ def regression(args):
         model_name_prefix: the prefix of the output model name 
     """
     p = OptionParser(regression.__doc__)
-    p.add_option('--batchsize', default=36, type='int', 
+    p.add_option('--inputsize', default=224, type='int',
+                    help='the input size of image. At least 224 if using pretrained models')
+    p.add_option('--batchsize', default=60, type='int', 
                     help='batch size')
-    p.add_option('--epoch', default=200, type='int', 
+    p.add_option('--epoch', default=500, type='int', 
                     help='number of total epochs')
-    p.add_option('--patience', default=20, type='int', 
+    p.add_option('--patience', default=50, type='int', 
                     help='patience in early stopping')
     p.add_option('--pretrained_mn', default='vgg16',
                     help='pretrained model name. Available pretrained models: vgg16, googlenet, resnet18, resnet152...')
-    p.add_option('--tl_type', default='feature_extract', choices=('feature_extract', 'finetuning'),
-                    help='transfer learning type')
+    p.add_option('--tl_type', default='finetuning', choices=('feature_extractor', 'finetuning'),
+                    help='transfer learning type. finetuning: initialize the network with a pretrained network, like the one that is trained on imagenet 1000 dataset. Rest of the training looks as usual. feature_extractor: freeze the weights for all of the network except that of the final fully connected layer. ')
     p.add_option('--disable_slurm', default=False, action="store_true",
-                 help='run directly without generating slurm job')
+                 help='run directly in the console without generating slurm job. Do not do this in HCC login node')
     p.add_slurm_opts(job_prefix=regression.__name__)
 
     opts, args = p.parse_args(args)
@@ -64,51 +67,58 @@ def regression(args):
     train_csv, train_dir, valid_csv, valid_dir, model_name_prefix = args
     # genearte slurm file
     if not opts.disable_slurm:
-        cmd_header = 'ml singularity'
-        cmd = "singularity exec docker://unlhcc/pytorch:1.5.0 "\
-            "python3 -m schnablelab.CNN.TransLearning regression "\
+        #cmd_header = 'ml singularity'
+        cmd = "python -m schnablelab.CNN.TransLearning regression "\
             f"{train_csv} {train_dir} {valid_csv} {valid_dir} {model_name_prefix} "\
-            f"--batchsize {opts.batchsize} --pretrained_mn {opts.pretrained_mn} --disable_slurm"
+            f"--inputsize {opts.inputsize} --pretrained_mn {opts.pretrained_mn} --disable_slurm"
         put2slurm_dict = vars(opts)
-        put2slurm_dict['cmd_header'] = cmd_header
+        #put2slurm_dict['cmd_header'] = cmd_header
         put2slurm([cmd], put2slurm_dict)
         sys.exit()
 
     logfile = model_name_prefix + '.log'
     histfile = model_name_prefix + '.hist.csv'
-    logging.basicConfig(filename=logfile, level=logging.DEBUG, format="%(asctime)s:%(levelname)s:%(message)s")
+    
+    logger = logging.getLogger(__name__)
+    f_handler = logging.FileHandler(logfile, mode='w')
+    f_handler.setLevel(logging.DEBUG)
+    f_format = logging.Formatter('%(asctime)s:%(name)s:%(funcName)s:%(levelname)s:%(message)s')
+    f_handler.setFormatter(f_format)
+    logger.addHandler(f_handler)
+    # can also create another handler for streaming. e.g. c_handler = logging.StreamHandler()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    logging.debug('device: %s'%device)
-    logging.debug('pytorch version: %s'%torch.__version__)
-    logging.debug('cuda version: %s'%torch.version.cuda)
+    logger.debug('device: %s'%device) # creat a LogRecord and send this info to all the handlers in the logger
+    logger.debug('pytorch version: %s'%torch.__version__)
+    logger.debug('cuda version: %s'%torch.version.cuda)
 
     # prepare training and validation data
-    train_dataset = LeafcountingDataset(train_csv, train_dir, image_transforms['train'])
-    valid_dataset = LeafcountingDataset(valid_csv, valid_dir, image_transforms['valid'])
+    train_dataset = LeafcountingDataset(train_csv, train_dir, image_transforms(input_size=opts.inputsize)['train'])
+    valid_dataset = LeafcountingDataset(valid_csv, valid_dir, image_transforms(input_size=opts.inputsize)['valid'])
     train_loader = DataLoader(train_dataset, batch_size=opts.batchsize)
     valid_loader = DataLoader(valid_dataset, batch_size=opts.batchsize)
     dataloaders_dict = {'train': train_loader, 'valid': valid_loader}
 
     # initialize the pre-trained model
-    model, input_size = initialize_model(model_name=opts.pretrained_mn)
-    logging.debug(model)
-
-    feature_extract = True if opts.tl_type == 'feature_extract' else False
+    feature_extract = True if opts.tl_type=='feature_extractor' else False
+    logger.debug('feature extract: %s'%feature_extract)
+    model, input_size = initialize_model(model_name=opts.pretrained_mn, 
+                                         feature_extract=feature_extract, 
+                                         inputsize=opts.inputsize)
+    logger.debug(model)
 
     params_to_update = model.parameters()
-    #logging.debug("Params to learn:")
+    #logger.debug("Params to learn:")
     if feature_extract:
         params_to_update = []
         for name, param in model.named_parameters():
             if param.requires_grad == True:
                 params_to_update.append(param)
-                #logging.debug("\t%s"%name)
     else:
         for name, param in model.named_parameters():
             if param.requires_grad == True:
                 pass
-                #logging.debug("\t%s"%name)
+                
     # optimizer
     sgd_optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
     # loss
@@ -123,15 +133,15 @@ def regression(args):
                                                             num_epochs=opts.epoch, 
                                                             is_inception=inception)
     time_elapsed = time.time() - since
-    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    logger.debug('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     
     # save training and validation loss.
-    logging.debug('saving loss history...')
+    logger.debug('saving loss history...')
     df = pd.DataFrame(dict(zip(['training', 'validation'], [train_hist, valid_hist])))
     df.to_csv(histfile, index=False)
     
     # plot training and validation loss
-    logging.debug('plot loss history...')
+    logger.debug('plot loss history...')
     fig, ax = plt.subplots(figsize=(4, 3))
     ax = df.plot(ax=ax)
     ax.set_xlabel('Epoch', fontsize=12)
@@ -144,11 +154,13 @@ def prediction(args):
     %prog prediction saved_model test_csv, test_dir, output
     Args:
         saved_model: saved model with either a .pt or .pth file extension
-        test_csv: csv file (comma separated without header) containing all testing image filenames
+        test_csv: csv file (comma separated with header) containing all testing image filenames
         test_dir: directory where testing images are located
         output: csv file saving prediction results
     """
     p = OptionParser(prediction.__doc__)
+    p.add_option('--inputsize', default=224, type='int',
+                    help='the input size of image. At least 224 if using pretrained models')
     p.add_option('--batchsize', default=36, type='int', 
                     help='batch size')
     p.add_option('--pretrained_mn', default=None,
@@ -164,15 +176,14 @@ def prediction(args):
 
     # genearte slurm file
     if not opts.disable_slurm:
-        cmd_header = 'ml singularity'
-        cmd = "singularity exec docker://unlhcc/pytorch:1.5.0 "\
-            "python3 -m schnablelab.CNN.TransLearning prediction "\
+        #cmd_header = 'ml singularity'
+        cmd = "python -m schnablelab.CNN.TransLearning prediction "\
             f"{saved_model} {test_csv} {test_dir} {output} "\
             f"--batchsize {opts.batchsize} --disable_slurm "
         if opts.pretrained_mn:
-         cmd += f"--pretrained_mn {opts.pretrained_mn}"
+            cmd += f"--pretrained_mn {opts.pretrained_mn}"
         put2slurm_dict = vars(opts)
-        put2slurm_dict['cmd_header'] = cmd_header
+        #put2slurm_dict['cmd_header'] = cmd_header
         put2slurm([cmd], put2slurm_dict)
         sys.exit()
 
@@ -189,7 +200,7 @@ def prediction(args):
     model.load_state_dict(torch.load(saved_model, map_location=device))
     model.eval()
 
-    test_dataset = LeafcountingDataset(test_csv, test_dir, image_transforms['valid'])
+    test_dataset = LeafcountingDataset(test_csv, test_dir, image_transforms(input_size=opts.inputsize)['valid'])
     test_loader = DataLoader(test_dataset, batch_size=opts.batchsize)
 
     ground_truths, predicts, filenames = [],[],[]

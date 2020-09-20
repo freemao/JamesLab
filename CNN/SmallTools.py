@@ -2,17 +2,16 @@
 generate labels of training images
 """
 
-import pandas as pd
-from pathlib import Path
-import os.path as op
 import sys
-from schnablelab.apps.base import ActionDispatcher, OptionParser
-from schnablelab.apps.header import Slurm_header, Slurm_gpu_header
-from schnablelab.apps.Tools import GenDataFrameFromPath
-import matplotlib.pyplot as plt
-from sklearn.metrics import mean_squared_error
 import numpy as np
+import pandas as pd
+import os.path as op
+import matplotlib.pyplot as plt
+from pathlib import Path
 from scipy.stats import linregress
+from sklearn.metrics import mean_squared_error
+from schnablelab.apps.Tools import GenDataFrameFromPath
+from schnablelab.apps.base import ActionDispatcher, OptionParser
 
 def main():
     actions = (
@@ -215,7 +214,7 @@ def extract_info(args):
     prediction = extract_num(predict_lines)
     #print(len(prediction), '\n', prediction)
 
-    df = pd.DataFrame(dict(zip(['ground_truth', 'prediction'], [ground_truth, prediction])))
+    df = pd.DataFrame(dict(zip(['groundtruth', 'prediction'], [groundtruth, prediction])))
     df.to_csv(opp, index=False, sep='\t')
     print('Done! check %s'%opp)
 
@@ -235,12 +234,14 @@ def statistics(args):
         sys.exit(not p.print_help())
     mycsv,cls_range, opp, = args
     
-    df_compare = pd.read_csv(mycsv, delim_whitespace=True) \
-        if not opts.header \
-        else pd.read_csv(mycsv, delim_whitespace=True, header=None)
+    df_compare = pd.read_csv(mycsv) if opts.header else pd.read_csv(mycsv, header=None)
     print('shape of %s: %s'%(mycsv, df_compare.shape))
+    
+    slope, intercept, r_value, p_value, std_err = linregress(df_compare['groundtruth'], df_compare['prediction'])
+    df_compare['prediction_adjusted'] = df_compare['prediction']
+    #df_compare['prediction_adjusted'] = (df_compare['prediction']-intercept)/slope
 
-    df_compare['diff'] = df_compare['ground_truth'] - df_compare['prediction']
+    df_compare['diff'] = df_compare['groundtruth'] - df_compare['prediction_adjusted']
     df_compare['abs_diff'] = np.abs(df_compare['diff'])
 
     mi, ma = df_compare['diff'].min(), df_compare['diff'].max()
@@ -258,8 +259,9 @@ def statistics(args):
 
     aggrmt = (df_compare['abs_diff']<=float(opts.cutoff_agreement)).sum()/df_compare.shape[0]
     print('agreement is defined as diff <= %s.'%opts.cutoff_agreement)
-    slope, intercept, r_value, p_value, std_err = linregress(df_compare['ground_truth'], df_compare['prediction'])
-    mse = mean_squared_error(df_compare['ground_truth'], df_compare['prediction'])
+    
+    
+    rmse = np.sqrt(mean_squared_error(df_compare['groundtruth'], df_compare['prediction_adjusted']))
 
     bt = int(cls_range.split('-')[0])
     tp = int(cls_range.split('-')[1])
@@ -272,15 +274,16 @@ def statistics(args):
     txt += 'AbsCountDiff: %.2f(%.2f)\n'%(abs_mean, abs_std)
     txt += 'r2: %.2f\n'%r_value**2
     txt += 'p value: %s\n'%p_value
-    txt += 'MSE: %.2f\n'%mse
-    txt += 'Agreement: %.2f'%aggrmt
+    txt += 'RMSE: %.2f\n'%rmse
+    txt += 'Agreement: %.2f\n'%aggrmt
+    txt += 'y = %.2fx + %.2f'%(slope, intercept)
     with open('%s.statics'%opp, 'w') as f1:
         f1.write(txt)
     print('statistics done!')
 
-    ax2 = df_compare.plot.scatter(x='ground_truth', y='prediction', alpha=0.5, figsize=(7,7), edgecolor='k')        
-    ax2.set_xlim(bt-0.9, tp+0.9)
-    ax2.set_ylim(bt-0.9, tp+0.9)
+    ax2 = df_compare.plot.scatter(x='groundtruth', y='prediction', alpha=0.5, figsize=(7,7), edgecolor='k')        
+    #ax2.set_xlim(bt-0.9, tp+0.9)
+    #ax2.set_ylim(bt-0.9, tp+0.9)
     ax2.plot(x,y, color='red', linewidth=2)
     ax2.text(x=bt, y=tp-2, s = txt, fontsize=12, color='red')
     plt.savefig('%s_scatter.png'%opp)

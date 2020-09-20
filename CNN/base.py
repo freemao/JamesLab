@@ -9,8 +9,9 @@ from PIL import Image
 from pathlib import Path
 import torch
 import torch.nn as nn
-
 from torchvision import transforms, models
+#import logging
+
 
 def split_df_to2(df, n):
     '''
@@ -90,28 +91,32 @@ class EarlyStopping:
         torch.save(model.state_dict(), '%s.pt'%self.mn_prefix)
         self.val_loss_min = val_loss
 
-image_transforms = {
-    # Train uses data augmentation
-    'train':
-    transforms.Compose([
-        transforms.RandomRotation(degrees=15),
-        transforms.ColorJitter(),
-        transforms.RandomHorizontalFlip(),
-        transforms.Resize(size=(224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406],
-                             [0.229, 0.224, 0.225])  # Imagenet standards
-    ]),
-    # Validation does not use augmentation
-    'valid':
-    transforms.Compose([
-        transforms.Resize(size=(224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ]),
-}
+def image_transforms(input_size=224):
+    
+    image_transforms_dict = {
+        # Train uses data augmentation
+        'train':
+        transforms.Compose([
+            #transforms.RandomRotation(degrees=15),
+            transforms.ColorJitter(),
+            transforms.RandomHorizontalFlip(),
+            transforms.Resize(size=(input_size, input_size)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])# Imagenet standards  
+            ]),
+    
+        # Validation does not use augmentation
+        'valid':
+        transforms.Compose([
+            transforms.Resize(size=(input_size, input_size)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+    }
+    return image_transforms_dict
 
-def train_model_regression(model, dataloaders, criterion, optimizer, model_name_prefix, patience=10, num_epochs=10, is_inception=False):
+def train_model_regression(model, dataloaders, criterion, optimizer, model_name_prefix, 
+                           patience=10, num_epochs=10, is_inception=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)
     valid_loss_history = []
@@ -176,7 +181,7 @@ def set_parameter_requires_grad(model, feature_extracting):
         for param in model.parameters():
             param.requires_grad = False
 
-def initialize_model(model_name='vgg16', num_classes=1, feature_extract=True, use_pretrained=True):
+def initialize_model(model_name='vgg16', num_classes=1, feature_extract=True, use_pretrained=True, inputsize=224):
     # Initialize these variables which will be set in this if statement. Each of these
     #   variables is model specific.
     model_ft = None
@@ -189,7 +194,7 @@ def initialize_model(model_name='vgg16', num_classes=1, feature_extract=True, us
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
+        input_size = inputsize
 
     elif model_name == "resnet152":
         """ Resnet152
@@ -198,7 +203,7 @@ def initialize_model(model_name='vgg16', num_classes=1, feature_extract=True, us
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
+        input_size = inputsize
 
     elif model_name == "vgg16":
         """ VGG16
@@ -207,7 +212,7 @@ def initialize_model(model_name='vgg16', num_classes=1, feature_extract=True, us
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.classifier[6].in_features
         model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
-        input_size = 224
+        input_size = inputsize
 
     elif model_name == "resnet18":
         """ Resnet18
@@ -216,7 +221,7 @@ def initialize_model(model_name='vgg16', num_classes=1, feature_extract=True, us
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
+        input_size = inputsize
 
     elif model_name == "alexnet":
         """ Alexnet
@@ -225,7 +230,7 @@ def initialize_model(model_name='vgg16', num_classes=1, feature_extract=True, us
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.classifier[6].in_features
         model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
-        input_size = 224
+        input_size = inputsize
 
     elif model_name == "vgg11_bn":
         """ VGG11_bn
@@ -234,7 +239,7 @@ def initialize_model(model_name='vgg16', num_classes=1, feature_extract=True, us
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.classifier[6].in_features
         model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
-        input_size = 224
+        input_size = inputsize
 
     elif model_name == "squeezenet":
         """ Squeezenet
@@ -243,7 +248,7 @@ def initialize_model(model_name='vgg16', num_classes=1, feature_extract=True, us
         set_parameter_requires_grad(model_ft, feature_extract)
         model_ft.classifier[1] = nn.Conv2d(512, num_classes, kernel_size=(1,1), stride=(1,1))
         model_ft.num_classes = num_classes
-        input_size = 224
+        input_size = inputsize
 
     elif model_name == "densenet":
         """ Densenet
@@ -252,7 +257,7 @@ def initialize_model(model_name='vgg16', num_classes=1, feature_extract=True, us
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.classifier.in_features
         model_ft.classifier = nn.Linear(num_ftrs, num_classes)
-        input_size = 224
+        input_size = inputsize
 
     elif model_name == "inception":
         """ Inception v3
@@ -266,7 +271,7 @@ def initialize_model(model_name='vgg16', num_classes=1, feature_extract=True, us
         # Handle the primary net
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs,num_classes)
-        input_size = 299
+        input_size = inputsize
 
     else:
         print("Invalid model name, exiting...")

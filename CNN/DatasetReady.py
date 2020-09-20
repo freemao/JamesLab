@@ -20,7 +20,7 @@ class LeafcountingDataset(Dataset):
             csv_file (string): Path to the comma separated csv file without header. The 1st column is image file name and the 2nd column is the annotation/label. 
             root_dir (string): Directory with all the images.
         """
-        self.csv = pd.read_csv(csv_file, header=None)
+        self.csv = pd.read_csv(csv_file)#, header=None)
         self.root_dir = Path(root_dir)
         self.transform = transform
 
