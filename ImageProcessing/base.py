@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import multiprocessing
 from collections import deque
 from itertools import repeat
-from multiprocessing import Process
+from multiprocessing import Process, Pool
 from datetime import datetime
 from PIL import Image
 from tqdm import tqdm
@@ -100,7 +100,7 @@ class ProsImage():
 
     def box_size(self, frame=None):
         '''
-        frame: tuple, left, upper, right, bottom
+        frame: tuple (left, upper, right, bottom)
         '''
         thresh_ivt = self.green_channel_thresh()
         if frame is not None:
@@ -240,6 +240,33 @@ def BatchResize(args):
         put2slurm_dict = vars(opts)
         put2slurm(cmds, put2slurm_dict)
 
+def _CropObject(img_fn, out_dir, boundry=None, pad=0):
+    '''
+    img_fn: string
+    out_dir: string
+    boundry is string following 'left,top,right,bottom' if not None
+    pad: int
+    '''
+    print(img_fn)
+    boundry = tuple(int(i) for i in boundry.split(',')) if boundry else None
+    img = ProsImage(img_fn)
+    idx_top, idx_bottom, idx_left, idx_right = img.box_size(frame=boundry)
+    
+    if pad > 0:
+        idx_top -= pad
+        idx_bottom += pad
+        idx_left -= pad
+        idx_right += pad
+
+    idx_top = 0 if idx_top < 0 else idx_top
+    idx_bottom = img.height if idx_bottom > img.height else idx_bottom
+    idx_left = 0 if idx_left < 0 else idx_left
+    idx_right = img.width if idx_right > img.width else idx_right
+    crp_dim = (idx_left, idx_top, idx_right, idx_bottom)
+    
+    img_out_fn = Path(img_fn).name.replace('.jpg', '.Crp.jpg')
+    img.crop(crp_dim).save(Path(out_dir)/img_out_fn)
+
 def CropObject(args):
     '''
     %prog CropObject img1 img2 img3 ...
@@ -257,25 +284,9 @@ def CropObject(args):
     if len(args) == 0:
         sys.exit(not p.print_help())
 
-    boundry = tuple(int(i) for i in opts.boundry.split(',')) if opts.boundry else None
-    
     for img_fn in args:
-        img_out_fn = Path(img_fn).name.replace('.jpg', '.Crp.jpg')
-        img = ProsImage(img_fn)
-        idx_top, idx_bottom, idx_left, idx_right = img.box_size(frame=boundry)
-        print('box size:\n  top:%s, bottom:%s, left:%s, right:%s'%(idx_top, idx_bottom, idx_left, idx_right))
-        
-        idx_top -= opts.pad
-        idx_bottom += opts.pad
-        idx_left -= opts.pad
-        idx_right += opts.pad
-
-        idx_top = 0 if idx_top < 0 else idx_top
-        idx_bottom = img.height if idx_bottom > img.height else idx_bottom
-        idx_left = 0 if idx_left < 0 else idx_left
-        idx_right = img.width if idx_right > img.width else idx_right
-        crp_dim = (idx_left, idx_top, idx_right, idx_bottom)
-        img.crop(crp_dim).save(Path(opts.out_dir)/img_out_fn)
+        print(img_fn)
+        _CropObject(img_fn, opts.out_dir, boundry=opts.boundry, pad=opts.pad)
 
 def BatchCropObject(args):
     '''
@@ -294,6 +305,8 @@ def BatchCropObject(args):
         help = 'frame coordinates under zoom1')
     p.add_option('--frame_zoom2',
         help = 'frame coordinates under zoom2')
+    p.add_option('--ncpu', default=1, type='int',
+                 help='CPU cores if using multiprocessing on own desktop (require python>3.8)')
     p.add_option('--disable_slurm', default=False, action="store_true",
                  help='do not convert commands to slurm jobs')
     p.add_slurm_opts(job_prefix=BatchCropObject.__name__)
@@ -303,9 +316,37 @@ def BatchCropObject(args):
         sys.exit(not p.print_help())
     in_dir, out_dir, = args
     in_dir_path = Path(in_dir)
-    pngs = in_dir_path.glob(opts.pattern)
+    pngs = list(in_dir_path.glob(opts.pattern))
+
+    ## running on desktop
+    if opts.ncpu > 1:
+        ncpu = min(multiprocessing.cpu_count(), opts.ncpu)
+        print('available CPUs: %s'%ncpu)
+        if ncpu > 1 and len(pngs) >= ncpu:
+            img_fns, boundrys = [], []
+            for img_fn in pngs:
+                img_fns.append(str(img_fn))
+                if opts.date_cutoff and opts.frame_zoom1 and opts.frame_zoom2:
+                    date_cutoff = datetime.strptime(opts.date_cutoff, '%Y-%m-%d_%H-%M')
+                    ymd = img_fn.name.split('_')[1]
+                    hm = '-'.join(img_fn.name.split('_')[2].split('-')[0:-1])
+                    image_date = datetime.strptime('%s_%s'%(ymd, hm), '%Y-%m-%d_%H-%M')
+                    if image_date <= date_cutoff:
+                        boundrys.append(opts.frame_zoom1)
+                    else:
+                        boundrys.append(opts.frame_zoom2)
+                else:
+                    boundrys.append(None)
+            print(len(img_fns), len(boundrys))
+            pool_args = zip(img_fns, repeat(out_dir), boundrys, repeat(opts.pad))
+            with Pool(processes=ncpu) as pool:
+                results = pool.starmap(_CropObject, pool_args)
+            sys.exit('parallel finish!')
+        else:
+            sys.exit('not enough files for parallel computing!')
+
+    ## running on HCC
     cmds = []
- 
     for img_fn in pngs:
         img_fn = str(img_fn).replace(' ', '\ ')
         if opts.date_cutoff and opts.frame_zoom1 and opts.frame_zoom2:
@@ -326,6 +367,7 @@ def BatchCropObject(args):
     cmd_sh = '%s.cmds%s.sh'%(opts.job_prefix, len(cmds))
     pd.Series(cmds).to_csv(cmd_sh, index=False, header=False)
     print('check %s for all the commands!'%cmd_sh)
+
     if not opts.disable_slurm:
         put2slurm_dict = vars(opts)
         put2slurm(cmds, put2slurm_dict)
@@ -478,27 +520,12 @@ def Combo(args):
         ncpu = min(multiprocessing.cpu_count(), opts.ncpu)
         print('available CPUs: %s'%ncpu)
         if ncpu > 1 and len(fn_cores) >= ncpu:
-            pool = multiprocessing.Pool(processes=ncpu)
             pool_args = zip([str(Path(in_dir)/fn_core) for fn_core in fn_cores], repeat(opts.pattern), repeat(out_dir), repeat(size))
-
-            # The pool will distribute those tasks to the worker processes(typically same in number as available cores) 
-            # and collects the return values in the form of list and pass it to the parent process.
-            results = pool.starmap(_Combo, pool_args)
-
-            pool.close()
-            pool.join()            
-            '''
-            procs = []
-            # instantiating process with arguments
-            for fn_core in fn_cores:
-                proc = Process(target=_Combo, args=(str(Path(in_dir)/fn_core), opts.pattern, out_dir, size))
-                procs.append(proc)
-                proc.start()
-            # complete the processes
-            for proc in procs:
-                proc.join()
+            with Pool(processes=ncpu) as pool:
+                # The pool will distribute those tasks to the worker processes(typically same in number as available cores) 
+                # and collects the return values in the form of list and pass it to the parent process.
+                results = pool.starmap(_Combo, pool_args)
             sys.exit('parallel finish!')
-            '''
     for fn_core in fn_cores:
         _Combo(str(Path(in_dir)/fn_core), opts.pattern, out_dir, size)
 
