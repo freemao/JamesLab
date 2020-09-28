@@ -139,7 +139,7 @@ def UniquePeaks(args):
     
     if len(args) == 0:
         sys.exit(not p.print_help())
-    gwasfile, pvalue, outprefix = args
+    gwasfile, cutoff, outprefix = args
 
     if opts.software == 'other':
         if opts.usecols is None:
@@ -149,7 +149,7 @@ def UniquePeaks(args):
             print('indics of columns to be read: %s'%opts.usecols)
 
     gwas0 = ReadGWASfile(gwasfile, opts.software, usecols=opts.usecols)
-    df = gwas0.SignificantSNPs(sig_cutoff=opts.cutoff)
+    df = gwas0.SignificantSNPs(sig_cutoff=float(cutoff))
     print('number of significant SNPs: %s'%df.shape[0])
 
     # find peaks in each chromosome

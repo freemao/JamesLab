@@ -282,11 +282,11 @@ class ReadGWASfile():
             if len(self.usecols) != 4:
                 sys.exit('usecols must have the lenght of 4')
             with open(self.fn) as f:
-                j = f.readline().split(',')
+                j = list(pd.read_csv(self.fn).columns)
                 snp_idx, chr_idx, pos_idx, pv_idx = self.usecols
                 snp, chr, pos, pv = j[snp_idx], j[chr_idx], j[pos_idx], j[pv_idx]
-                dtype_dict = {chr:'str', snp:'str', pos:np.int64, pv:np.float64}
-            df = pd.read_csv(self.fn, usecols=self.usecols, dtype=dtype_dict)
+                dtype_dict = {snp:'str', chr:'str', pos:np.int64, pv:np.float64}
+            df = pd.read_csv(self.fn, usecols=[snp, chr, pos, pv], dtype=dtype_dict)[[snp, chr, pos, pv]]
         else:
             sys.exit('only gemma, farmcpu, gapit, and other are supported!')
         df.columns = ['snp', 'chr', 'pos', 'pvalue']
