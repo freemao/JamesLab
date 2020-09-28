@@ -118,10 +118,10 @@ def Manhattan(args):
 
 def UniquePeaks(args):
     """
-    %prog UniquePeaks GWASfile pvalue(log10) OutputFilePrefix
+    %prog UniquePeaks GWASfile pvalue(-log10) OutputFilePrefix
     Args:
         GWASfile: GWAS file to be parsed
-        pvalue: the pvalue cutoff in log10
+        pvalue: the pvalue cutoff in -log10
         OutputFilePrefix: The prefix of output files.  
     
     Identify peaks in the output of a GWAS run
