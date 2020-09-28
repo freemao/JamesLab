@@ -118,9 +118,10 @@ def Manhattan(args):
 
 def UniquePeaks(args):
     """
-    %prog UniquePeaks GWASfile OutputFilePrefix
+    %prog UniquePeaks GWASfile pvalue(log10) OutputFilePrefix
     Args:
         GWASfile: GWAS file to be parsed
+        pvalue: the pvalue cutoff in log10
         OutputFilePrefix: The prefix of output files.  
     
     Identify peaks in the output of a GWAS run
@@ -130,8 +131,6 @@ def UniquePeaks(args):
         help = 'softare where the GWAS result came from. If other, specify --usecols option')
     p.add_option('--WindowSize', type='int', default=150_000,
         help = 'Maximum distance between two significant SNPs in same peak in base pairs')
-    p.add_option('--cutoff', type='float',
-        help = "specify the significant cutoff in log10")
     p.add_option('--sort', default=False, action='store_true',
         help = "If GWAS file needs to be sorted based on chromosome and position")
     p.add_option('--usecols', default=None,
@@ -140,11 +139,11 @@ def UniquePeaks(args):
     
     if len(args) == 0:
         sys.exit(not p.print_help())
-    gwasfile, outprefix = args
+    gwasfile, pvalue, outprefix = args
 
     if opts.software == 'other':
         if opts.usecols is None:
-            sys.exit('--usecols must be specified if software is other')
+            sys.exit('--usecols option must be specified if software is other')
         else:
             opts.usecols = list(map(int, opts.usecols.split(',')))
             print('indics of columns to be read: %s'%opts.usecols)
