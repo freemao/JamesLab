@@ -36,15 +36,17 @@ def classification(args):
 
 def regression(args):
     """
-    %prog regression train_csv, train_dir, valid_csv, valid_dir, model_name_prefix
+    %prog regression train_csv, train_dir, model_name_prefix
     Args:
         train_csv: csv file (comma separated without header) containing all training image filenames
-        train_dir: directory where training images are located
-        valid_csv: csv file (comma separated without header) containing all validation image filenames
-        valid_dir: directory where validation images are located
+        train_dir: directory where training images reside
         model_name_prefix: the prefix of the output model name 
     """
     p = OptionParser(regression.__doc__)
+    p.add_option('--valid_csv',
+                    help='csv file for validation if available')
+    p.add_option('--valid_dir',
+                    help='directory where validation images reside')
     p.add_option('--inputsize', default=224, type='int',
                     help='the input size of image. At least 224 if using pretrained models')
     p.add_option('--batchsize', default=60, type='int', 
@@ -53,26 +55,30 @@ def regression(args):
                     help='number of total epochs')
     p.add_option('--patience', default=50, type='int', 
                     help='patience in early stopping')
-    p.add_option('--pretrained_mn', default='vgg16',
-                    help='pretrained model name. Available pretrained models: vgg16, googlenet, resnet18, resnet152...')
+    p.add_option('--base_mn', default='resnet18',
+                    help='base model architectures: vgg16, googlenet, resnet18, resnet152...')
     p.add_option('--tl_type', default='finetuning', choices=('feature_extractor', 'finetuning'),
                     help='transfer learning type. finetuning: initialize the network with a pretrained network, like the one that is trained on imagenet 1000 dataset. Rest of the training looks as usual. feature_extractor: freeze the weights for all of the network except that of the final fully connected layer. ')
+    p.add_option('--pretrained_mn',
+                    help='specify your own pretrained model as feature extractor')
     p.add_option('--disable_slurm', default=False, action="store_true",
                  help='run directly in the console without generating slurm job. Do not do this in HCC login node')
     p.add_slurm_opts(job_prefix=regression.__name__)
 
     opts, args = p.parse_args(args)
-    if len(args) != 5:
+    if len(args) != 3:
         sys.exit(not p.print_help())
-    train_csv, train_dir, valid_csv, valid_dir, model_name_prefix = args
+    train_csv, train_dir, model_name_prefix = args
     # genearte slurm file
     if not opts.disable_slurm:
-        #cmd_header = 'ml singularity'
         cmd = "python -m schnablelab.CNN.TransLearning regression "\
             f"{train_csv} {train_dir} {valid_csv} {valid_dir} {model_name_prefix} "\
-            f"--inputsize {opts.inputsize} --pretrained_mn {opts.pretrained_mn} --disable_slurm"
+            f"--inputsize {opts.inputsize} --base_mn {opts.base_mn} --disable_slurm "
+        if opts.pretrained_mn:
+            cmd += f"--pretrained_mn {opts.pretrained_mn} "
+        if opts.valid_csv and opts.valid_dir:
+            cmd += f"--valid_csv {opts.valid_csv} --valid_dir {opts.valid_dir} "
         put2slurm_dict = vars(opts)
-        #put2slurm_dict['cmd_header'] = cmd_header
         put2slurm([cmd], put2slurm_dict)
         sys.exit()
 
@@ -94,37 +100,35 @@ def regression(args):
 
     # prepare training and validation data
     train_dataset = LeafcountingDataset(train_csv, train_dir, image_transforms(input_size=opts.inputsize)['train'])
-    valid_dataset = LeafcountingDataset(valid_csv, valid_dir, image_transforms(input_size=opts.inputsize)['valid'])
     train_loader = DataLoader(train_dataset, batch_size=opts.batchsize)
-    valid_loader = DataLoader(valid_dataset, batch_size=opts.batchsize)
-    dataloaders_dict = {'train': train_loader, 'valid': valid_loader}
+    dataloaders_dict = {'train': train_loader}
+
+    if opts.valid_csv and opts.valid_dir:
+        valid_dataset = LeafcountingDataset(opts.valid_csv, opts.valid_dir, image_transforms(input_size=opts.inputsize)['valid'])
+        valid_loader = DataLoader(valid_dataset, batch_size=opts.batchsize)
+        dataloaders_dict['valid'] = valid_loader 
 
     # initialize the pre-trained model
     feature_extract = True if opts.tl_type=='feature_extractor' else False
     logger.debug('feature extract: %s'%feature_extract)
-    model, input_size = initialize_model(model_name=opts.pretrained_mn, 
+    
+    if opts.pretrained_mn:
+        model, input_size = initialize_model(model_name=opts.base_mn, 
+                                         feature_extract=True, # set param.requires_grad=True for all layers except the fully connected layer
+                                         use_pretrained=False,
+                                         inputsize=opts.inputsize)
+        model.load_state_dict(torch.load(opts.pretrained_mn, map_location=device))
+    else:
+        model, input_size = initialize_model(model_name=opts.base_mn, 
                                          feature_extract=feature_extract, 
                                          inputsize=opts.inputsize)
     logger.debug(model)
 
-    params_to_update = model.parameters()
-    #logger.debug("Params to learn:")
-    if feature_extract:
-        params_to_update = []
-        for name, param in model.named_parameters():
-            if param.requires_grad == True:
-                params_to_update.append(param)
-    else:
-        for name, param in model.named_parameters():
-            if param.requires_grad == True:
-                pass
-                
-    # optimizer
-    sgd_optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
-    # loss
-    criterion = nn.MSELoss()
+    params_to_update = [param for param in model.parameters() if param.requires_grad] # trainable parameters
+    sgd_optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9) # optimizer
+    criterion = nn.MSELoss() # loss
     # train and validation
-    inception = True if opts.pretrained_mn=='inception' else False
+    inception = True if opts.base_mn=='inception' else False
     since = time.time()
     model_ft, train_hist, valid_hist = train_model_regression(model, dataloaders_dict, 
                                                             criterion, sgd_optimizer,
@@ -137,7 +141,10 @@ def regression(args):
     
     # save training and validation loss.
     logger.debug('saving loss history...')
-    df = pd.DataFrame(dict(zip(['training', 'validation'], [train_hist, valid_hist])))
+    if opts.valid_csv and opts.valid_dir:
+        df = pd.DataFrame(dict(zip(['training', 'validation'], [train_hist, valid_hist])))
+    else: 
+        df = pd.DataFrame(dict(zip(['training'], [train_hist])))
     df.to_csv(histfile, index=False)
     
     # plot training and validation loss
@@ -163,8 +170,8 @@ def prediction(args):
                     help='the input size of image. At least 224 if using pretrained models')
     p.add_option('--batchsize', default=36, type='int', 
                     help='batch size')
-    p.add_option('--pretrained_mn', default=None,
-                    help='specifiy pretrained model name if a pretrained model was used')
+    p.add_option('--base_mn', default='resnet18',
+                    help='base model architectures: vgg16, googlenet, resnet18, resnet152...')
     p.add_option('--disable_slurm', default=False, action="store_true",
                  help='run directly without generating slurm job')
     p.add_slurm_opts(job_prefix=prediction.__name__)
@@ -176,21 +183,22 @@ def prediction(args):
 
     # genearte slurm file
     if not opts.disable_slurm:
-        #cmd_header = 'ml singularity'
         cmd = "python -m schnablelab.CNN.TransLearning prediction "\
             f"{saved_model} {test_csv} {test_dir} {output} "\
             f"--batchsize {opts.batchsize} --disable_slurm "
-        if opts.pretrained_mn:
-            cmd += f"--pretrained_mn {opts.pretrained_mn}"
+        if opts.base_mn:
+            cmd += f"--base_mn {opts.base_mn} "
         put2slurm_dict = vars(opts)
-        #put2slurm_dict['cmd_header'] = cmd_header
         put2slurm([cmd], put2slurm_dict)
         sys.exit()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    if opts.pretrained_mn:
-        model, input_size = initialize_model(model_name=opts.pretrained_mn)
+    if opts.base_mn:
+        model, input_size = initialize_model(model_name=opts.base_mn, 
+                                            feature_extract=True, 
+                                            use_pretrained=False, 
+                                            inputsize=opts.inputsize)
         # turn all gradients off
         for param in model.parameters():
             param.requires_grad = False

@@ -48,7 +48,7 @@ def split_val_train(df, n_val, n_fold):
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, mn_prefix, patience=20, verbose=True, delta=0):
+    def __init__(self, mn_prefix, patience=20, verbose=True, delta=0, min_loss_cutoff=-np.Inf):
         """
         Args:
             mn_prefix (str): the prefix of the saved model name.
@@ -58,6 +58,8 @@ class EarlyStopping:
                             Default: True
             delta (float): Minimum change in the monitored quantity to qualify as an improvement.
                             Default: 0
+            min_loss_cutoff (float): set the minimum loss cutoff if there is no validation process during training.
+                For leaf counting problem with MSE as the loss, set 0.81 consdering human error is 0.5.
         """
         self.patience = patience
         self.verbose = verbose
@@ -67,6 +69,7 @@ class EarlyStopping:
         self.val_loss_min = np.Inf
         self.delta = delta
         self.mn_prefix = mn_prefix
+        self.min_loss_cutoff = min_loss_cutoff
 
     def __call__(self, val_loss, model):
         score = -val_loss
@@ -83,6 +86,8 @@ class EarlyStopping:
             self.best_score = score
             self.save_checkpoint(val_loss, model)
             self.counter = 0
+            if score > self.min_loss_cutoff: # the model performs better than human being
+                self.early_stop = True
 
     def save_checkpoint(self, val_loss, model):
         '''Saves model when validation loss decrease.'''
@@ -119,60 +124,56 @@ def train_model_regression(model, dataloaders, criterion, optimizer, model_name_
                            patience=10, num_epochs=10, is_inception=False):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    valid_loss_history = []
-    train_loss_history = []
+    train_loss_history, valid_loss_history = [], []
     
     early_stopping = EarlyStopping(model_name_prefix, patience=patience, verbose=True)
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
-
-        # Each epoch has a training and validation phase
-        for phase in ['train', 'valid']:
-            if phase == 'train':
-                model.train()  # Set model to training mode
+        model.train()
+        train_running_loss = 0.0
+        for inputs, labels, _ in dataloaders['train']:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            optimizer.zero_grad()
+            if is_inception:
+                # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
+                outputs, aux_outputs = model(inputs)
+                loss1 = criterion(outputs, labels)
+                loss2 = criterion(aux_outputs, labels)
+                loss = loss1 + 0.4*loss2
             else:
-                model.eval()   # Set model to evaluate mode
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            train_running_loss += loss.item() * inputs.size(0)
+        epoch_loss_train = train_running_loss / len(dataloaders['train'].dataset)
+        print('Train Loss: {:.4f}'.format(epoch_loss_train))
+        train_loss_history.append(epoch_loss_train)
 
-            running_loss = 0.0
-            for inputs, labels, img_fn in dataloaders[phase]:
+        if 'valid' in dataloaders: # if validation data is available
+            model.eval()
+            valid_running_loss = 0.0
+            for inputs, labels, _ in dataloaders['valid']:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
-                
-                # zero the parameter gradients
-                optimizer.zero_grad()
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+                valid_running_loss += loss.item() * inputs.size(0)
+            epoch_loss_valid = valid_running_loss / len(dataloaders['valid'].dataset)
+            print('Validation Loss: {:.4f}'.format(epoch_loss_valid))
+            valid_loss_history.append(epoch_loss_valid)
+            early_stopping(epoch_loss_valid, model)
+        else:
+            early_stopping(epoch_loss_train, model)
 
-                # forward
-                # track history if only in train
-                with torch.set_grad_enabled(phase == 'train'):
-                    if is_inception and phase == 'train':
-                        # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
-                        outputs, aux_outputs = model(inputs)
-                        loss1 = criterion(outputs, labels)
-                        loss2 = criterion(aux_outputs, labels)
-                        loss = loss1 + 0.4*loss2
-                    else:
-                        outputs = model(inputs)
-                        loss = criterion(outputs, labels)
-                    # backward + optimize only if in training phase
-                    if phase == 'train':
-                        loss.backward()
-                        optimizer.step()
-                # statistics
-                running_loss += loss.item() * inputs.size(0)
-            epoch_loss = running_loss / len(dataloaders[phase].dataset)
-            print('{} Loss: {:.4f}'.format(phase, epoch_loss))
-            if phase == 'train':
-                train_loss_history.append(epoch_loss)
-            if phase == 'valid':
-                valid_loss_history.append(epoch_loss)
-                early_stopping(epoch_loss, model)
         if early_stopping.early_stop:
             print('Early stopping')
             break
     print('Best val loss: {:4f}'.format(early_stopping.val_loss_min))
 
-    # load best model weights
+    # load best model weights and return 
     model.load_state_dict(torch.load('%s.pt'%model_name_prefix))
     return model, train_loss_history, valid_loss_history
 
