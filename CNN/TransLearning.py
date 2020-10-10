@@ -71,8 +71,8 @@ def regression(args):
     train_csv, train_dir, model_name_prefix = args
     # genearte slurm file
     if not opts.disable_slurm:
-        cmd = "python -m schnablelab.CNN.TransLearning regression "\
-            f"{train_csv} {train_dir} {valid_csv} {valid_dir} {model_name_prefix} "\
+        cmd = "python -m -u schnablelab.CNN.TransLearning regression "\
+            f"{train_csv} {train_dir} {model_name_prefix} "\
             f"--inputsize {opts.inputsize} --base_mn {opts.base_mn} --disable_slurm "
         if opts.pretrained_mn:
             cmd += f"--pretrained_mn {opts.pretrained_mn} "
@@ -183,7 +183,7 @@ def prediction(args):
 
     # genearte slurm file
     if not opts.disable_slurm:
-        cmd = "python -m schnablelab.CNN.TransLearning prediction "\
+        cmd = "python -m -u schnablelab.CNN.TransLearning prediction "\
             f"{saved_model} {test_csv} {test_dir} {output} "\
             f"--batchsize {opts.batchsize} --disable_slurm "
         if opts.base_mn:
