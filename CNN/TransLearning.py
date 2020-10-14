@@ -15,12 +15,6 @@ from torch.utils.data import DataLoader
 import logging
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib import rcParams
-plt.style.use('bmh')
-rcParams['xtick.direction'] = 'out'
-rcParams['ytick.direction'] = 'out'
-
 
 def main():
     actions = (
@@ -71,7 +65,7 @@ def regression(args):
     train_csv, train_dir, model_name_prefix = args
     # genearte slurm file
     if not opts.disable_slurm:
-        cmd = "python -m -u schnablelab.CNN.TransLearning regression "\
+        cmd = "python -m schnablelab.CNN.TransLearning regression "\
             f"{train_csv} {train_dir} {model_name_prefix} "\
             f"--inputsize {opts.inputsize} --base_mn {opts.base_mn} --disable_slurm "
         if opts.pretrained_mn:
@@ -149,6 +143,11 @@ def regression(args):
     
     # plot training and validation loss
     logger.debug('plot loss history...')
+    import matplotlib.pyplot as plt
+    from matplotlib import rcParams
+    plt.style.use('bmh')
+    rcParams['xtick.direction'] = 'out'
+    rcParams['ytick.direction'] = 'out'
     fig, ax = plt.subplots(figsize=(4, 3))
     ax = df.plot(ax=ax)
     ax.set_xlabel('Epoch', fontsize=12)
@@ -183,7 +182,7 @@ def prediction(args):
 
     # genearte slurm file
     if not opts.disable_slurm:
-        cmd = "python -m -u schnablelab.CNN.TransLearning prediction "\
+        cmd = "python -m schnablelab.CNN.TransLearning prediction "\
             f"{saved_model} {test_csv} {test_dir} {output} "\
             f"--batchsize {opts.batchsize} --disable_slurm "
         if opts.base_mn:
@@ -193,6 +192,7 @@ def prediction(args):
         sys.exit()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print('devicd: %s'%device)
 
     if opts.base_mn:
         model, input_size = initialize_model(model_name=opts.base_mn, 
@@ -212,9 +212,10 @@ def prediction(args):
     test_loader = DataLoader(test_dataset, batch_size=opts.batchsize)
 
     ground_truths, predicts, filenames = [],[],[]
-    for phase, (inputs, labels, fns) in enumerate(test_loader, 1): # fns is a tuple
-        print('phase %s'%phase)
+    for idx, (inputs, labels, fns) in enumerate(test_loader, 1): # fns is a tuple
+        print('idx %s'%idx)
         inputs = inputs.to(device)
+        print('type of inputs: %s'%(type(inputs)))
         outputs = model(inputs)
         ground_truths.append(labels.squeeze().numpy())
         filenames.append(np.array(fns))

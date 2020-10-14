@@ -48,7 +48,7 @@ def split_val_train(df, n_val, n_fold):
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, mn_prefix, patience=20, verbose=True, delta=0, min_loss_cutoff=-np.Inf):
+    def __init__(self, mn_prefix, patience=20, verbose=True, delta=0, min_loss_cutoff=0):
         """
         Args:
             mn_prefix (str): the prefix of the saved model name.
@@ -69,7 +69,7 @@ class EarlyStopping:
         self.val_loss_min = np.Inf
         self.delta = delta
         self.mn_prefix = mn_prefix
-        self.min_loss_cutoff = min_loss_cutoff
+        self.min_loss_cutoff = -min_loss_cutoff
 
     def __call__(self, val_loss, model):
         score = -val_loss
@@ -86,7 +86,7 @@ class EarlyStopping:
             self.best_score = score
             self.save_checkpoint(val_loss, model)
             self.counter = 0
-            if score > self.min_loss_cutoff: # the model performs better than human being
+            if self.best_score > self.min_loss_cutoff: # the model performs better than human being
                 self.early_stop = True
 
     def save_checkpoint(self, val_loss, model):
@@ -126,7 +126,7 @@ def train_model_regression(model, dataloaders, criterion, optimizer, model_name_
     model.to(device)
     train_loss_history, valid_loss_history = [], []
     
-    early_stopping = EarlyStopping(model_name_prefix, patience=patience, verbose=True)
+    early_stopping = EarlyStopping(model_name_prefix, patience=patience, verbose=True, min_loss_cutoff=0.8)
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
