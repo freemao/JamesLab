@@ -215,3 +215,61 @@ class SimpleStats(object):
     def agreement(self, cutoff):
         return (self.absdiff<=float(cutoff)).sum()/self.length
 
+def simulate_gwas_results(num_chr=10, num_snp=50000, max_chr_size=60000000, 
+                            num_gwas=25, sig_cutoff=6.5, num_sig_snps=5):
+    '''
+    num_chr: number of chromosomes
+    num_snp: number of snps in each chr
+    max_chr_size: the maximum chromosome size for each chr
+    num_gwas: number of gwas analyses
+    sig_cutoff: the -log transformed p value cutoff
+    num_sig_snps: number of significant snps in each gwas analysis
+    '''
+    chrs = np.array([np.full(num_snp, i) for i in range(1, chrom+1)]).flatten()
+    # simulate snp positions in each chromosomes
+    snp_pos = np.array([np.sort(np.random.randint(0, max_chr_size, num_snp)) for i in range(1, 11)]).flatten()
+    # simuate -log transformed pvalues in 25 GWAS analyses (assume all pvalues are not significant)
+    df_pvalues = pd.DataFrame(np.random.uniform(0, sig_cutoff, (num_snp, num_gwas))) # simuate pvalues
+
+    # simuate positions and pvalues for significant SNPs, assume only 5 significant snps in each GWAS
+    sig_pos = pd.DataFrame(np.random.randint(0, num_snp, (num_sig_snps, num_gwas)))
+    sig_pvalues = pd.DataFrame(np.random.uniform(sig_cutoff, sig_cutoff+5, (num_sig_snps, num_gwas)))
+    # introduce the simuated snps
+    for col in range(num_gwas): 
+        for row in range(num_sig_snps):
+            pos = sig_pos.iloc[row, col]
+            pv = sig_pvalues.iloc[row, col]
+            #print(pos, col)
+            df_pvalues.iloc[pos, col] = pv
+    df_pvalues.columns = np.arange(num_gwas)
+    df_snp = pd.DataFrame(chrs, columns=['chr'])
+    df_snp['pos'] = snp_pos
+    df_gwas = pd.concat([df_snp, df_pvalues], axis=1)
+    return df_gwas
+
+def bin_gwas_snps(df, bin_size=16):
+    '''
+    df: the dataframe of your GWAS results
+        Make sure the first column is 'chr' and 2nd column is 'pos'
+        The rest columns are genus names.
+    bin_size: how many bins for each chromosme (even integer)
+    '''
+    df = df.set_index(['chr', 'pos'])
+    chros, sts, eds, ps = [], [], [], []
+    for chrom, tmp in df.groupby(level=0):
+        tmp = tmp.reset_index()
+        bins = pd.qcut(tmp['pos'], bin_size)
+        grps = tmp.groupby(bins)
+        for _, grp in grps:
+            idx = grp['pos'].values
+            st, ed = idx[0], idx[-1]
+            maxs = grp.iloc[:,2:].max(axis=0)
+            chros.append(chrom)
+            sts.append(st)
+            eds.append(ed)
+            ps.append(maxs)
+    df_bins = pd.DataFrame(ps)
+    df_bins.index = chros
+    df_plot = df_bins.transpose().fillna(0)
+    df_bins_info = pd.DataFrame(dict(zip(['chr', 'st', 'ed'], [chros, sts, eds])))    
+    return df_plot, df_bins_info
